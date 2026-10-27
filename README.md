@@ -51,7 +51,7 @@ DATABASE_URL=postgresql://postgres:postgres@127.0.0.1:54322/postgres
 DEMO_PASSWORD=<pick a password, 10+ characters>
 ```
 
-Create `supabase/functions/.env` for the edge functions (copy the "Edge function secrets" block of `.env.example`; `MPESA_ENV=mock` and `WHATSAPP_ENABLED=false` need no credentials):
+Create `supabase/functions/.env` for the edge functions (the M-Pesa and WhatsApp lines of `.env.example`; `MPESA_ENV=mock` and `WHATSAPP_ENABLED=false` need no credentials):
 
 ```
 SITE_URL=http://localhost:3000

@@ -480,8 +480,9 @@ begin
   if tg_op = 'UPDATE' then
     v_old := to_jsonb(old);
     -- units: only log when a price field changed
-    if v_entity = 'unit' and not (new.base_rate is distinct from old.base_rate
-        or new.weekend_rate is distinct from old.weekend_rate or new.cleaning_fee is distinct from old.cleaning_fee) then
+    -- (compared through jsonb: this function serves several tables, so NEW.base_rate would not exist on all of them)
+    if v_entity = 'unit' and not (v_row->>'base_rate' is distinct from v_old->>'base_rate'
+        or v_row->>'weekend_rate' is distinct from v_old->>'weekend_rate' or v_row->>'cleaning_fee' is distinct from v_old->>'cleaning_fee') then
       return null;
     end if;
     insert into audit_log(user_id, action, entity, entity_id, diff)

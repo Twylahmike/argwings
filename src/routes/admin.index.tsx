@@ -66,7 +66,7 @@ function Dashboard() {
       {q.isLoading && <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">{Array.from({ length: 8 }, (_, i) => <Skeleton key={i} className="h-24" />)}</div>}
       {q.error && <ErrorState error={q.error} retry={() => q.refetch()} />}
       {d && (
-        <div className="grid gap-5">
+        <div className="grid grid-cols-1 gap-5">
           {d.review.length > 0 && (
             <div role="alert" className="rounded-xl border border-danger/50 bg-danger/5 p-4">
               <p className="flex items-center gap-2 font-semibold text-danger"><AlertTriangle className="h-5 w-5" aria-hidden /> Payments needing review ({d.review.length})</p>
@@ -81,7 +81,7 @@ function Dashboard() {
             <Stat label="Revenue this month" value={formatKES(d.revenue)} /><Stat label="Outstanding balances" value={formatKES(d.owing.reduce((s, b) => s + balance(b), 0))} hint={`${d.owing.length} booking${d.owing.length === 1 ? '' : 's'}`} tone={d.owing.length ? 'warn' : undefined} />
             <Stat label="Pending holds" value={d.holds} />
           </div>
-          <div className="grid gap-5 lg:grid-cols-2">
+          <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <ListCard title="Arriving today" rows={arrivals} empty="No arrivals today." extra={(b) => <><StatusBadge status={b.status} /> {balance(b) > 0 && <span className="text-xs text-amber-700 dark:text-amber-400">owes {formatKES(balance(b))}</span>}</>} />
             <ListCard title="Departing today" rows={departures} empty="No departures today." extra={(b) => balance(b) > 0 ? <span className="text-xs text-amber-700 dark:text-amber-400">owes {formatKES(balance(b))}</span> : <span className="text-xs text-emerald-700 dark:text-emerald-400">paid</span>} />
             <ListCard title="Balances due" rows={d.owing.sort((a, b) => a.check_in.localeCompare(b.check_in)).slice(0, 10)} empty="Nobody owes anything." extra={(b) => <Money value={balance(b)} className="font-medium" />} />

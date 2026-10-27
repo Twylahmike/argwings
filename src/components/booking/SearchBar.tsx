@@ -21,12 +21,13 @@ export function SearchBar({ initial, propertyId }: { initial?: { checkIn?: strin
     nav({ to: '/search', search: { in: checkIn, out: checkOut, guests, ...(propertyId ? { property: propertyId } : {}) } })
   }
   return (
-    <form onSubmit={submit} className="grid gap-3 rounded-2xl border bg-card p-4 shadow-sm sm:grid-cols-[1fr_1fr_8rem_auto] sm:items-end" aria-label="Search availability">
-      <Field label="Check-in" htmlFor="s-in"><Input id="s-in" type="date" min={today} value={checkIn} onChange={(e) => { setCheckIn(e.target.value); if (checkOut && checkOut <= e.target.value) setCheckOut(addDays(e.target.value, 1)) }} /></Field>
-      <Field label="Check-out" htmlFor="s-out"><Input id="s-out" type="date" min={checkIn ? addDays(checkIn, 1) : today} value={checkOut} onChange={(e) => setCheckOut(e.target.value)} /></Field>
+    <form action="/search" method="get" onSubmit={submit} className="grid gap-3 rounded-2xl border bg-card p-4 shadow-sm sm:grid-cols-[1fr_1fr_8rem_auto] sm:items-end" aria-label="Search availability">
+      <Field label="Check-in" htmlFor="s-in"><Input id="s-in" name="in" type="date" min={today} value={checkIn} onChange={(e) => { setCheckIn(e.target.value); if (checkOut && checkOut <= e.target.value) setCheckOut(addDays(e.target.value, 1)) }} /></Field>
+      <Field label="Check-out" htmlFor="s-out"><Input id="s-out" name="out" type="date" min={checkIn ? addDays(checkIn, 1) : today} value={checkOut} onChange={(e) => setCheckOut(e.target.value)} /></Field>
       <Field label="Guests" htmlFor="s-guests">
-        <Select id="s-guests" value={guests} onChange={(e) => setGuests(Number(e.target.value))}>{Array.from({ length: 10 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}</Select>
+        <Select id="s-guests" name="guests" value={guests} onChange={(e) => setGuests(Number(e.target.value))}>{Array.from({ length: 10 }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}</Select>
       </Field>
+      {propertyId && <input type="hidden" name="property" value={propertyId} />}
       <Button type="submit" size="lg"><Search className="h-4 w-4" /> Search</Button>
       {error && <p role="alert" className="text-sm text-danger sm:col-span-4">{error}</p>}
     </form>

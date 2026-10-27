@@ -428,6 +428,21 @@ test('seed: 5 properties, ~40 bookings, re-runnable, no overlaps, P&L covers eve
   })
 })
 
+test('audit: settings, expense and unit-rate changes are logged (and unrelated unit edits are not)', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await c.query(`update settings set value='60' where key='deposit_percent'`)
+    assert.ok(await one(c, `select id from audit_log where entity='setting' and entity_id='deposit_percent'`))
+    await c.query(`update units set name='Renamed' where id=$1`, [f.ua])
+    assert.equal((await q(c, `select id from audit_log where entity='unit' and entity_id=$1`, [f.ua])).length, 0)
+    await c.query(`update units set base_rate=5500 where id=$1`, [f.ua])
+    assert.equal((await q(c, `select id from audit_log where entity='unit' and entity_id=$1`, [f.ua])).length, 1)
+    await c.query(`insert into expenses(property_id,category,amount) values ($1,'repairs',100)`, [f.pa])
+    assert.ok(await one(c, `select id from audit_log where entity='expense'`))
+    await c.query(`insert into user_roles(user_id, role) values ($1,'manager')`, [f.cleaner])
+    assert.ok(await one(c, `select id from audit_log where entity='user_role' and action='user_role.insert'`))
+  }))
+
 test('misc: rate limiter, audit trail, guest anonymisation keeps financial records', async () =>
   tx(async (c) => {
     const f = await fixture(c)

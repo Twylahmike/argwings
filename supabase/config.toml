@@ -30,8 +30,9 @@ additional_redirect_urls = ["http://localhost:3000"]
 jwt_expiry = 3600
 enable_signup = false
 
+# The email PROVIDER must be enabled for password login. Self-registration stays off via [auth] enable_signup = false.
 [auth.email]
-enable_signup = false
+enable_signup = true
 enable_confirmations = false
 
 [edge_runtime]

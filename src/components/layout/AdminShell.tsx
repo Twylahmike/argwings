@@ -112,11 +112,11 @@ export function AdminShell({ me }: { me: Me }) {
 
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="no-print sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b bg-background/90 px-3 backdrop-blur md:px-6">
-            <div className="md:hidden"><Wordmark /></div>
+            <div className="md:hidden"><Wordmark compact /></div>
             <div className="hidden md:block" />
             <div className="flex items-center gap-2">
               {showFilter && (
-                <Select aria-label="Filter by property" value={propertyId} onChange={(e) => setPropertyId(e.target.value)} className="h-11 w-44 sm:w-56">
+                <Select aria-label="Filter by property" value={propertyId} onChange={(e) => setPropertyId(e.target.value)} className="h-11 w-36 sm:w-56">
                   <option value="all">All properties</option>
                   {me.properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </Select>

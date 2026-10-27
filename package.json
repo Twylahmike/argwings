@@ -18,7 +18,8 @@
     "create-owner": "node scripts/create-owner.mjs",
     "seed": "node scripts/seed.mjs",
     "seed:users": "node scripts/seed-users.mjs",
-    "export-all": "node scripts/export-all.mjs"
+    "export-all": "node scripts/export-all.mjs",
+    "check:functions": "deno check --config scripts/deno.check.json supabase/functions/*/index.ts"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.1",
@@ -52,6 +53,7 @@
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
     "cross-env": "^10.1.0",
+    "deno": "^2.9.6",
     "dotenv": "^18.0.9",
     "eslint": "^10.13.0",
     "eslint-plugin-react-hooks": "^7.1.1",

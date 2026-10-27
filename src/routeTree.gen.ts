@@ -11,11 +11,16 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
+import { Route as BookRouteImport } from './routes/book'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as SearchRouteImport } from './routes/search'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminChangePasswordRouteImport } from './routes/admin.change-password'
 import { Route as AdminHousekeepingRouteImport } from './routes/admin.housekeeping'
 import { Route as AdminStaffRouteImport } from './routes/admin.staff'
+import { Route as PropertiesSlugRouteImport } from './routes/properties.$slug'
+import { Route as AdminPropertiesIndexRouteImport } from './routes/admin.properties.index'
+import { Route as AdminPropertiesIdRouteImport } from './routes/admin.properties.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -27,9 +32,19 @@ const AdminRoute = AdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BookRoute = BookRouteImport.update({
+  id: '/book',
+  path: '/book',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SearchRoute = SearchRouteImport.update({
+  id: '/search',
+  path: '/search',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -52,67 +67,115 @@ const AdminStaffRoute = AdminStaffRouteImport.update({
   path: '/staff',
   getParentRoute: () => AdminRoute,
 } as any)
+const PropertiesSlugRoute = PropertiesSlugRouteImport.update({
+  id: '/properties/$slug',
+  path: '/properties/$slug',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AdminPropertiesIndexRoute = AdminPropertiesIndexRouteImport.update({
+  id: '/properties/',
+  path: '/properties/',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminPropertiesIdRoute = AdminPropertiesIdRouteImport.update({
+  id: '/properties/$id',
+  path: '/properties/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/book': typeof BookRoute
   '/login': typeof LoginRoute
+  '/search': typeof SearchRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/properties/$slug': typeof PropertiesSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/properties/$id': typeof AdminPropertiesIdRoute
+  '/admin/properties/': typeof AdminPropertiesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/book': typeof BookRoute
   '/login': typeof LoginRoute
+  '/search': typeof SearchRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/properties/$slug': typeof PropertiesSlugRoute
   '/admin': typeof AdminIndexRoute
+  '/admin/properties/$id': typeof AdminPropertiesIdRoute
+  '/admin/properties': typeof AdminPropertiesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
+  '/book': typeof BookRoute
   '/login': typeof LoginRoute
+  '/search': typeof SearchRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/properties/$slug': typeof PropertiesSlugRoute
   '/admin/': typeof AdminIndexRoute
+  '/admin/properties/$id': typeof AdminPropertiesIdRoute
+  '/admin/properties/': typeof AdminPropertiesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
     | '/admin'
+    | '/book'
     | '/login'
+    | '/search'
     | '/admin/change-password'
     | '/admin/housekeeping'
     | '/admin/staff'
+    | '/properties/$slug'
     | '/admin/'
+    | '/admin/properties/$id'
+    | '/admin/properties/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/book'
     | '/login'
+    | '/search'
     | '/admin/change-password'
     | '/admin/housekeeping'
     | '/admin/staff'
+    | '/properties/$slug'
     | '/admin'
+    | '/admin/properties/$id'
+    | '/admin/properties'
   id:
     | '__root__'
     | '/'
     | '/admin'
+    | '/book'
     | '/login'
+    | '/search'
     | '/admin/change-password'
     | '/admin/housekeeping'
     | '/admin/staff'
+    | '/properties/$slug'
     | '/admin/'
+    | '/admin/properties/$id'
+    | '/admin/properties/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
+  BookRoute: typeof BookRoute
   LoginRoute: typeof LoginRoute
+  SearchRoute: typeof SearchRoute
+  PropertiesSlugRoute: typeof PropertiesSlugRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -131,11 +194,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/book': {
+      id: '/book'
+      path: '/book'
+      fullPath: '/book'
+      preLoaderRoute: typeof BookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/search': {
+      id: '/search'
+      path: '/search'
+      fullPath: '/search'
+      preLoaderRoute: typeof SearchRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -166,6 +243,27 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStaffRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/properties/$slug': {
+      id: '/properties/$slug'
+      path: '/properties/$slug'
+      fullPath: '/properties/$slug'
+      preLoaderRoute: typeof PropertiesSlugRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/admin/properties/': {
+      id: '/admin/properties/'
+      path: '/properties'
+      fullPath: '/admin/properties/'
+      preLoaderRoute: typeof AdminPropertiesIndexRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/properties/$id': {
+      id: '/admin/properties/$id'
+      path: '/properties/$id'
+      fullPath: '/admin/properties/$id'
+      preLoaderRoute: typeof AdminPropertiesIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
@@ -174,6 +272,8 @@ interface AdminRouteChildren {
   AdminHousekeepingRoute: typeof AdminHousekeepingRoute
   AdminStaffRoute: typeof AdminStaffRoute
   AdminIndexRoute: typeof AdminIndexRoute
+  AdminPropertiesIdRoute: typeof AdminPropertiesIdRoute
+  AdminPropertiesIndexRoute: typeof AdminPropertiesIndexRoute
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
@@ -181,6 +281,8 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminHousekeepingRoute: AdminHousekeepingRoute,
   AdminStaffRoute: AdminStaffRoute,
   AdminIndexRoute: AdminIndexRoute,
+  AdminPropertiesIdRoute: AdminPropertiesIdRoute,
+  AdminPropertiesIndexRoute: AdminPropertiesIndexRoute,
 }
 
 const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
@@ -188,7 +290,10 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
+  BookRoute: BookRoute,
   LoginRoute: LoginRoute,
+  SearchRoute: SearchRoute,
+  PropertiesSlugRoute: PropertiesSlugRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

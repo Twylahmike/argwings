@@ -1,0 +1,62 @@
+# Supabase local development config (`supabase start`). Production settings live in the Supabase dashboard.
+project_id = "bnb-system"
+
+[api]
+enabled = true
+port = 54321
+schemas = ["public", "graphql_public"]
+extra_search_path = ["public", "extensions"]
+max_rows = 1000
+
+[db]
+port = 54322
+major_version = 15
+
+[db.seed]
+enabled = true
+sql_paths = ["./seed.sql"]
+
+[realtime]
+enabled = true
+
+[storage]
+enabled = true
+file_size_limit = "10MiB"
+
+[auth]
+enabled = true
+site_url = "http://localhost:3000"
+additional_redirect_urls = ["http://localhost:3000"]
+jwt_expiry = 3600
+enable_signup = false
+
+[auth.email]
+enable_signup = false
+enable_confirmations = false
+
+[edge_runtime]
+enabled = true
+policy = "per_worker"
+
+# verify_jwt = false ONLY for the two webhooks called by third parties.
+# mpesa-callback is protected by MPESA_CALLBACK_SECRET (?token=), whatsapp-webhook by WHATSAPP_VERIFY_TOKEN.
+[functions.mpesa-callback]
+verify_jwt = false
+
+[functions.whatsapp-webhook]
+verify_jwt = false
+
+[functions.create-booking]
+verify_jwt = true
+[functions.mpesa-stk-push]
+verify_jwt = true
+[functions.mpesa-reconcile]
+verify_jwt = true
+[functions.expire-holds]
+verify_jwt = true
+[functions.send-whatsapp]
+verify_jwt = true
+[functions.send-reminders]
+verify_jwt = true
+[functions.admin-users]
+verify_jwt = true

@@ -18,6 +18,7 @@ import { Field, Textarea } from '~/components/ui/form'
 import { ErrorState, Skeleton } from '~/components/ui/misc'
 import { Money } from '~/components/booking/BookingBits'
 import { RecordPaymentDialog } from '~/components/booking/RecordPaymentDialog'
+import { MessagesPanel } from '~/components/booking/MessagesPanel'
 import { RequestPaymentDialog } from '~/components/booking/RequestPaymentDialog'
 import { useAdmin } from '~/components/layout/AdminShell'
 
@@ -161,6 +162,13 @@ function BookingDetail() {
               ))}
             </ul>
           </CardContent>
+        </Card>
+      )}
+
+      {b.status !== 'blocked' && (
+        <Card className="mt-4">
+          <CardHeader><CardTitle>WhatsApp messages</CardTitle></CardHeader>
+          <CardContent><MessagesPanel bookingId={b.id} /></CardContent>
         </Card>
       )}
 

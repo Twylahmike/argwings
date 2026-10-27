@@ -60,3 +60,5 @@ verify_jwt = true
 verify_jwt = true
 [functions.admin-users]
 verify_jwt = true
+[functions.system-status]
+verify_jwt = true

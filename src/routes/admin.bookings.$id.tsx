@@ -177,6 +177,7 @@ function BookingDetail() {
         <CardContent><p className="whitespace-pre-line text-sm">{b.notes || <span className="text-muted-foreground">No notes.</span>}</p></CardContent>
       </Card>
 
+      {isOwner(me) && <History id={id} />}
       {requesting && <RequestPaymentDialog booking={b} onClose={() => setRequesting(false)} onDone={() => { setRequesting(false); refresh() }} />}
       {recording && <RecordPaymentDialog booking={b} userId={me.id} onClose={() => setRecording(false)} onDone={() => { setRecording(false); refresh() }} />}
       {pending && <StatusDialog action={pending} booking={b} busy={setStatus.isPending} onClose={() => setPending(null)} onConfirm={(reason) => setStatus.mutate({ to: pending.to, reason })} />}
@@ -223,5 +224,38 @@ function NotesDialog({ id, initial, onClose, onDone }: { id: string; initial: st
         <Button className="mt-3" loading={save.isPending} onClick={() => save.mutate()}>Save notes</Button>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** Owner-only history from the audit log (managers have no access to audit_log by design). */
+function History({ id }: { id: string }) {
+  const q = useQuery({
+    queryKey: ['booking-audit', id],
+    queryFn: async () => {
+      const { data, error } = await sb().from('audit_log').select('id, action, diff, created_at, user_id').eq('entity', 'booking').eq('entity_id', id).order('created_at', { ascending: false }).limit(50)
+      if (error) throw error
+      const ids = [...new Set((data ?? []).map((r) => r.user_id).filter(Boolean))] as string[]
+      const names = ids.length ? await sb().from('profiles').select('id, full_name').in('id', ids) : { data: [] as { id: string; full_name: string }[] }
+      return { rows: data ?? [], names: new Map((names.data ?? []).map((p) => [p.id, p.full_name])) }
+    },
+  })
+  if (!q.data?.rows.length) return null
+  return (
+    <Card className="mt-4">
+      <CardHeader><CardTitle>History</CardTitle></CardHeader>
+      <CardContent>
+        <ul className="divide-y text-sm">
+          {q.data.rows.map((r) => {
+            const d = r.diff as { from?: string; to?: string; reason?: string } | null
+            return (
+              <li key={r.id} className="flex flex-wrap justify-between gap-2 py-2">
+                <span>{r.action === 'booking.created' ? 'Booking created' : d?.from ? `Status ${d.from} → ${d.to}${d.reason ? ` (${d.reason})` : ''}` : r.action}</span>
+                <span className="text-muted-foreground">{r.user_id ? q.data.names.get(r.user_id) ?? 'Staff' : 'System'} · {formatDateTime(r.created_at)}</span>
+              </li>
+            )
+          })}
+        </ul>
+      </CardContent>
+    </Card>
   )
 }

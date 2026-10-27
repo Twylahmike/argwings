@@ -3,6 +3,7 @@ import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from '@tanst
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import appCss from '~/styles/theme.css?url'
+import { BrandContext, fetchBrand } from '~/lib/brand'
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
@@ -19,11 +20,13 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap' },
     ],
   }),
+  loader: async () => ({ brand: await fetchBrand() }),
   component: RootComponent,
 })
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext()
+  const { brand } = Route.useLoaderData()
   return (
     <html lang="en">
       <head>
@@ -31,7 +34,9 @@ function RootComponent() {
       </head>
       <body>
         <QueryClientProvider client={queryClient}>
-          <Outlet />
+          <BrandContext.Provider value={brand}>
+            <Outlet />
+          </BrandContext.Provider>
           <Toaster position="top-center" richColors />
         </QueryClientProvider>
         <Scripts />

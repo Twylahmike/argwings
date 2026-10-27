@@ -13,7 +13,7 @@ export function NotFound() {
   )
 }
 
-export function RouteError({ error }: { error: Error }) {
+export function RouteError({ error }: { error: unknown }) {
   // Never show stack traces to users; the console has the detail.
   console.error(error)
   return (

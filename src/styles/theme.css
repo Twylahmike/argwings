@@ -1,0 +1,68 @@
+@import 'tailwindcss';
+
+/* Brand tokens: change these (and the logo in components/layout/Wordmark.tsx) to re-skin the whole app. */
+:root {
+  --brand: 164 61% 24%;
+  --brand-foreground: 0 0% 100%;
+  --background: 40 20% 98%;
+  --foreground: 200 15% 12%;
+  --card: 0 0% 100%;
+  --muted: 40 12% 94%;
+  --muted-foreground: 200 8% 38%;
+  --border: 40 10% 86%;
+  --ring: 164 61% 30%;
+  --danger: 0 72% 42%;
+  --st-pending: 38 92% 44%;
+  --st-confirmed: 152 60% 32%;
+  --st-checked_in: 214 80% 45%;
+  --st-checked_out: 220 10% 40%;
+  --st-blocked: 220 8% 48%;
+  --st-cancelled: 0 60% 45%;
+  --st-expired: 220 8% 55%;
+  --st-no_show: 18 70% 42%;
+}
+:root[data-theme='dark'] {
+  --brand: 160 55% 48%;
+  --brand-foreground: 200 20% 8%;
+  --background: 200 18% 8%;
+  --foreground: 40 15% 94%;
+  --card: 200 16% 11%;
+  --muted: 200 14% 15%;
+  --muted-foreground: 200 8% 66%;
+  --border: 200 12% 22%;
+  --ring: 160 55% 55%;
+  --danger: 0 80% 62%;
+  --st-pending: 38 92% 58%;
+  --st-confirmed: 152 55% 50%;
+  --st-checked_in: 214 85% 66%;
+  --st-checked_out: 220 12% 66%;
+  --st-blocked: 220 8% 64%;
+  --st-cancelled: 0 70% 66%;
+  --st-expired: 220 8% 62%;
+  --st-no_show: 18 80% 62%;
+}
+
+@theme inline {
+  --color-brand: hsl(var(--brand));
+  --color-brand-foreground: hsl(var(--brand-foreground));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-border: hsl(var(--border));
+  --color-ring: hsl(var(--ring));
+  --color-danger: hsl(var(--danger));
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+}
+
+html { background: hsl(var(--background)); color: hsl(var(--foreground)); font-family: var(--font-sans); -webkit-text-size-adjust: 100%; }
+body { margin: 0; min-height: 100dvh; background: hsl(var(--background)); }
+* { border-color: hsl(var(--border)); }
+:focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
+button, [role='button'], a, select, input { touch-action: manipulation; }
+
+@media print {
+  .no-print { display: none !important; }
+  body { background: #fff; color: #000; }
+}

@@ -5,7 +5,8 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { ShieldCheck } from 'lucide-react'
-import { callFunction, FunctionError, sb } from '~/lib/supabase'
+import { callFunction, FunctionError } from '~/lib/functions'
+import { pub } from '~/lib/public-client'
 import { fetchQuote } from '~/lib/public-api'
 import { normalizePhone } from '~/lib/phone'
 import { formatKES } from '~/lib/money'
@@ -50,11 +51,11 @@ function BookPage() {
     queryKey: ['book-info', s.unit, s.in, s.out],
     enabled: valid,
     queryFn: async () => {
-      const { data: unit, error } = await sb().from('units').select('*').eq('id', s.unit).eq('active', true).maybeSingle()
+      const { data: unit, error } = await pub().from('units').select('*').eq('id', s.unit).eq('active', true).maybeSingle()
       if (error) throw error
       if (!unit) return null
       const [prop, quote] = await Promise.all([
-        sb().from('properties').select('*').eq('id', (unit as Unit).property_id).maybeSingle(),
+        pub().from('properties').select('*').eq('id', (unit as Unit).property_id).maybeSingle(),
         fetchQuote(s.unit, s.in, s.out),
       ])
       return { unit: unit as Unit, property: prop.data as Property, quote }
@@ -72,7 +73,7 @@ function BookPage() {
     try {
       const res = await callFunction<{ booking: { public_token: string; deposit_required: number } }>('create-booking', {
         unit_id: s.unit, check_in: s.in, check_out: s.out, guests: v.guests, name: v.name, phone: p.phone, email: v.email || undefined, source: 'website', consent: true,
-      })
+      }, { auth: false })
       // The payment itself is started (and followed live) on the booking page, so a refresh never loses it.
       nav({ to: '/booking/$token', params: { token: res.booking.public_token }, search: { start: p.phone } })
     } catch (e) {

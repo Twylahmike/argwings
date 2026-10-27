@@ -4,12 +4,12 @@ import { formatKES } from '~/lib/money'
 import { fromRate } from '~/lib/pricing'
 import type { PropertyWithUnits } from '~/lib/public-api'
 
-export function PropertyCard({ p }: { p: PropertyWithUnits }) {
+export function PropertyCard({ p, priority = false }: { p: PropertyWithUnits; priority?: boolean }) {
   const from = p.units.length ? Math.min(...p.units.map(fromRate)) : null
   return (
     <Link to="/properties/$slug" params={{ slug: p.slug }} className="group block overflow-hidden rounded-2xl border bg-card shadow-sm transition-shadow hover:shadow-md">
       {p.cover_image
-        ? <img src={p.cover_image} alt={`${p.name}`} className="aspect-[4/3] w-full object-cover" loading="lazy" width={800} height={600} />
+        ? <img src={p.cover_image} alt={`${p.name}`} className="aspect-[4/3] w-full object-cover" loading={priority ? 'eager' : 'lazy'} fetchPriority={priority ? 'high' : undefined} width={800} height={600} />
         : <div className="aspect-[4/3] bg-muted" />}
       <div className="p-4">
         <h3 className="text-lg font-semibold group-hover:text-brand">{p.name}</h3>

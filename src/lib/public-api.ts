@@ -1,4 +1,4 @@
-import { sb } from './supabase'
+import { pub } from './public-client'
 import type { Property, Unit } from './types'
 
 export type PropertyWithUnits = Property & { units: Unit[] }
@@ -6,8 +6,8 @@ export type PropertyWithUnits = Property & { units: Unit[] }
 /** All visible properties with their bookable units (anon-readable by RLS). */
 export async function fetchProperties(): Promise<PropertyWithUnits[]> {
   const [p, u] = await Promise.all([
-    sb().from('properties').select('*').eq('active', true).order('sort').order('name'),
-    sb().from('units').select('*').eq('active', true).order('sort').order('base_rate'),
+    pub().from('properties').select('*').eq('active', true).order('sort').order('name'),
+    pub().from('units').select('*').eq('active', true).order('sort').order('base_rate'),
   ])
   if (p.error) throw p.error
   if (u.error) throw u.error
@@ -15,10 +15,10 @@ export async function fetchProperties(): Promise<PropertyWithUnits[]> {
 }
 
 export async function fetchPropertyBySlug(slug: string): Promise<PropertyWithUnits | null> {
-  const { data: prop, error } = await sb().from('properties').select('*').eq('slug', slug).eq('active', true).maybeSingle()
+  const { data: prop, error } = await pub().from('properties').select('*').eq('slug', slug).eq('active', true).maybeSingle()
   if (error) throw error
   if (!prop) return null
-  const { data: units, error: e2 } = await sb().from('units').select('*').eq('property_id', prop.id).eq('active', true).order('sort').order('base_rate')
+  const { data: units, error: e2 } = await pub().from('units').select('*').eq('property_id', prop.id).eq('active', true).order('sort').order('base_rate')
   if (e2) throw e2
   return { ...(prop as Property), units: units as Unit[] }
 }
@@ -26,7 +26,7 @@ export async function fetchPropertyBySlug(slug: string): Promise<PropertyWithUni
 export type AvailableUnit = { unit_id: string; property_id: string; nights: number; total: number }
 
 export async function fetchAvailability(checkIn: string, checkOut: string, guests: number, propertyId?: string): Promise<AvailableUnit[]> {
-  const { data, error } = await sb().rpc('get_available_units', { p_in: checkIn, p_out: checkOut, p_guests: guests, p_property: propertyId ?? null })
+  const { data, error } = await pub().rpc('get_available_units', { p_in: checkIn, p_out: checkOut, p_guests: guests, p_property: propertyId ?? null })
   if (error) throw error
   return data as AvailableUnit[]
 }
@@ -34,14 +34,14 @@ export async function fetchAvailability(checkIn: string, checkOut: string, guest
 export type DateRange = { start_date: string; end_date: string }
 /** Occupied [start, end) ranges for a unit. Dates only: no guest data is ever exposed. */
 export async function fetchUnavailableDates(unitId: string): Promise<DateRange[]> {
-  const { data, error } = await sb().rpc('get_unit_unavailable_dates', { p_unit: unitId })
+  const { data, error } = await pub().rpc('get_unit_unavailable_dates', { p_unit: unitId })
   if (error) throw error
   return data as DateRange[]
 }
 
 export type ServerQuote = { nights: number; nightly_total: number; cleaning_fee: number; total: number; min_nights: number }
 export async function fetchQuote(unitId: string, checkIn: string, checkOut: string): Promise<ServerQuote | null> {
-  const { data, error } = await sb().rpc('quote_stay', { p_unit: unitId, p_in: checkIn, p_out: checkOut })
+  const { data, error } = await pub().rpc('quote_stay', { p_unit: unitId, p_in: checkIn, p_out: checkOut })
   if (error) throw error
   return (data as ServerQuote[])[0] ?? null
 }

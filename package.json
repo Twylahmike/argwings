@@ -21,13 +21,15 @@
     "export-all": "node scripts/export-all.mjs",
     "check:functions": "deno check --config scripts/deno.check.json supabase/functions/*/index.ts",
     "dev:functions": "node scripts/dev-functions.mjs",
-    "test:api": "node --test --test-concurrency=1 tests/api/payments.test.mjs"
+    "test:api": "node --test --test-concurrency=1 tests/api/payments.test.mjs",
+    "check:bundle": "node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.1",
     "@radix-ui/react-dialog": "^1.3.1",
     "@radix-ui/react-label": "^2.1.17",
     "@radix-ui/react-slot": "^1.5.0",
+    "@supabase/postgrest-js": "^2.118.0",
     "@supabase/supabase-js": "^2.118.0",
     "@tanstack/react-query": "^5.105.0",
     "@tanstack/react-router": "^1.170.46",

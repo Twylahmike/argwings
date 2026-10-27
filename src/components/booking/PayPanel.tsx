@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { CheckCircle2, Loader2, Smartphone, XCircle } from 'lucide-react'
-import { callFunction, FunctionError } from '~/lib/supabase'
+import { callFunction, FunctionError } from '~/lib/functions'
 import { formatKES, parseKES } from '~/lib/money'
 import { formatPhoneLocal, normalizePhone } from '~/lib/phone'
 import { mpesaFailureMessage, STK_WAIT_SECONDS } from '~/lib/payment-messages'
@@ -46,7 +46,7 @@ export function PayPanel({
     if (amount > owing) { setError(`That is more than the balance of ${formatKES(owing)}.`); return }
     setBusy(true)
     try {
-      await callFunction('mpesa-stk-push', { token, phone: p.phone, amount, kind: needsDeposit ? 'deposit' : 'balance' })
+      await callFunction('mpesa-stk-push', { token, phone: p.phone, amount, kind: needsDeposit ? 'deposit' : 'balance' }, { auth: false })
       setStartedAt(Date.now())
       onStarted()
     } catch (e) {

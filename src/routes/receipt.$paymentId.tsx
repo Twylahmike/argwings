@@ -1,7 +1,7 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Printer } from 'lucide-react'
-import { sb } from '~/lib/supabase'
+import { pub } from '~/lib/public-client'
 import { formatKES } from '~/lib/money'
 import { formatDate, formatDateTime } from '~/lib/dates'
 import { METHOD_LABEL, type PaymentKind, type PaymentMethod } from '~/lib/types'
@@ -28,7 +28,7 @@ function ReceiptPage() {
     queryKey: ['receipt', paymentId, token],
     enabled: !!token,
     queryFn: async () => {
-      const { data, error } = await sb().rpc('get_receipt', { p_payment: paymentId, p_token: token })
+      const { data, error } = await pub().rpc('get_receipt', { p_payment: paymentId, p_token: token })
       if (error) throw error
       return (data as Receipt | null) ?? null
     },

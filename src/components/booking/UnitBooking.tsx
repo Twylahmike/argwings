@@ -3,7 +3,7 @@ import { Link } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { BedDouble, CalendarDays, MessageCircle, Users } from 'lucide-react'
 import { toast } from 'sonner'
-import { callFunction } from '~/lib/supabase'
+import { callFunction } from '~/lib/functions'
 import { fetchQuote, fetchUnavailableDates } from '~/lib/public-api'
 import { useBrand, waLink } from '~/lib/brand'
 import { calcDeposit } from '~/lib/pricing'
@@ -127,7 +127,7 @@ function WhatsAppDialog({ unit, property, checkIn, checkOut, guests, nights, tot
       // Optional short hold so nobody else can take the dates while the guest chats with us.
       const res = await callFunction<{ booking: { reference: string } }>('create-booking', {
         unit_id: unit.id, check_in: checkIn, check_out: checkOut, guests, name: name.trim(), phone: p.phone, source: 'whatsapp',
-      })
+      }, { auth: false })
       setLink(waLink(number, message({ reference: res.booking.reference, name: name.trim() })))
       toast.success(`Dates held for ${brand.holdMinutes} minutes`)
     } catch (e) {

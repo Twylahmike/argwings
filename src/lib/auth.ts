@@ -1,5 +1,4 @@
 import { redirect } from '@tanstack/react-router'
-import { sb } from './supabase'
 import type { AppRole } from './types'
 
 export type StaffProperty = { id: string; name: string; slug: string; active: boolean; sort: number }
@@ -25,6 +24,8 @@ export const homePath = (me: Me) => (canManage(me) ? '/admin' : '/admin/housekee
  * This only drives UI; the real enforcement is RLS in the database.
  */
 export async function fetchMe(): Promise<Me | null> {
+  // Loaded on demand: route guards live in the main bundle and must not drag the auth client into the guest site.
+  const { sb } = await import('./supabase')
   const client = sb()
   const { data } = await client.auth.getSession()
   const user = data.session?.user

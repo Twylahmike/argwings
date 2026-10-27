@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
 import { fetchProperties } from '~/lib/public-api'
-import { isSupabaseConfigured } from '~/lib/supabase'
+import { isSupabaseConfigured } from '~/lib/config'
 import { PublicLayout } from '~/components/layout/PublicLayout'
 import { SearchBar } from '~/components/booking/SearchBar'
 import { PropertyCard } from '~/components/booking/PropertyCard'
@@ -37,7 +37,7 @@ function Home() {
         <h2 id="props" className="mb-5 text-xl font-semibold">Our properties</h2>
         {properties.length === 0
           ? <EmptyState icon={Building2} title="Properties are coming soon" description="Please check back shortly, or message us on WhatsApp." />
-          : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{properties.map((p) => <PropertyCard key={p.id} p={p} />)}</div>}
+          : <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{properties.map((p, i) => <PropertyCard key={p.id} p={p} priority={i < 2} />)}</div>}
       </section>
     </PublicLayout>
   )

@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { CalendarClock, ExternalLink, MapPin, MessageCircle, Phone, Receipt } from 'lucide-react'
-import { sb } from '~/lib/supabase'
+import { pub } from '~/lib/public-client'
 import { mapsLink } from '~/lib/public-api'
 import { formatKES } from '~/lib/money'
 import { formatDate, formatDateTime, formatTime } from '~/lib/dates'
@@ -36,7 +36,7 @@ function BookingPage() {
     queryKey: ['public-booking', token],
     enabled: UUID.test(token),
     queryFn: async () => {
-      const { data, error } = await sb().rpc('get_booking_by_token', { p_token: token })
+      const { data, error } = await pub().rpc('get_booking_by_token', { p_token: token })
       if (error) throw error
       return (data as PublicBooking | null) ?? null
     },

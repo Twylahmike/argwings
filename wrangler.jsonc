@@ -3,6 +3,6 @@
   "name": "bnb-system",
   "compatibility_date": "2026-01-15",
   "compatibility_flags": ["nodejs_compat"],
-  "main": "@tanstack/react-start/server-entry",
+  "main": "src/server.ts",
   "observability": { "enabled": true }
 }

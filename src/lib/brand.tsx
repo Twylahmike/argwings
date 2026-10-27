@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
-import { sb, isSupabaseConfigured } from './supabase'
+import { pub } from './public-client'
+import { isSupabaseConfigured } from './config'
 
 export type Brand = {
   businessName: string
@@ -27,7 +28,7 @@ export const DEFAULT_BRAND: Brand = {
 export async function fetchBrand(): Promise<Brand> {
   if (!isSupabaseConfigured) return DEFAULT_BRAND
   try {
-    const { data } = await sb().from('settings').select('key, value')
+    const { data } = await pub().from('settings').select('key, value')
     const m = Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value]))
     const str = (k: string, d: string) => (typeof m[k] === 'string' && m[k] ? (m[k] as string) : d)
     const num = (k: string, d: number) => (Number.isFinite(Number(m[k])) && m[k] != null ? Number(m[k]) : d)

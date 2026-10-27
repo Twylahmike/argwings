@@ -148,7 +148,7 @@ function System() {
       </CardContent></Card>
       <Card><CardHeader><CardTitle>WhatsApp messages</CardTitle></CardHeader><CardContent className="grid gap-3 text-sm">
         <label className="flex h-11 items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={!!wa.data} disabled={wa.isLoading || toggle.isPending} onChange={(e) => toggle.mutate(e.target.checked)} /> Send automatic WhatsApp messages</label>
-        {s && <p className="text-muted-foreground">Server credentials: {s.whatsapp_configured ? <b className="text-emerald-700">configured</b> : <b className="text-amber-700">not configured (WHATSAPP_ENABLED / WHATSAPP_TOKEN / WHATSAPP_PHONE_NUMBER_ID)</b>}{s.whatsapp_templates ? ' · using approved templates' : ' · using session messages'}.</p>}
+        {s && <p className="text-muted-foreground">Server credentials: {s.whatsapp_configured ? <b className="text-emerald-700">configured</b> : <b className="text-amber-700">not configured on the server (see the WhatsApp section of DEPLOY.md)</b>}{s.whatsapp_templates ? ' · using approved templates' : ' · using session messages'}.</p>}
         <p className="text-muted-foreground">When sending is off or fails, nothing breaks: open the booking or the Messages page and tap "Send via WhatsApp" to send the same text yourself.</p>
       </CardContent></Card>
     </div>

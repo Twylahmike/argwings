@@ -6,6 +6,7 @@ export default tseslint.config(
   { ignores: ['node_modules', 'dist', '.output', '.wrangler', 'src/routeTree.gen.ts', 'supabase/functions', 'scripts', 'test-results', 'playwright-report'] },
   js.configs.recommended,
   ...tseslint.configs.recommended,
+  { files: ['**/*.mjs', 'tests/**/*.ts', 'playwright.config.ts'], languageOptions: { globals: { process: 'readonly', console: 'readonly', fetch: 'readonly', setTimeout: 'readonly', URL: 'readonly' } } },
   {
     plugins: { 'react-hooks': reactHooks },
     rules: {

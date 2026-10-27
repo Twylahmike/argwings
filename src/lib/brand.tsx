@@ -39,7 +39,7 @@ export async function fetchBrand(): Promise<Brand> {
       depositPercent: num('deposit_percent', 50),
       holdMinutes: num('hold_minutes', 15),
       manualInstructions: str('mpesa_manual_instructions', DEFAULT_BRAND.manualInstructions),
-      mpesaPaybillDisplay: DEFAULT_BRAND.mpesaPaybillDisplay,
+      mpesaPaybillDisplay: str('mpesa_paybill_display', DEFAULT_BRAND.mpesaPaybillDisplay),
     }
   } catch {
     return DEFAULT_BRAND

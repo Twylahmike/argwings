@@ -24,7 +24,7 @@ export function sb(): SupabaseClient {
   return browserClient
 }
 
-export const functionsUrl = url ? `${url}/functions/v1` : ''
+export const functionsUrl = (import.meta.env.VITE_FUNCTIONS_URL as string | undefined) || (url ? `${url}/functions/v1` : '')
 
 /** Calls an edge function. Errors come back as { error: { code, message } } and are thrown as Error with .code/.status. */
 export class FunctionError extends Error {

@@ -64,7 +64,7 @@ export type PublicBooking = {
   }
   cancellation_policy: string | null
   payments: { id: string; kind: PaymentKind; method: PaymentMethod; status: PaymentStatus; amount: number
-    mpesa_receipt: string | null; result_desc: string | null; created_at: string; confirmed_at: string | null }[]
+    mpesa_receipt: string | null; result_code: number | null; result_desc: string | null; created_at: string; confirmed_at: string | null }[]
 }
 
 export const STATUS_LABEL: Record<BookingStatus, string> = {

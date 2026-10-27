@@ -101,7 +101,7 @@ create policy messages_manager_insert on message_log for insert to authenticated
 
 -- ---- settings ----------------------------------------------------------------
 create policy settings_public_read on settings for select to anon, authenticated
-  using (key in ('business_name','cancellation_policy','logo_url','support_whatsapp','deposit_percent','hold_minutes','mpesa_manual_instructions'));
+  using (key in ('business_name','cancellation_policy','logo_url','support_whatsapp','deposit_percent','hold_minutes','mpesa_manual_instructions','mpesa_paybill_display'));
 create policy settings_manager_read on settings for select to authenticated
   using (has_role((select auth.uid()),'owner') or has_role((select auth.uid()),'manager'));
 create policy settings_owner_write on settings for all to authenticated

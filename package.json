@@ -19,7 +19,9 @@
     "seed": "node scripts/seed.mjs",
     "seed:users": "node scripts/seed-users.mjs",
     "export-all": "node scripts/export-all.mjs",
-    "check:functions": "deno check --config scripts/deno.check.json supabase/functions/*/index.ts"
+    "check:functions": "deno check --config scripts/deno.check.json supabase/functions/*/index.ts",
+    "dev:functions": "node scripts/dev-functions.mjs",
+    "test:api": "node --test --test-concurrency=1 tests/api/payments.test.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^6.0.1",
@@ -59,6 +61,7 @@
     "eslint-plugin-react-hooks": "^7.1.1",
     "pg": "^8.23.1",
     "prettier": "^3.9.10",
+    "supabase": "^2.122.0",
     "tailwindcss": "^4.3.3",
     "typescript": "5.9",
     "typescript-eslint": "^8.72.1",

@@ -389,7 +389,7 @@ language sql stable security definer set search_path = public as $$
     'cancellation_policy', (select value #>> '{}' from settings where key = 'cancellation_policy'),
     'payments', coalesce((select jsonb_agg(jsonb_build_object(
         'id', pay.id, 'kind', pay.kind, 'method', pay.method, 'status', pay.status, 'amount', pay.amount,
-        'mpesa_receipt', pay.mpesa_receipt, 'result_desc', pay.result_desc,
+        'mpesa_receipt', pay.mpesa_receipt, 'result_code', pay.result_code, 'result_desc', pay.result_desc,
         'created_at', pay.created_at, 'confirmed_at', pay.confirmed_at) order by pay.created_at desc)
       from payments pay where pay.booking_id = b.id), '[]'::jsonb)
   )

@@ -256,7 +256,8 @@ insert into settings(key,value) values
   ('logo_url','""'), ('support_whatsapp','""'),
   ('default_check_in_time','"14:00"'), ('default_check_out_time','"10:00"'),
   ('whatsapp_enabled','false'),
-  ('mpesa_manual_instructions','"Pay to the Paybill/Till shown below, using your booking reference as the account number."');
+  ('mpesa_manual_instructions','"Pay to the Paybill/Till shown below, using your booking reference as the account number."'),
+  ('mpesa_paybill_display','""'), ('owner_notify_phone','""');
 
 create table audit_log (
   id bigint generated always as identity primary key,

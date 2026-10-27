@@ -12,3 +12,4 @@ playwright-report
 *.log
 .pgdata
 exports
+supabase/functions/.env

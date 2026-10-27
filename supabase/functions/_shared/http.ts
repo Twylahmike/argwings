@@ -1,6 +1,8 @@
 import { corsHeaders } from './cors.ts'
 import { makeLogger, type Logger } from './log.ts'
 
+declare const Deno: { env: { get(k: string): string | undefined } }
+
 /** Thrown by handlers to produce a structured error response: { error: { code, message } }. */
 export class HttpError extends Error {
   constructor(public status: number, public code: string, message: string) {
@@ -57,4 +59,11 @@ export function safeEqual(a: string, b: string): boolean {
 
 export function clientIp(req: Request): string {
   return (req.headers.get('cf-connecting-ip') ?? req.headers.get('x-forwarded-for') ?? 'unknown').split(',')[0].trim()
+}
+
+/** Cron / internal callers must present the service-role key (verify_jwt alone would also admit the public anon key). */
+export function requireServiceRole(req: Request): void {
+  const key = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
+  const token = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
+  if (!key || !safeEqual(token, key)) throw new HttpError(401, 'unauthorized', 'This endpoint is for scheduled jobs only.')
 }

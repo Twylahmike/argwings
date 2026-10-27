@@ -257,7 +257,7 @@ test('RLS: anon cannot read bookings, guests, payments; can use availability and
     for (const k of ['email', 'id_number', 'notes', 'guest_id', 'created_by']) assert.ok(!(k in info), `${k} must not leak`)
     assert.equal((await one(c, 'select get_booking_by_token($1) j', [randomUUID()])).j, null)
     const settings = await q(c, 'select key from settings')
-    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions'].includes(s.key)))
+    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display'].includes(s.key)))
     assert.ok(settings.length > 0)
   }))
 

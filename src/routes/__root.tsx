@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query'
 import { Toaster } from 'sonner'
 import appCss from '~/styles/theme.css?url'
 import { BrandContext, fetchBrand } from '~/lib/brand'
+import { brandCss } from '~/lib/color'
 
 export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()({
   head: () => ({
@@ -25,9 +26,13 @@ function RootComponent() {
   const { queryClient } = Route.useRouteContext()
   const { brand } = Route.useLoaderData()
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <HeadContent />
+        {/* Owner-chosen brand colour (Settings). Falls back to the defaults in styles/theme.css. */}
+        {brand.brandColor && <style dangerouslySetInnerHTML={{ __html: brandCss(brand.brandColor) }} />}
+        {/* Apply the saved theme before first paint to avoid a light flash in dark mode. */}
+        <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}" }} />
       </head>
       <body>
         <QueryClientProvider client={queryClient}>

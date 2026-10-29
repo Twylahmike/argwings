@@ -31,9 +31,9 @@ export async function open(page: Page, url: string) {
 
 export async function searchAndBook(page: Page, dates: { checkIn: string; checkOut: string }, guests = 2) {
   await open(page, '/')
-  await page.getByLabel('Check-in').fill(dates.checkIn)
-  await page.getByLabel('Check-out').fill(dates.checkOut)
-  await page.getByLabel('Guests').selectOption(String(guests))
+  await page.getByLabel('Check-in', { exact: true }).fill(dates.checkIn)
+  await page.getByLabel('Check-out', { exact: true }).fill(dates.checkOut)
+  await page.getByLabel('Guests', { exact: true }).selectOption(String(guests))
   await page.getByRole('button', { name: 'Search' }).click()
   await expect(page).toHaveURL(/\/search/)
 }

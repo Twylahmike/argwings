@@ -3,7 +3,7 @@ import { createFileRoute, Link } from '@tanstack/react-router'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { AlertTriangle } from 'lucide-react'
 import { sb } from '~/lib/supabase'
-import { requireRole } from '~/lib/auth'
+import { isOwner, requireRole } from '~/lib/auth'
 import { BOOKING_SELECT, balance, type BookingRow } from '~/lib/bookings-api'
 import { addDays, formatDate, monthStart, todayNairobi } from '~/lib/dates'
 import { formatKES } from '~/lib/money'
@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { ErrorState, PageHeader, Skeleton, Stat } from '~/components/ui/misc'
 import { BookingLink, Money } from '~/components/booking/BookingBits'
 import { useAdmin } from '~/components/layout/AdminShell'
+import { GettingStarted } from '~/components/layout/GettingStarted'
 
 export const Route = createFileRoute('/admin/')({
   beforeLoad: ({ context }) => requireRole(context.me, ['owner', 'manager']),
@@ -29,7 +30,7 @@ function Dashboard() {
     queryKey: ['dashboard', scopeIds, today],
     queryFn: async () => {
       const [live, owing, review, units, tasks, pnl] = await Promise.all([
-        sb().from('bookings').select(BOOKING_SELECT).in('property_id', scopeIds).in('status', ['pending', 'confirmed', 'checked_in', 'checked_out', 'blocked']).lte('check_in', addDays(today, 7)).gte('check_out', today).limit(2000),
+        sb().from('bookings').select(BOOKING_SELECT).in('property_id', scopeIds).in('status', ['pending', 'confirmed', 'checked_in', 'checked_out', 'blocked']).lte('check_in', addDays(today, 14)).gte('check_out', today).limit(2000),
         sb().from('bookings').select(BOOKING_SELECT).in('property_id', scopeIds).in('status', ['confirmed', 'checked_in', 'checked_out']).gte('check_out', addDays(today, -60)).limit(2000),
         sb().from('bookings').select(BOOKING_SELECT).in('property_id', scopeIds).eq('payment_review', true).limit(50),
         sb().from('units').select('id', { count: 'exact', head: true }).in('property_id', scopeIds).eq('active', true),
@@ -67,13 +68,14 @@ function Dashboard() {
       {q.error && <ErrorState error={q.error} retry={() => q.refetch()} />}
       {d && (
         <div className="grid grid-cols-1 gap-5">
+          {isOwner(me) && <GettingStarted />}
           {d.review.length > 0 && (
             <div role="alert" className="rounded-xl border border-danger/50 bg-danger/5 p-4">
               <p className="flex items-center gap-2 font-semibold text-danger"><AlertTriangle className="h-5 w-5" aria-hidden /> Payments needing review ({d.review.length})</p>
               <ul className="mt-2 grid gap-1 text-sm">{d.review.map((b) => <li key={b.id}><BookingLink id={b.id}>{b.reference}</BookingLink> · {b.guest?.full_name} · {b.review_reason}</li>)}</ul>
             </div>
           )}
-          <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 [&>*:last-child]:col-span-2 lg:[&>*:last-child]:col-span-1">
             <Stat label="Arriving today" value={arrivals.length} /><Stat label="Departing today" value={departures.length} />
             <Stat label="In-house guests" value={inHouse.reduce((s, b) => s + b.num_guests, 0)} hint={`${inHouse.length} booking${inHouse.length === 1 ? '' : 's'}`} />
             <Stat label="Needs cleaning" value={d.tasks} tone={d.tasks > 0 ? 'warn' : undefined} hint="units" />
@@ -81,9 +83,10 @@ function Dashboard() {
             <Stat label="Revenue this month" value={formatKES(d.revenue)} /><Stat label="Outstanding balances" value={formatKES(d.owing.reduce((s, b) => s + balance(b), 0))} hint={`${d.owing.length} booking${d.owing.length === 1 ? '' : 's'}`} tone={d.owing.length ? 'warn' : undefined} />
             <Stat label="Pending holds" value={d.holds} />
           </div>
+          <OccupancyStrip bookings={total} units={d.unitCount} from={today} />
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <ListCard title="Arriving today" rows={arrivals} empty="No arrivals today." extra={(b) => <><StatusBadge status={b.status} /> {balance(b) > 0 && <span className="text-xs text-amber-700 dark:text-amber-400">owes {formatKES(balance(b))}</span>}</>} />
-            <ListCard title="Departing today" rows={departures} empty="No departures today." extra={(b) => balance(b) > 0 ? <span className="text-xs text-amber-700 dark:text-amber-400">owes {formatKES(balance(b))}</span> : <span className="text-xs text-emerald-700 dark:text-emerald-400">paid</span>} />
+            <ListCard title="Departing today" dateOf="out" rows={departures} empty="No departures today." extra={(b) => balance(b) > 0 ? <span className="text-xs text-amber-700 dark:text-amber-400">owes {formatKES(balance(b))}</span> : <span className="text-xs text-emerald-700 dark:text-emerald-400">paid</span>} />
             <ListCard title="Balances due" rows={d.owing.sort((a, b) => a.check_in.localeCompare(b.check_in)).slice(0, 10)} empty="Nobody owes anything." extra={(b) => <Money value={balance(b)} className="font-medium" />} />
           </div>
           <p className="text-xs text-muted-foreground">Updates live as bookings and payments come in. <Link to="/admin/calendar" className="underline">Open the calendar</Link></p>
@@ -93,7 +96,7 @@ function Dashboard() {
   )
 }
 
-function ListCard({ title, rows, empty, extra }: { title: string; rows: BookingRow[]; empty: string; extra: (b: BookingRow) => React.ReactNode }) {
+function ListCard({ title, rows, empty, extra, dateOf = 'in' }: { title: string; rows: BookingRow[]; empty: string; extra: (b: BookingRow) => React.ReactNode; dateOf?: 'in' | 'out' }) {
   return (
     <Card>
       <CardHeader><CardTitle>{title}</CardTitle></CardHeader>
@@ -101,10 +104,35 @@ function ListCard({ title, rows, empty, extra }: { title: string; rows: BookingR
         {rows.length === 0 ? <p className="py-3 text-sm text-muted-foreground">{empty}</p> : (
           <ul className="divide-y">{rows.map((b) => (
             <li key={b.id} className="flex items-center justify-between gap-3 py-2.5 text-sm">
-              <div className="min-w-0"><BookingLink id={b.id}>{b.guest?.full_name ?? b.reference}</BookingLink><p className="truncate text-xs text-muted-foreground">{b.property.name} · {b.unit.name} · {formatDate(b.check_in)}</p></div>
+              <div className="min-w-0"><BookingLink id={b.id}>{b.guest?.full_name ?? b.reference}</BookingLink><p className="truncate text-xs text-muted-foreground">{b.property.name} · {b.unit.name} · {formatDate(dateOf === 'out' ? b.check_out : b.check_in)}</p></div>
               <div className="flex shrink-0 items-center gap-2">{extra(b)}</div>
             </li>))}</ul>
         )}
+      </CardContent>
+    </Card>
+  )
+}
+
+/** 14 nights of occupancy as plain CSS bars (no chart library on the landing screen). */
+function OccupancyStrip({ bookings, units, from }: { bookings: BookingRow[]; units: number; from: string }) {
+  const days = Array.from({ length: 14 }, (_, i) => addDays(from, i))
+  return (
+    <Card>
+      <CardHeader><CardTitle>Next 14 nights</CardTitle></CardHeader>
+      <CardContent>
+        <ul className="flex items-end gap-1" aria-label="Occupancy for the next 14 nights">
+          {days.map((d, i) => {
+            const pct = occupancyPct(bookings, units, d, 1)
+            return (
+              <li key={d} className="flex flex-1 flex-col items-center gap-1" title={`${formatDate(d)}: ${pct}% occupied`}>
+                <span className="text-[10px] tabular-nums text-muted-foreground">{pct}</span>
+                <span className="flex h-20 w-full items-end rounded bg-muted"><span className="w-full rounded bg-brand" style={{ height: `${Math.max(pct, 3)}%`, opacity: i === 0 ? 1 : 0.75 }} /></span>
+                <span className={`text-[10px] ${i === 0 ? 'font-semibold text-brand' : 'text-muted-foreground'}`}>{Number(d.slice(8))}</span>
+              </li>
+            )
+          })}
+        </ul>
+        <p className="mt-2 text-xs text-muted-foreground">Percent of units occupied each night.</p>
       </CardContent>
     </Card>
   )

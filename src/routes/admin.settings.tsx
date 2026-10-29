@@ -7,6 +7,7 @@ import { callFunction, sb } from '~/lib/supabase'
 import { requireRole } from '~/lib/auth'
 import { uploadImage } from '~/lib/images'
 import { normalizePhone } from '~/lib/phone'
+import { HEX_RE, readableOn } from '~/lib/color'
 import { formatDateTime } from '~/lib/dates'
 import { toCsv, downloadCsv } from '~/lib/csv'
 import { errMessage } from '~/lib/utils'
@@ -22,7 +23,7 @@ export const Route = createFileRoute('/admin/settings')({
 })
 
 type Vals = Record<string, string>
-const KEYS = ['business_name', 'logo_url', 'support_whatsapp', 'owner_notify_phone', 'mpesa_paybill_display', 'mpesa_manual_instructions', 'deposit_percent', 'hold_minutes',
+const KEYS = ['business_name', 'brand_color', 'logo_url', 'support_whatsapp', 'owner_notify_phone', 'mpesa_paybill_display', 'mpesa_manual_instructions', 'deposit_percent', 'hold_minutes',
   'default_check_in_time', 'default_check_out_time', 'cancellation_policy', 'reminder_days_before', 'balance_reminder_days_before'] as const
 
 function SettingsPage() {
@@ -71,6 +72,7 @@ function Business() {
           if (!Number.isFinite(n) || raw === '' || n < lo || n > hi || !Number.isInteger(n)) errs[k] = `Enter a whole number from ${lo} to ${hi}.`
           val = n
         } else if (k === 'business_name' && !raw) errs[k] = 'Enter your business name.'
+        else if (k === 'brand_color' && raw && !HEX_RE.test(raw)) errs[k] = 'Use a colour like #0f766e.'
         rows.push({ key: k, value: val, updated_at: new Date().toISOString() })
       }
       setErrors(errs)
@@ -101,7 +103,13 @@ function Business() {
           <label className="inline-flex"><input type="file" accept="image/*" hidden onChange={(e) => logo(e.target.files?.[0])} /><span role="button" tabIndex={0} className="inline-flex h-11 cursor-pointer items-center gap-2 rounded-md border bg-card px-4 text-sm font-medium hover:bg-muted"><ImagePlus className="h-4 w-4" /> {busyLogo ? 'Uploading…' : 'Upload logo'}</span></label>
           {v.logo_url && <Button variant="ghost" size="sm" onClick={() => setV((s) => ({ ...s, logo_url: '' }))}>Remove</Button>}
         </div>
-        <p className="text-xs text-muted-foreground">Brand colours live in <code>src/styles/theme.css</code> (two variables).</p>
+        <Field label="Brand colour" htmlFor="s-brand_color" error={errors.brand_color} hint="Buttons, links and highlights across the site and admin. The text colour adjusts automatically.">
+          <div className="flex items-center gap-3">
+            <input aria-label="Pick a colour" type="color" className="h-11 w-14 cursor-pointer rounded-md border bg-card p-1" value={HEX_RE.test(v.brand_color ?? '') ? v.brand_color : '#0f766e'} onChange={set('brand_color')} />
+            <Input id="s-brand_color" className="w-32 font-mono" value={v.brand_color ?? ''} onChange={set('brand_color')} placeholder="#0f766e" aria-invalid={!!errors.brand_color} />
+            {HEX_RE.test(v.brand_color ?? '') && <span className="inline-flex h-11 items-center rounded-md px-4 text-sm font-medium" style={{ background: v.brand_color, color: readableOn(v.brand_color) }}>Preview</span>}
+          </div>
+        </Field>
       </CardContent></Card>
       <Card><CardHeader><CardTitle>Contact</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
         {f('support_whatsapp', 'Support WhatsApp', { inputMode: 'tel', hint: 'Shown to guests. Also the fallback for "Book on WhatsApp".' })}

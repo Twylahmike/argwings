@@ -71,8 +71,10 @@ function BookingsPage() {
         <Select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value as '' | BookingStatus)}>
           <option value="">All statuses</option>{STATUSES.map((s) => <option key={s} value={s}>{STATUS_LABEL[s]}</option>)}
         </Select>
-        <Input aria-label="Stays ending on or after" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-        <Input aria-label="Stays starting on or before" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        <div className="grid grid-cols-2 gap-3 sm:contents">
+          <Input aria-label="Stays ending on or after" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+  <Input aria-label="Stays starting on or before" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+        </div>
         <label className="flex h-11 items-center gap-2 text-sm"><input type="checkbox" className="h-5 w-5" checked={balanceDue} onChange={(e) => setBalanceDue(e.target.checked)} /> Balance due</label>
       </div>
       {q.isLoading && <Skeleton className="h-64" />}
@@ -81,6 +83,18 @@ function BookingsPage() {
       {rows.length > 0 && (
         <>
           <p className="mb-2 text-sm text-muted-foreground">{rows.length} booking{rows.length === 1 ? '' : 's'}{q.data && q.data.length >= 1000 ? ' (showing the latest 1,000: narrow the dates)' : ''}</p>
+          <ul className="grid gap-3 md:hidden" aria-label="Bookings">
+            {rows.map((b) => (
+              <li key={b.id} className="rounded-xl border bg-card p-4">
+                <div className="flex items-start justify-between gap-2"><div><BookingLink id={b.id}>{b.reference}</BookingLink><p className="text-sm">{b.guest?.full_name ?? 'Blocked dates'}</p></div><StatusBadge status={b.status} /></div>
+                <p className="mt-2 text-sm text-muted-foreground">{b.property.name} · {b.unit.name}</p>
+                <p className="text-sm">{formatDate(b.check_in)} → {formatDate(b.check_out)} · {b.nights} night{b.nights === 1 ? '' : 's'}</p>
+                {b.status !== 'blocked' && <p className="mt-2 flex justify-between text-sm"><span>Total <Money value={b.total_amount} /></span><span>Balance <BalanceCell b={b} /></span></p>}
+                {b.payment_review && <p className="mt-1 text-xs font-medium text-danger">Payment needs review</p>}
+              </li>
+            ))}
+          </ul>
+          <div className="hidden md:block">
           <TableWrap>
             <thead><tr>
               {['Reference', 'Guest', 'Property / unit', 'Dates', 'Nights', 'Status', 'Total', 'Paid', 'Balance', 'Source'].map((h) => <th key={h} className={th}>{h}</th>)}
@@ -102,6 +116,7 @@ function BookingsPage() {
               ))}
             </tbody>
           </TableWrap>
+          </div>
         </>
       )}
     </div>

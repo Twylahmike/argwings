@@ -66,7 +66,7 @@ export function Stat({ label, value, hint, tone }: { label: string; value: React
   return (
     <div className="rounded-xl border bg-card p-4">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-      <p className={cn('mt-1 text-2xl font-semibold tabular-nums', tone === 'danger' && 'text-danger')}>{value}</p>
+      <p className={cn('mt-1 whitespace-nowrap text-xl font-semibold tabular-nums sm:text-2xl', tone === 'danger' && 'text-danger')}>{value}</p>
       {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
     </div>
   )

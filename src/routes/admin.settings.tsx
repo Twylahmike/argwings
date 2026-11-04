@@ -11,6 +11,7 @@ import { HEX_RE, readableOn } from '~/lib/color'
 import { formatDateTime } from '~/lib/dates'
 import { toCsv, downloadCsv } from '~/lib/csv'
 import { errMessage } from '~/lib/utils'
+import { WebsiteContentForm } from '~/components/layout/WebsiteContentForm'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
@@ -27,12 +28,13 @@ const KEYS = ['business_name', 'brand_color', 'logo_url', 'support_whatsapp', 'o
   'default_check_in_time', 'default_check_out_time', 'cancellation_policy', 'reminder_days_before', 'balance_reminder_days_before'] as const
 
 function SettingsPage() {
-  const [tab, setTab] = useState<'business' | 'system' | 'audit' | 'export'>('business')
+  const [tab, setTab] = useState<'business' | 'website' | 'system' | 'audit' | 'export'>('business')
   return (
     <div>
       <PageHeader title="Settings" />
-      <div className="mb-5"><Tabs label="Settings sections" value={tab} onChange={setTab} tabs={[{ value: 'business', label: 'Business' }, { value: 'system', label: 'Payments & WhatsApp' }, { value: 'audit', label: 'Audit log' }, { value: 'export', label: 'Data export' }]} /></div>
+      <div className="mb-5"><Tabs label="Settings sections" value={tab} onChange={setTab} tabs={[{ value: 'business', label: 'Business' }, { value: 'website', label: 'Website' }, { value: 'system', label: 'Payments & WhatsApp' }, { value: 'audit', label: 'Audit log' }, { value: 'export', label: 'Data export' }]} /></div>
       {tab === 'business' && <Business />}
+      {tab === 'website' && <WebsiteContentForm />}
       {tab === 'system' && <System />}
       {tab === 'audit' && <Audit />}
       {tab === 'export' && <Export />}

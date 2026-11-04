@@ -12,8 +12,10 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BookRouteImport } from './routes/book'
+import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as SpacesRouteImport } from './routes/spaces'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
 import { Route as AdminChangePasswordRouteImport } from './routes/admin.change-password'
@@ -49,6 +51,11 @@ const BookRoute = BookRouteImport.update({
   path: '/book',
   getParentRoute: () => rootRouteImport,
 } as any)
+const GalleryRoute = GalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
@@ -57,6 +64,11 @@ const LoginRoute = LoginRouteImport.update({
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpacesRoute = SpacesRouteImport.update({
+  id: '/spaces',
+  path: '/spaces',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -159,8 +171,10 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/book': typeof BookRoute
+  '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
+  '/spaces': typeof SpacesRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
@@ -184,8 +198,10 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/book': typeof BookRoute
+  '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
+  '/spaces': typeof SpacesRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
@@ -211,8 +227,10 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/book': typeof BookRoute
+  '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
+  '/spaces': typeof SpacesRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
@@ -239,8 +257,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/book'
+    | '/gallery'
     | '/login'
     | '/search'
+    | '/spaces'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
@@ -264,8 +284,10 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/book'
+    | '/gallery'
     | '/login'
     | '/search'
+    | '/spaces'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
@@ -290,8 +312,10 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/book'
+    | '/gallery'
     | '/login'
     | '/search'
+    | '/spaces'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
@@ -317,8 +341,10 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   BookRoute: typeof BookRoute
+  GalleryRoute: typeof GalleryRoute
   LoginRoute: typeof LoginRoute
   SearchRoute: typeof SearchRoute
+  SpacesRoute: typeof SpacesRoute
   BookingTokenRoute: typeof BookingTokenRoute
   PropertiesSlugRoute: typeof PropertiesSlugRoute
   ReceiptPaymentIdRoute: typeof ReceiptPaymentIdRoute
@@ -347,6 +373,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BookRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/gallery': {
+      id: '/gallery'
+      path: '/gallery'
+      fullPath: '/gallery'
+      preLoaderRoute: typeof GalleryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
@@ -359,6 +392,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/spaces': {
+      id: '/spaces'
+      path: '/spaces'
+      fullPath: '/spaces'
+      preLoaderRoute: typeof SpacesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -541,8 +581,10 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   BookRoute: BookRoute,
+  GalleryRoute: GalleryRoute,
   LoginRoute: LoginRoute,
   SearchRoute: SearchRoute,
+  SpacesRoute: SpacesRoute,
   BookingTokenRoute: BookingTokenRoute,
   PropertiesSlugRoute: PropertiesSlugRoute,
   ReceiptPaymentIdRoute: ReceiptPaymentIdRoute,

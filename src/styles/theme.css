@@ -1,3 +1,10 @@
+@import '@fontsource/inter/latin-400.css';
+@import '@fontsource/inter/latin-500.css';
+@import '@fontsource/inter/latin-600.css';
+@import '@fontsource/cormorant-garamond/latin-400.css';
+@import '@fontsource/cormorant-garamond/latin-500.css';
+@import '@fontsource/cormorant-garamond/latin-600.css';
+@import '@fontsource/cormorant-garamond/latin-400-italic.css';
 @import 'tailwindcss';
 
 /* Brand tokens: change these (and the logo in components/layout/Wordmark.tsx) to re-skin the whole app. */
@@ -12,6 +19,10 @@
   --border: 40 10% 86%;
   --ring: 164 61% 30%;
   --danger: 0 72% 42%;
+  --ink: 200 18% 9%;
+  --ink-foreground: 40 15% 94%;
+  --olive: 91 14% 38%;
+  --radius: 0.75rem;
   --st-pending: 38 92% 44%;
   --st-confirmed: 152 60% 32%;
   --st-checked_in: 214 80% 45%;
@@ -32,6 +43,9 @@
   --border: 200 12% 22%;
   --ring: 160 55% 55%;
   --danger: 0 80% 62%;
+  --ink: 200 20% 5%;
+  --ink-foreground: 40 15% 94%;
+  --olive: 91 14% 46%;
   --st-pending: 38 92% 58%;
   --st-confirmed: 152 55% 50%;
   --st-checked_in: 214 85% 66%;
@@ -53,16 +67,114 @@
   --color-border: hsl(var(--border));
   --color-ring: hsl(var(--ring));
   --color-danger: hsl(var(--danger));
-  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --color-brand-glow: color-mix(in oklab, hsl(var(--brand)), white 45%);
+  --color-olive: hsl(var(--olive));
+  --color-ink: hsl(var(--ink));
+  --color-ink-foreground: hsl(var(--ink-foreground));
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  --font-display: 'Cormorant Garamond', 'Playfair Display', Georgia, serif;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --radius-2xl: calc(var(--radius) + 8px);
 }
 
 html { background: hsl(var(--background)); color: hsl(var(--foreground)); font-family: var(--font-sans); -webkit-text-size-adjust: 100%; }
 body { margin: 0; min-height: 100dvh; background: hsl(var(--background)); }
-* { border-color: hsl(var(--border)); }
+@layer base { * { border-color: hsl(var(--border)); } }
 :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
 button, [role='button'], a, select, input { touch-action: manipulation; }
+html { scroll-behavior: smooth; }
+h1, h2, h3 { text-wrap: balance; }
+
+/* ---------- Public-site design language (layout, type and motion) ---------- */
+.font-display { font-family: var(--font-display); letter-spacing: -0.01em; }
+.eyebrow { font-size: 0.75rem; letter-spacing: 0.32em; text-transform: uppercase; font-weight: 500; }
+.section-title { font-family: var(--font-display); font-weight: 500; line-height: 1.05; font-size: clamp(2.25rem, 6vw, 3.75rem); letter-spacing: -0.01em; }
+
+@keyframes fade-up { from { opacity: 0; transform: translateY(24px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes fade-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes scroll-x { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+@keyframes ken-burns { from { transform: scale(1); } to { transform: scale(1.12); } }
+@keyframes draw-line { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+@keyframes word-in { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes pulse-ring { 0%, 100% { box-shadow: 0 0 0 0 hsl(var(--brand) / 0.55); } 50% { box-shadow: 0 0 0 16px hsl(var(--brand) / 0); } }
+@keyframes drift-up { 0% { transform: translateY(0); opacity: 0; } 15% { opacity: 0.5; } 100% { transform: translateY(-60vh) translateX(16px); opacity: 0; } }
+
+.animate-fade-up { animation: fade-up 0.8s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.animate-fade-in { animation: fade-in 0.8s ease both; }
+.animate-ken { animation: ken-burns 14s ease-in-out infinite alternate; }
+.animate-ring { animation: pulse-ring 3s ease-in-out infinite; }
+.scroll-ticker { animation: scroll-x 40s linear infinite; }
+.scroll-reviews { animation: scroll-x 60s linear infinite; }
+.scroll-reviews:hover { animation-play-state: paused; }
+.word-in { opacity: 0; animation: word-in 0.9s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+.draw-underline { position: relative; display: inline-block; }
+.draw-underline::after { content: ''; position: absolute; left: 0; bottom: -8px; height: 3px; width: 100%; background: hsl(var(--brand)); transform-origin: left; animation: draw-line 1.2s 0.4s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.hover-lift { transition: transform 0.35s ease, box-shadow 0.35s ease; }
+.hover-lift:hover { transform: translateY(-6px); box-shadow: 0 30px 60px -24px hsl(var(--ink) / 0.35); }
+.particle { position: absolute; bottom: 0; width: 6px; height: 6px; border-radius: 9999px; background: hsl(var(--brand-foreground) / 0.5); animation: drift-up linear infinite; }
+
+/* Reveal-on-scroll (toggled by useReveal). Content stays visible without JS. */
+.reveal { opacity: 1; }
+.js .reveal:not(.is-visible) { opacity: 0; transform: translateY(24px); }
+.js .reveal { transition: opacity 0.8s cubic-bezier(0.16, 1, 0.3, 1), transform 0.8s cubic-bezier(0.16, 1, 0.3, 1); transition-delay: var(--d, 0ms); }
+
+.flip-card { perspective: 1000px; }
+.flip-inner { position: relative; transition: transform 0.7s; transform-style: preserve-3d; }
+.flip-card:hover .flip-inner, .flip-card:focus-within .flip-inner, .flip-card[data-flipped='true'] .flip-inner { transform: rotateY(180deg); }
+.flip-face { position: absolute; inset: 0; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.flip-back { transform: rotateY(180deg); }
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .word-in { opacity: 1; }
+  .js .reveal:not(.is-visible) { opacity: 1; transform: none; }
+  .flip-card:hover .flip-inner { transform: none; }
+}
 
 @media print {
   .no-print { display: none !important; }
   body { background: #fff; color: #000; }
 }
+
+
+/* ---------- Public site theme: warm ivory / charcoal / olive, with the owner's brand colour as the accent ---------- */
+.site-theme {
+  --background: 45 38% 96%;
+  --foreground: 40 10% 7%;
+  --card: 45 45% 99%;
+  --muted: 44 24% 92%;
+  --muted-foreground: 40 6% 32%;
+  --border: 42 20% 84%;
+  --ink: 40 8% 5%;
+  --ink-foreground: 45 40% 94%;
+  --olive: 40 8% 11%;
+  --radius: 0.5rem;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+:root[data-theme='dark'] .site-theme {
+  --background: 40 8% 7%;
+  --foreground: 45 40% 94%;
+  --card: 40 7% 11%;
+  --muted: 40 6% 14%;
+  --muted-foreground: 45 14% 68%;
+  --border: 40 6% 22%;
+  --ink: 40 10% 3%;
+  --olive: 40 7% 15%;
+}
+.site-theme h1, .site-theme h2, .site-theme h3 { font-family: var(--font-display); letter-spacing: -0.01em; }
+
+.btn-brand { background: hsl(var(--brand)); color: hsl(var(--brand-foreground)); transition: all 0.3s ease; }
+.btn-brand:hover { background: var(--color-brand-glow); box-shadow: 0 12px 30px -8px hsl(var(--brand) / 0.55); transform: translateY(-2px); }
+.btn-olive { background: hsl(var(--olive)); color: var(--color-brand-glow); border: 1px solid hsl(var(--brand) / 0.5); transition: all 0.3s ease; }
+.btn-olive:hover { filter: brightness(1.25); box-shadow: 0 12px 30px -8px hsl(var(--brand) / 0.45); transform: translateY(-2px); }
+.btn-ivory { background: hsl(48 58% 94%); color: hsl(211 11% 7%); transition: all 0.3s ease; }
+.btn-ivory:hover { box-shadow: 0 0 40px hsl(48 58% 94% / 0.6); transform: translateY(-2px); }
+
+@keyframes ripple { 0% { transform: scale(0); opacity: 0.5; } 100% { transform: scale(4); opacity: 0; } }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.2); } }
+.animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }

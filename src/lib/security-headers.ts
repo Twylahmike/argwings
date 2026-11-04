@@ -13,6 +13,7 @@ export function securityHeaders(opts: { supabaseUrl?: string; functionsUrl?: str
     "font-src 'self' data:",
     "img-src 'self' data: blob: https:",
     `connect-src 'self' ${[...new Set([...origins, ...ws, ...wsLocal])].join(' ')}`.trim(),
+    "frame-src https://www.google.com",
     "frame-ancestors 'none'",
     "base-uri 'self'",
     "form-action 'self' https://wa.me",

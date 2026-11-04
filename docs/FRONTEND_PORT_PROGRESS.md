@@ -6,9 +6,9 @@ Alias: argwings uses `~/`. No DB changes, no edits to `supabase/migrations`, `su
 ## Phases
 - [x] Phase 0 - Recon and port map (this file)
 - [x] Phase 1 - Foundation (theme tokens, fonts, site-content.ts, placeholder-images.ts, placeholder photos, check-no-placeholders)
-- [ ] Phase 2 - Shell (Header, Footer, AnnouncementBar, FloatingWA in PublicLayout)
-- [ ] Phase 3 - Home sections
-- [ ] Phase 4 - /gallery, PWA
+- [x] Phase 2 - Shell (SiteHeader, SiteFooter, AnnouncementBar, FloatingWA in PublicLayout)
+- [x] Phase 3 - Home sections (Hero, TrustBar, Spaces, Facilities, Amenities, HowToBook, PaymentExplainer, Reviews, Gallery teaser, Faq, FinalCTA)
+- [ ] Phase 4 - /gallery (done in Phase 3 commit), PWA (todo)
 - [ ] Phase 5 - Booking CTAs wired to existing flow, mock M-Pesa e2e
 - [ ] Phase 6 - Rebrand sweep + gate
 - [ ] Phase 7 - Verify (typecheck, lint, test, build, check:bundle, e2e, screenshots)
@@ -66,5 +66,16 @@ Collected in `src/lib/site-content.ts` once created (Phase 1).
 - `npm run deploy` now runs `check:placeholders` first (fails while the folder exists).
 - Default business name fallback in brand.tsx is now "RG Wings Stays".
 
+## Phase 2/3 notes
+- PublicLayout now: SiteHeader (fixed + transparent over hero on `/` via `overlay`, sticky on inner pages so the announcement bar never covers content), SiteFooter, FloatingWA. Mobile menu + ThemeToggle in header.
+- WhatsApp: `useWhatsApp()` (src/lib/contact.ts) validates the configured number with `normalizePhone`; invalid/empty -> no link rendered anywhere (header, floating button, footer, FAQ, CTA).
+- TrustBar shows only configured facts (deposit %, hold minutes). No invented stats.
+- Amenities derived from property/unit `amenities[]`; hidden when none. Facilities, Reviews, AnnouncementBar driven by site-content.ts, hidden when empty.
+- PaymentExplainer replaces Everlett's "request booking" form: explains the M-Pesa flow (no card claims) and embeds the real SearchBar. No inquiries insert, no wa.me form submit.
+- FinalCTA: deterministic particles (Everlett used Math.random in render = hydration mismatch), no map iframes (CSP), "Directions" via `mapsLink()`.
+- Gallery fed from property cover_image + gallery[] (no new table); placeholders only when no real photo exists at all. Filter chips = property names.
+- lucide-react v1 has no brand icons: socials are text badges.
+- Kept the existing FAQ block (real answers) as `Faq`.
+
 ## Surprises
-(none yet)
+- Supabase isn't configured in this sandbox, so previews render with zero properties (placeholder hero/gallery only).

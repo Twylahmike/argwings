@@ -12,6 +12,7 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BookRouteImport } from './routes/book'
+import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
@@ -47,6 +48,11 @@ const AdminRoute = AdminRouteImport.update({
 const BookRoute = BookRouteImport.update({
   id: '/book',
   path: '/book',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GalleryRoute = GalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -159,6 +165,7 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/book': typeof BookRoute
+  '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/admin/calendar': typeof AdminCalendarRoute
@@ -184,6 +191,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/book': typeof BookRoute
+  '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/admin/calendar': typeof AdminCalendarRoute
@@ -211,6 +219,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/admin': typeof AdminRouteWithChildren
   '/book': typeof BookRoute
+  '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/admin/calendar': typeof AdminCalendarRoute
@@ -239,6 +248,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/book'
+    | '/gallery'
     | '/login'
     | '/search'
     | '/admin/calendar'
@@ -264,6 +274,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/book'
+    | '/gallery'
     | '/login'
     | '/search'
     | '/admin/calendar'
@@ -290,6 +301,7 @@ export interface FileRouteTypes {
     | '/'
     | '/admin'
     | '/book'
+    | '/gallery'
     | '/login'
     | '/search'
     | '/admin/calendar'
@@ -317,6 +329,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AdminRoute: typeof AdminRouteWithChildren
   BookRoute: typeof BookRoute
+  GalleryRoute: typeof GalleryRoute
   LoginRoute: typeof LoginRoute
   SearchRoute: typeof SearchRoute
   BookingTokenRoute: typeof BookingTokenRoute
@@ -345,6 +358,13 @@ declare module '@tanstack/react-router' {
       path: '/book'
       fullPath: '/book'
       preLoaderRoute: typeof BookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gallery': {
+      id: '/gallery'
+      path: '/gallery'
+      fullPath: '/gallery'
+      preLoaderRoute: typeof GalleryRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -541,6 +561,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AdminRoute: AdminRouteWithChildren,
   BookRoute: BookRoute,
+  GalleryRoute: GalleryRoute,
   LoginRoute: LoginRoute,
   SearchRoute: SearchRoute,
   BookingTokenRoute: BookingTokenRoute,

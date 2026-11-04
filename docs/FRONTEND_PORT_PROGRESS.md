@@ -93,3 +93,10 @@ Collected in `src/lib/site-content.ts` once created (Phase 1).
 - (b) 4 secret/host values from the reference .env checked: zero hits.
 - (c) sha256 of every reference-repo file vs argwings tree: zero matches (photos were resized/re-encoded).
 - (d) `npm run check:placeholders` fails as intended while the folder exists.
+
+## Supabase project bnb-system (bxpgpzrtoxjmynyjnfkg), 2026-11-04, done at the owner's explicit request
+- Migrations 0004 (cron) and 0005 (brand colour) applied; 0001-0003 were already there. Cron jobs verified present.
+- All 10 edge functions deployed from supabase/functions unchanged (verify_jwt per config.toml: false only for mpesa-callback and whatsapp-webhook).
+- Smoke test: create-booking validates input; mpesa-callback rejects a missing token; expire-holds and system-status reject the anon key.
+- Local `.env` (gitignored) points at this project with the public anon key.
+- NOT done (secret writes are blocked in this session): function secrets SITE_URL, MPESA_CALLBACK_SECRET (16+ random chars, required), BUSINESS_NAME, SUPPORT_WHATSAPP; Vault secrets functions_base_url and service_role_key for the reminder/reconcile cron jobs.

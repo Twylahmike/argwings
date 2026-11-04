@@ -24,7 +24,9 @@ import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
 import { Route as AdminHousekeepingRouteImport } from './routes/admin.housekeeping'
 import { Route as AdminInquiriesRouteImport } from './routes/admin.inquiries'
 import { Route as AdminMessagesRouteImport } from './routes/admin.messages'
+import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminRequestsRouteImport } from './routes/admin.requests'
 import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
 import { Route as AdminRoomsRouteImport } from './routes/admin.rooms'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
@@ -32,6 +34,7 @@ import { Route as AdminStaffRouteImport } from './routes/admin.staff'
 import { Route as BookingTokenRouteImport } from './routes/booking.$token'
 import { Route as PropertiesSlugRouteImport } from './routes/properties.$slug'
 import { Route as ReceiptPaymentIdRouteImport } from './routes/receipt.$paymentId'
+import { Route as RequestTokenRouteImport } from './routes/request.$token'
 import { Route as AdminBookingsIndexRouteImport } from './routes/admin.bookings.index'
 import { Route as AdminBookingsIdRouteImport } from './routes/admin.bookings.$id'
 import { Route as AdminBookingsNewRouteImport } from './routes/admin.bookings.new'
@@ -115,9 +118,19 @@ const AdminMessagesRoute = AdminMessagesRouteImport.update({
   path: '/messages',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRequestsRoute = AdminRequestsRouteImport.update({
+  id: '/requests',
+  path: '/requests',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminReviewsRoute = AdminReviewsRouteImport.update({
@@ -153,6 +166,11 @@ const PropertiesSlugRoute = PropertiesSlugRouteImport.update({
 const ReceiptPaymentIdRoute = ReceiptPaymentIdRouteImport.update({
   id: '/receipt/$paymentId',
   path: '/receipt/$paymentId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RequestTokenRoute = RequestTokenRouteImport.update({
+  id: '/request/$token',
+  path: '/request/$token',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminBookingsIndexRoute = AdminBookingsIndexRouteImport.update({
@@ -206,7 +224,9 @@ export interface FileRoutesByFullPath {
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/messages': typeof AdminMessagesRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/requests': typeof AdminRequestsRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -214,6 +234,7 @@ export interface FileRoutesByFullPath {
   '/booking/$token': typeof BookingTokenRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
+  '/request/$token': typeof RequestTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/bookings/$id': typeof AdminBookingsIdRoute
   '/admin/bookings/new': typeof AdminBookingsNewRoute
@@ -237,7 +258,9 @@ export interface FileRoutesByTo {
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/messages': typeof AdminMessagesRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/requests': typeof AdminRequestsRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -245,6 +268,7 @@ export interface FileRoutesByTo {
   '/booking/$token': typeof BookingTokenRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
+  '/request/$token': typeof RequestTokenRoute
   '/admin': typeof AdminIndexRoute
   '/admin/bookings/$id': typeof AdminBookingsIdRoute
   '/admin/bookings/new': typeof AdminBookingsNewRoute
@@ -270,7 +294,9 @@ export interface FileRoutesById {
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/messages': typeof AdminMessagesRoute
+  '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/requests': typeof AdminRequestsRoute
   '/admin/reviews': typeof AdminReviewsRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/admin/settings': typeof AdminSettingsRoute
@@ -278,6 +304,7 @@ export interface FileRoutesById {
   '/booking/$token': typeof BookingTokenRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
+  '/request/$token': typeof RequestTokenRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/bookings/$id': typeof AdminBookingsIdRoute
   '/admin/bookings/new': typeof AdminBookingsNewRoute
@@ -304,7 +331,9 @@ export interface FileRouteTypes {
     | '/admin/housekeeping'
     | '/admin/inquiries'
     | '/admin/messages'
+    | '/admin/notifications'
     | '/admin/reports'
+    | '/admin/requests'
     | '/admin/reviews'
     | '/admin/rooms'
     | '/admin/settings'
@@ -312,6 +341,7 @@ export interface FileRouteTypes {
     | '/booking/$token'
     | '/properties/$slug'
     | '/receipt/$paymentId'
+    | '/request/$token'
     | '/admin/'
     | '/admin/bookings/$id'
     | '/admin/bookings/new'
@@ -335,7 +365,9 @@ export interface FileRouteTypes {
     | '/admin/housekeeping'
     | '/admin/inquiries'
     | '/admin/messages'
+    | '/admin/notifications'
     | '/admin/reports'
+    | '/admin/requests'
     | '/admin/reviews'
     | '/admin/rooms'
     | '/admin/settings'
@@ -343,6 +375,7 @@ export interface FileRouteTypes {
     | '/booking/$token'
     | '/properties/$slug'
     | '/receipt/$paymentId'
+    | '/request/$token'
     | '/admin'
     | '/admin/bookings/$id'
     | '/admin/bookings/new'
@@ -367,7 +400,9 @@ export interface FileRouteTypes {
     | '/admin/housekeeping'
     | '/admin/inquiries'
     | '/admin/messages'
+    | '/admin/notifications'
     | '/admin/reports'
+    | '/admin/requests'
     | '/admin/reviews'
     | '/admin/rooms'
     | '/admin/settings'
@@ -375,6 +410,7 @@ export interface FileRouteTypes {
     | '/booking/$token'
     | '/properties/$slug'
     | '/receipt/$paymentId'
+    | '/request/$token'
     | '/admin/'
     | '/admin/bookings/$id'
     | '/admin/bookings/new'
@@ -396,6 +432,7 @@ export interface RootRouteChildren {
   BookingTokenRoute: typeof BookingTokenRoute
   PropertiesSlugRoute: typeof PropertiesSlugRoute
   ReceiptPaymentIdRoute: typeof ReceiptPaymentIdRoute
+  RequestTokenRoute: typeof RequestTokenRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -505,11 +542,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMessagesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/notifications': {
+      id: '/admin/notifications'
+      path: '/notifications'
+      fullPath: '/admin/notifications'
+      preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/reports': {
       id: '/admin/reports'
       path: '/reports'
       fullPath: '/admin/reports'
       preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/requests': {
+      id: '/admin/requests'
+      path: '/requests'
+      fullPath: '/admin/requests'
+      preLoaderRoute: typeof AdminRequestsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/reviews': {
@@ -559,6 +610,13 @@ declare module '@tanstack/react-router' {
       path: '/receipt/$paymentId'
       fullPath: '/receipt/$paymentId'
       preLoaderRoute: typeof ReceiptPaymentIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/request/$token': {
+      id: '/request/$token'
+      path: '/request/$token'
+      fullPath: '/request/$token'
+      preLoaderRoute: typeof RequestTokenRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/bookings/': {
@@ -621,7 +679,9 @@ interface AdminRouteChildren {
   AdminHousekeepingRoute: typeof AdminHousekeepingRoute
   AdminInquiriesRoute: typeof AdminInquiriesRoute
   AdminMessagesRoute: typeof AdminMessagesRoute
+  AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminReportsRoute: typeof AdminReportsRoute
+  AdminRequestsRoute: typeof AdminRequestsRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
   AdminRoomsRoute: typeof AdminRoomsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
@@ -644,7 +704,9 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminHousekeepingRoute: AdminHousekeepingRoute,
   AdminInquiriesRoute: AdminInquiriesRoute,
   AdminMessagesRoute: AdminMessagesRoute,
+  AdminNotificationsRoute: AdminNotificationsRoute,
   AdminReportsRoute: AdminReportsRoute,
+  AdminRequestsRoute: AdminRequestsRoute,
   AdminReviewsRoute: AdminReviewsRoute,
   AdminRoomsRoute: AdminRoomsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
@@ -672,6 +734,7 @@ const rootRouteChildren: RootRouteChildren = {
   BookingTokenRoute: BookingTokenRoute,
   PropertiesSlugRoute: PropertiesSlugRoute,
   ReceiptPaymentIdRoute: ReceiptPaymentIdRoute,
+  RequestTokenRoute: RequestTokenRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

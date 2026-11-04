@@ -15,7 +15,7 @@ import { WebsiteContentForm } from '~/components/layout/WebsiteContentForm'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
-import { Field, Input, Textarea } from '~/components/ui/form'
+import { Field, Input, Select, Textarea } from '~/components/ui/form'
 import { ErrorState, PageHeader, Skeleton, Tabs, TableWrap, td, th } from '~/components/ui/misc'
 
 export const Route = createFileRoute('/admin/settings')({
@@ -24,7 +24,7 @@ export const Route = createFileRoute('/admin/settings')({
 })
 
 type Vals = Record<string, string>
-const KEYS = ['business_name', 'brand_color', 'logo_url', 'support_whatsapp', 'owner_notify_phone', 'mpesa_paybill_display', 'mpesa_manual_instructions', 'deposit_percent', 'hold_minutes',
+const KEYS = ['business_name', 'brand_color', 'logo_url', 'support_whatsapp', 'owner_notify_phone', 'mpesa_paybill_display', 'mpesa_manual_instructions', 'deposit_percent', 'hold_minutes', 'booking_mode', 'request_hold_hours',
   'default_check_in_time', 'default_check_out_time', 'cancellation_policy', 'reminder_days_before', 'balance_reminder_days_before'] as const
 
 function SettingsPage() {
@@ -64,16 +64,18 @@ function Business() {
       const rows: { key: string; value: unknown; updated_at: string }[] = []
       for (const k of KEYS) {
         let raw = (v[k] ?? '').trim()
+        if (k === 'request_hold_hours' && !raw) raw = '24'
         let val: unknown = raw
         if (k === 'support_whatsapp' || k === 'owner_notify_phone') {
           if (raw) { const p = normalizePhone(raw); if (!p.ok) errs[k] = p.error; else raw = p.phone }
           val = raw
-        } else if (['deposit_percent', 'hold_minutes', 'reminder_days_before', 'balance_reminder_days_before'].includes(k)) {
+        } else if (['deposit_percent', 'hold_minutes', 'request_hold_hours', 'reminder_days_before', 'balance_reminder_days_before'].includes(k)) {
           const n = Number(raw)
-          const [lo, hi] = k === 'deposit_percent' ? [0, 100] : k === 'hold_minutes' ? [1, 1440] : [0, 30]
+          const [lo, hi] = k === 'deposit_percent' ? [0, 100] : k === 'hold_minutes' ? [1, 1440] : k === 'request_hold_hours' ? [1, 168] : [0, 30]
           if (!Number.isFinite(n) || raw === '' || n < lo || n > hi || !Number.isInteger(n)) errs[k] = `Enter a whole number from ${lo} to ${hi}.`
           val = n
         } else if (k === 'business_name' && !raw) errs[k] = 'Enter your business name.'
+        else if (k === 'booking_mode') val = raw === 'request' ? 'request' : 'instant'
         else if (k === 'brand_color' && raw && !HEX_RE.test(raw)) errs[k] = 'Use a colour like #0f766e.'
         rows.push({ key: k, value: val, updated_at: new Date().toISOString() })
       }
@@ -120,6 +122,10 @@ function Business() {
       <Card><CardHeader><CardTitle>Booking rules</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
         {f('deposit_percent', 'Deposit (%)', { inputMode: 'numeric', hint: 'Rounded up to the next KES 10.' })}
         {f('hold_minutes', 'Hold time (minutes)', { inputMode: 'numeric', hint: 'How long dates are held while a guest pays.' })}
+        <Field label="How guests book" htmlFor="s-booking_mode" className="sm:col-span-2" hint="Instant: guests pay a deposit and are confirmed automatically. Request first: guests send a request and you approve it in Requests before they can pay.">
+          <Select id="s-booking_mode" value={v.booking_mode === 'request' ? 'request' : 'instant'} onChange={set('booking_mode')}><option value="instant">Instant booking with payment</option><option value="request">Request first, I approve each booking</option></Select>
+        </Field>
+        {v.booking_mode === 'request' && f('request_hold_hours', 'Hold after approval (hours)', { inputMode: 'numeric', hint: 'How long dates are held for the guest to pay once you approve.' })}
         {f('default_check_in_time', 'Default check-in time', { type: 'time' })}{f('default_check_out_time', 'Default check-out time', { type: 'time' })}
         {f('reminder_days_before', 'Check-in reminder (days before)', { inputMode: 'numeric' })}{f('balance_reminder_days_before', 'Balance reminder (days before)', { inputMode: 'numeric' })}
         <Field label="Cancellation policy" htmlFor="s-cancel" className="sm:col-span-2"><Textarea id="s-cancel" rows={3} value={v.cancellation_policy ?? ''} onChange={set('cancellation_policy')} /></Field>

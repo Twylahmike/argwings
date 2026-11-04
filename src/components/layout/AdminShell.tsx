@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  BarChart3, BedDouble, Brush, Building2, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
+  BarChart3, BedDouble, Brush, Building2, CalendarCheck, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
   Settings, Star, UserCog, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
@@ -12,6 +12,7 @@ import { Dialog, SheetContent } from '~/components/ui/dialog'
 import { cn } from '~/lib/utils'
 import { Wordmark } from './Wordmark'
 import { ThemeToggle } from './ThemeToggle'
+import { NotificationBell } from './NotificationBell'
 
 type AdminCtx = {
   me: Me
@@ -33,6 +34,7 @@ const NAV: NavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, show: canManage, primary: true, group: 'Operations' },
   { to: '/admin/calendar', label: 'Calendar', icon: CalendarDays, show: canManage, primary: true, group: 'Operations' },
   { to: '/admin/bookings', label: 'Bookings', icon: ClipboardList, show: canManage, primary: true, group: 'Operations' },
+  { to: '/admin/requests', label: 'Requests', icon: CalendarCheck, show: canManage, group: 'Operations' },
   { to: '/admin/inquiries', label: 'Inquiries', icon: Inbox, show: canManage, group: 'Operations' },
   { to: '/admin/housekeeping', label: 'Housekeeping', icon: Brush, show: () => true, primary: true, group: 'Operations' },
   { to: '/admin/properties', label: 'Properties', icon: Building2, show: canManage, group: 'Operations' },
@@ -130,6 +132,7 @@ export function AdminShell({ me }: { me: Me }) {
                   {me.properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                 </Select>
               )}
+              {canManage(me) && <NotificationBell />}
               <ThemeToggle />
               <button onClick={signOut} className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted md:hidden" aria-label="Sign out"><LogOut className="h-5 w-5" /></button>
             </div>

@@ -13,6 +13,8 @@ export type Brand = {
   manualInstructions: string
   mpesaPaybillDisplay: string
   brandColor: string
+  /** 'instant' = pay a deposit straight away; 'request' = guest asks, staff approve first. */
+  bookingMode: 'instant' | 'request'
   /** Marketing copy edited in Admin > Settings > Website. */
   site: SiteContent
   /** Names of the active properties, for the footer. */
@@ -29,6 +31,7 @@ export const DEFAULT_BRAND: Brand = {
   manualInstructions: 'Pay to the Paybill/Till shown below, using your booking reference as the account number.',
   mpesaPaybillDisplay: (import.meta.env.VITE_MPESA_PAYBILL_DISPLAY as string | undefined) ?? '',
   brandColor: '',
+  bookingMode: 'instant',
   site: DEFAULT_SITE_CONTENT,
   spaces: [],
 }
@@ -63,6 +66,7 @@ export async function fetchBrand(): Promise<Brand> {
       manualInstructions: str('mpesa_manual_instructions', DEFAULT_BRAND.manualInstructions),
       mpesaPaybillDisplay: str('mpesa_paybill_display', DEFAULT_BRAND.mpesaPaybillDisplay),
       brandColor: str('brand_color', ''),
+      bookingMode: m.booking_mode === 'request' ? 'request' : 'instant',
       site: {
         ...content,
         // Announcements and reviews are managed in Admin (Announcements, Reviews); the Website tab text is only a fallback.

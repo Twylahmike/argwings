@@ -13,7 +13,7 @@ import { formatKES } from '~/lib/money'
 import { calcDeposit } from '~/lib/pricing'
 import { formatDate, formatTime } from '~/lib/dates'
 import { useBrand } from '~/lib/brand'
-import { DATES_TAKEN_MESSAGE } from '~/lib/utils'
+import { DATES_TAKEN_MESSAGE, isDatesTaken } from '~/lib/utils'
 import type { Property, Unit } from '~/lib/types'
 import { PublicLayout } from '~/components/layout/PublicLayout'
 import { Button } from '~/components/ui/button'
@@ -70,6 +70,16 @@ function BookPage() {
     const v = schema.parse(raw)
     const p = normalizePhone(v.phone)
     if (!p.ok) { setError('phone', { message: p.error }); return }
+    if (brand.bookingMode === 'request') {
+      const { data, error } = await pub().rpc('submit_booking_request', {
+        p_unit: s.unit, p_in: s.in, p_out: s.out, p_guests: v.guests, p_name: v.name, p_phone: p.phone,
+        p_email: v.email || null, p_message: null, p_website: '',
+      })
+      if (error) { setFormError(isDatesTaken(error) ? DATES_TAKEN_MESSAGE : error.message); return }
+      if (!data) { setFormError('Something went wrong. Please try again.'); return }
+      nav({ to: '/request/$token', params: { token: String(data) } })
+      return
+    }
     try {
       const res = await callFunction<{ booking: { public_token: string; deposit_required: number } }>('create-booking', {
         unit_id: s.unit, check_in: s.in, check_out: s.out, guests: v.guests, name: v.name, phone: p.phone, email: v.email || undefined, source: 'website', consent: true,
@@ -113,8 +123,10 @@ function BookPage() {
               {formError && <p role="alert" className="rounded-md border border-danger/40 bg-danger/5 p-3 text-sm text-danger">{formError}</p>}
               {q.nights < q.min_nights
                 ? <p role="alert" className="text-sm text-danger">This place has a {q.min_nights}-night minimum. <Link to="/properties/$slug" params={{ slug: d.property.slug }} className="underline">Change dates</Link></p>
-                : <Button type="submit" size="lg" loading={isSubmitting}>Pay {formatKES(deposit)} deposit with M-Pesa</Button>}
-              <p className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4" aria-hidden /> You will get an M-Pesa prompt on your phone. Enter your PIN to confirm. We never see your PIN.</p>
+                : <Button type="submit" size="lg" loading={isSubmitting}>{brand.bookingMode === 'request' ? 'Send booking request' : `Pay ${formatKES(deposit)} deposit with M-Pesa`}</Button>}
+              {brand.bookingMode === 'request'
+                ? <p className="text-xs text-muted-foreground">No payment now. We will confirm availability and send you a link to pay the deposit once approved.</p>
+                : <p className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4" aria-hidden /> You will get an M-Pesa prompt on your phone. Enter your PIN to confirm. We never see your PIN.</p>}
             </form>
           )}
         </div>
@@ -130,8 +142,8 @@ function BookPage() {
                   <p className="flex justify-between"><span>{q.nights} night{q.nights > 1 ? 's' : ''}</span><span>{formatKES(q.nightly_total)}</span></p>
                   {q.cleaning_fee > 0 && <p className="flex justify-between"><span>Cleaning fee</span><span>{formatKES(q.cleaning_fee)}</span></p>}
                   <p className="flex justify-between border-t pt-2 text-base font-semibold"><span>Total</span><span>{formatKES(q.total)}</span></p>
-                  <p className="flex justify-between font-medium text-brand"><span>Deposit due now ({brand.depositPercent}%)</span><span>{formatKES(deposit)}</span></p>
-                  <p className="flex justify-between text-muted-foreground"><span>Balance before check-in</span><span>{formatKES(q.total - deposit)}</span></p>
+                  {brand.bookingMode !== 'request' && <p className="flex justify-between font-medium text-brand"><span>Deposit due now ({brand.depositPercent}%)</span><span>{formatKES(deposit)}</span></p>}
+                  {brand.bookingMode !== 'request' && <p className="flex justify-between text-muted-foreground"><span>Balance before check-in</span><span>{formatKES(q.total - deposit)}</span></p>}
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">{brand.cancellationPolicy}</p>
               </CardContent>

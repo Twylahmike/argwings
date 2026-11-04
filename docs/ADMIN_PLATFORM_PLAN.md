@@ -22,8 +22,8 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 | 4 | Listings management | **MOSTLY DONE** | Slice 2: publish/unpublish, featured, archive/restore, per-property cancellation policy, bathrooms, bed setup, min/max stay, maintenance flag. Video upload and length-of-stay discounts TODO |
 | 5 | Rooms and occupancy | **DONE** | Slice 2: Admin > Rooms board (7 colour-coded statuses for any day), room condition control; overlap prevention already in the database |
 | 6 | Occupancy calendar | PARTIAL | Exists (timeline); week/day views, drag to reschedule TODO |
-| 7 | Bookings | PARTIAL | Full lifecycle exists (pending/confirmed/checked in/out/cancelled/no-show). "Inquiry", "awaiting payment", "rejected" statuses and approval workflow TODO |
-| 8 | Booking requests and inquiries | **DONE (inquiries)** | Migration 0007, Admin > Inquiries, public contact form. Booking-request approval workflow TODO |
+| 7 | Bookings | PARTIAL | Full lifecycle exists (pending/confirmed/checked in/out/cancelled/no-show). Request approval workflow (migration 0009, Admin > Requests) added; booking mode setting (instant or request first) |
+| 8 | Booking requests and inquiries | **DONE** | Migration 0007 (inquiries) and 0009 (booking requests: approve, decline, offer other dates, guest tracking page /request/token) |
 | 9 | Guests and credit | PARTIAL | Guest list/profile/anonymise exist. Credit limits, statements TODO |
 | 10 | Media library, gallery, homepage images | TODO | Needs `media` tables + Storage policies |
 | 11 | Branding and CMS | PARTIAL | Website text tab (headline, tagline, socials, feature band, SEO basics). Section ordering, drafts/preview, policies pages TODO |
@@ -38,11 +38,11 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 | 20 | Site settings and contacts | PARTIAL | Business, brand, WhatsApp, deposit, policy exist. Currency/time zone/tax/maintenance mode/contact numbers TODO |
 | 21 | Activity log | PARTIAL | Audit triggers on bookings, payments, units, expenses, roles, settings and now inquiries/reviews/announcements. Login events TODO |
 | 22 | Public site integration | PARTIAL | Listings, prices, availability, contact, reviews, announcements, site text wired. Homepage images TODO |
-| 23 | Notifications | TODO | In-app notification centre (new inquiry, review, payment) |
+| 23 | Notifications | **DONE** | Migration 0009: bell + Admin > Notifications, per-user read state and preferences, daily check-in/check-out/balance reminders |
 | 24 | Database and security | ONGOING | Every new table ships with RLS, indexes, checks, audit trigger and SQL tests |
 | 25 | Admin UX | PARTIAL | Grouped sidebar + "Back to website" added. Breadcrumbs, global search TODO |
 | 26 | Interaction quality | ONGOING | New pages have search/filters, empty/error/loading states, confirmations |
-| 27 | Testing | ONGOING | 109 app tests, 22 SQL tests, browser checks of public pages |
+| 27 | Testing | ONGOING | 109 app tests, 26 SQL tests, browser checks of public pages |
 
 ## Slice 1 (this change): Inquiries, Reviews, Announcements
 - Migration `0007_inquiries_reviews_announcements.sql` (applied to the live project): tables `inquiries`, `inquiry_notes`,

@@ -257,7 +257,7 @@ test('RLS: anon cannot read bookings, guests, payments; can use availability and
     for (const k of ['email', 'id_number', 'notes', 'guest_id', 'created_by']) assert.ok(!(k in info), `${k} must not leak`)
     assert.equal((await one(c, 'select get_booking_by_token($1) j', [randomUUID()])).j, null)
     const settings = await q(c, 'select key from settings')
-    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content'].includes(s.key)))
+    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content', 'booking_mode'].includes(s.key)))
     assert.ok(settings.length > 0)
   }))
 
@@ -624,4 +624,156 @@ test('room_board: statuses and priority', async () =>
     // a manager only sees the board for their own property
     await as(c, 'authenticated', f.manager)
     assert.ok((await q(c, 'select * from room_board($1)', [t])).every((r) => r.property_id === f.pa))
+  }))
+
+// ---------------------------------------------------------------------------------------------
+test('booking requests: public submit, staff decisions, approval creates a real held booking', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    const { id: ownerOther } = { id: await user(c, 'OtherManager', 'manager', [f.pb]) }
+    await as(c, 'anon')
+    const token = (await one(c, `select submit_booking_request($1,$2,$3,2,'Amina Test','0712 345 678','a@x.com','Late arrival') t`, [f.ua, d0, day(d0, 2)])).t
+    assert.ok(token)
+    assert.equal((await one(c, `select submit_booking_request($1,$2,$3,2,'Bot','0712345678',null,null,'http://spam') t`, [f.ua, d0, day(d0, 2)])).t, null, 'honeypot')
+    await fails(c, `select submit_booking_request($1,$2,$3,2,'Amina','123')`, [f.ua, d0, day(d0, 2)], '23514')
+    await fails(c, `select submit_booking_request($1,$2,$3,9,'Amina Test','0712345678')`, [f.ua, d0, day(d0, 2)], '23514')
+    await fails(c, `select submit_booking_request($1,$2,$3,2,'Amina Test','0712345678')`, [f.ua, day(d0, -800), day(d0, -798)], '23514')
+    await fails(c, 'select * from booking_requests', [], '42501')
+    // the guest can follow the request, but sees no contact details
+    const info = (await one(c, 'select get_booking_request($1) j', [token])).j
+    assert.equal(info.status, 'new')
+    assert.equal(info.unit_name, 'A1')
+    for (const k of ['phone', 'email', 'id', 'property_id', 'unit_id']) assert.ok(!(k in info), `${k} must not leak`)
+    assert.equal((await one(c, 'select get_booking_request($1) j', [randomUUID()])).j, null)
+
+    // staff: other property's manager and cleaners cannot decide
+    await admin(c)
+    const reqId = (await one(c, 'select id from booking_requests where public_token=$1', [token])).id
+    await as(c, 'authenticated', ownerOther)
+    assert.equal((await q(c, 'select * from booking_requests')).length, 0, 'other property manager sees nothing')
+    await fails(c, 'select * from approve_booking_request($1)', [reqId], '42501')
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, 'select * from approve_booking_request($1)', [reqId], '42501')
+
+    // the assigned manager approves: a REAL pending booking with the longer request hold
+    await as(c, 'authenticated', f.manager)
+    const b = await one(c, 'select * from approve_booking_request($1, $2)', [reqId, 'Welcome'])
+    assert.equal(b.status, 'pending')
+    assert.equal(b.unit_id, f.ua)
+    const hours = (new Date(b.hold_expires_at) - Date.now()) / 3_600_000
+    assert.ok(hours > 23 && hours <= 24.1, `hold is about 24h, got ${hours}`)
+    const r = await one(c, 'select * from booking_requests where id=$1', [reqId])
+    assert.equal(r.status, 'approved')
+    assert.equal(r.booking_id, b.id)
+    await fails(c, 'select * from approve_booking_request($1)', [reqId], '23514')          // already handled
+    await fails(c, 'select * from reject_booking_request($1)', [reqId], '23514')
+    await as(c, 'anon')
+    const after = (await one(c, 'select get_booking_request($1) j', [token])).j
+    assert.equal(after.booking_token, b.public_token, 'guest is pointed at the booking to pay')
+    // dates are now taken: a new request for them is refused
+    await fails(c, `select submit_booking_request($1,$2,$3,2,'Other Guest','0722000111')`, [f.ua, d0, day(d0, 2)], '23514')
+  }))
+
+test('booking requests: competing approvals, alternatives, reject, withdraw', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    const submit = async (name, phone, a, b) => { await as(c, 'anon'); const t = (await one(c, `select submit_booking_request($1,$2,$3,2,$4,$5) t`, [f.ua, a, b, name, phone])).t; await admin(c); return (await one(c, 'select id from booking_requests where public_token=$1', [t])).id }
+    // two guests ask for overlapping dates before either is approved
+    const r1 = await submit('First Guest', '0712000001', d0, day(d0, 3))
+    const r2 = await submit('Second Guest', '0712000002', day(d0, 1), day(d0, 4))
+    await as(c, 'authenticated', f.manager)
+    await c.query('select * from approve_booking_request($1)', [r1])
+    const e = await fails(c, 'select * from approve_booking_request($1)', [r2], '23P01')   // the database overlap guard wins
+    assert.ok(e)
+    // alternative dates must be free, then the guest accepts them
+    await fails(c, 'select offer_alternative_dates($1,$2,$3)', [r2, day(d0, 1), day(d0, 2)], '23514')
+    await c.query('select offer_alternative_dates($1,$2,$3,$4)', [r2, day(d0, 10), day(d0, 12), 'These are free'])
+    let row = await one(c, 'select * from booking_requests where id=$1', [r2])
+    assert.equal(row.status, 'alternative_offered')
+    assert.equal(fmt(row.alt_check_in), day(d0, 10))
+    await admin(c)
+    const tok2 = row.public_token
+    await as(c, 'anon')
+    await c.query('select accept_alternative_dates($1)', [tok2])
+    await admin(c)
+    row = await one(c, 'select * from booking_requests where id=$1', [r2])
+    assert.equal(row.status, 'new')
+    assert.equal(fmt(row.check_in), day(d0, 10))
+    assert.equal(row.alt_check_in, null)
+    assert.ok((await one(c, `select count(*)::int n from notifications where kind='request_update'`)).n >= 1, 'staff are told the guest accepted')
+    await as(c, 'authenticated', f.manager)
+    await c.query('select reject_booking_request($1,$2)', [r2, 'Sorry, not possible'])
+    assert.equal((await one(c, 'select status from booking_requests where id=$1', [r2])).status, 'rejected')
+    // withdraw
+    const r3 = await submit('Third Guest', '0712000003', day(d0, 20), day(d0, 22))
+    await as(c, 'anon')
+    await fails(c, 'select public_token from booking_requests where id=$1', [r3], '42501')   // anon cannot read the table to find tokens
+    await admin(c)
+    const t3 = (await one(c, 'select public_token t from booking_requests where id=$1', [r3])).t
+    await as(c, 'anon')
+    await c.query('select withdraw_booking_request($1)', [t3])
+    await fails(c, 'select withdraw_booking_request($1)', [t3], '23514')
+    // notes are staff-only and bound to the writer
+    await as(c, 'authenticated', f.manager)
+    await c.query(`insert into booking_request_notes(request_id, user_id, body) values ($1,$2,'Called guest')`, [r1, f.manager])
+    await fails(c, `insert into booking_request_notes(request_id, user_id, body) values ($1,$2,'forged')`, [r1, f.owner], '42501')
+  }))
+
+test('notifications: written by triggers without duplicates, scoped by property, preferences and read state per user', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    const otherMgr = await user(c, 'MgrB', 'manager', [f.pb])
+    // events in both properties
+    const ba = await booking(c, f, { from: d0, to: day(d0, 2), status: 'pending', hold: new Date(Date.now() + 600_000) })
+    const bb = await booking(c, f, { unit: f.ub, prop: f.pb, from: d0, to: day(d0, 2), status: 'pending', hold: new Date(Date.now() + 600_000) })
+    const pay = await one(c, `insert into payments(booking_id,kind,method,status,amount,confirmed_at) values ($1,'deposit','cash','succeeded',5000,now()) returning id`, [ba.id])
+    await c.query(`update payments set result_desc = 'again' where id = $1`, [pay.id])         // an update must not notify twice
+    await c.query(`insert into inquiries(name, phone, message, property_id) values ('Zed','254712000009','Hello there',$1)`, [f.pb])
+    await c.query(`update bookings set status='cancelled', cancel_reason='Guest asked' where id=$1`, [bb.id])
+    assert.equal((await one(c, `select count(*)::int n from notifications where kind='payment' and entity_id=$1`, [pay.id])).n, 1, 'no duplicates')
+
+    await as(c, 'authenticated', f.manager)
+    let mine = await q(c, 'select * from my_notifications(50)')
+    assert.ok(mine.some((n) => n.kind === 'payment'))
+    assert.ok(!mine.some((n) => n.kind === 'cancellation' || n.kind === 'inquiry'), 'manager A does not see property B events')
+    await as(c, 'authenticated', otherMgr)
+    const theirs = await q(c, 'select * from my_notifications(50)')
+    assert.ok(theirs.some((n) => n.kind === 'cancellation') && theirs.some((n) => n.kind === 'inquiry'))
+    assert.ok(!theirs.some((n) => n.kind === 'payment'))
+    await as(c, 'authenticated', f.cleaner)
+    assert.equal((await q(c, 'select * from my_notifications(50)')).length, 0, 'cleaners get none')
+
+    // read state is per user; preferences hide a kind
+    await as(c, 'authenticated', f.manager)
+    const before = (await one(c, 'select unread_notification_count() n')).n
+    assert.ok(before >= 1)
+    await c.query('select mark_notifications_read($1)', [[mine[0].id]])
+    assert.equal((await one(c, 'select unread_notification_count() n')).n, before - 1)
+    await c.query('select mark_notifications_read()')
+    assert.equal((await one(c, 'select unread_notification_count() n')).n, 0)
+    await as(c, 'authenticated', otherMgr)
+    assert.ok((await one(c, 'select unread_notification_count() n')).n >= 1, 'other users keep their own unread count')
+    await c.query(`insert into notification_prefs(user_id, kind, enabled) values ($1,'inquiry',false)`, [otherMgr])
+    assert.ok(!(await q(c, 'select * from my_notifications(50)')).some((n) => n.kind === 'inquiry'), 'muted kinds are hidden')
+    await fails(c, `insert into notifications(kind,title) values ('inquiry','forged')`, [], '42501')
+    await as(c, 'anon')
+    await fails(c, 'select * from notifications', [], '42501')
+  }))
+
+test('daily notifications: arrivals, departures and balances once; stale requests expire', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const today = fmt((await one(c, 'select nairobi_today() d')).d)
+    await booking(c, f, { from: day(today, 1), to: day(today, 3), status: 'confirmed', total: 9000, deposit: 4000 })
+    await booking(c, f, { unit: f.ub, prop: f.pb, from: day(today, -2), to: today, status: 'checked_in', total: 5000, deposit: 5000 })
+    await c.query(`insert into booking_requests(property_id, unit_id, name, phone, check_in, check_out, guests, created_at) values ($1,$2,'Old','254712000008',$3,$4,1, now())`, [f.pa, f.ua, day(today, -3), day(today, -1)])
+    const n1 = (await one(c, 'select generate_daily_notifications() n')).n
+    assert.ok(n1 >= 3)
+    const kinds = (await q(c, `select kind from notifications`)).map((r) => r.kind)
+    for (const k of ['checkin_soon', 'checkout_today', 'balance_due']) assert.ok(kinds.includes(k), k)
+    assert.equal((await one(c, 'select generate_daily_notifications() n')).n, 0, 'second run adds nothing')
+    assert.equal((await one(c, `select status from booking_requests where name='Old'`)).status, 'expired')
   }))

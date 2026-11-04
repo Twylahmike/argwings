@@ -31,6 +31,7 @@ import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
 import { Route as AdminRoomsRouteImport } from './routes/admin.rooms'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminStaffRouteImport } from './routes/admin.staff'
+import { Route as AdminSupportRouteImport } from './routes/admin.support'
 import { Route as BookingTokenRouteImport } from './routes/booking.$token'
 import { Route as PropertiesSlugRouteImport } from './routes/properties.$slug'
 import { Route as ReceiptPaymentIdRouteImport } from './routes/receipt.$paymentId'
@@ -153,6 +154,11 @@ const AdminStaffRoute = AdminStaffRouteImport.update({
   path: '/staff',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminSupportRoute = AdminSupportRouteImport.update({
+  id: '/support',
+  path: '/support',
+  getParentRoute: () => AdminRoute,
+} as any)
 const BookingTokenRoute = BookingTokenRouteImport.update({
   id: '/booking/$token',
   path: '/booking/$token',
@@ -231,6 +237,7 @@ export interface FileRoutesByFullPath {
   '/admin/rooms': typeof AdminRoomsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/admin/support': typeof AdminSupportRoute
   '/booking/$token': typeof BookingTokenRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
@@ -265,6 +272,7 @@ export interface FileRoutesByTo {
   '/admin/rooms': typeof AdminRoomsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/admin/support': typeof AdminSupportRoute
   '/booking/$token': typeof BookingTokenRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
@@ -301,6 +309,7 @@ export interface FileRoutesById {
   '/admin/rooms': typeof AdminRoomsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
+  '/admin/support': typeof AdminSupportRoute
   '/booking/$token': typeof BookingTokenRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
@@ -338,6 +347,7 @@ export interface FileRouteTypes {
     | '/admin/rooms'
     | '/admin/settings'
     | '/admin/staff'
+    | '/admin/support'
     | '/booking/$token'
     | '/properties/$slug'
     | '/receipt/$paymentId'
@@ -372,6 +382,7 @@ export interface FileRouteTypes {
     | '/admin/rooms'
     | '/admin/settings'
     | '/admin/staff'
+    | '/admin/support'
     | '/booking/$token'
     | '/properties/$slug'
     | '/receipt/$paymentId'
@@ -407,6 +418,7 @@ export interface FileRouteTypes {
     | '/admin/rooms'
     | '/admin/settings'
     | '/admin/staff'
+    | '/admin/support'
     | '/booking/$token'
     | '/properties/$slug'
     | '/receipt/$paymentId'
@@ -591,6 +603,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminStaffRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/support': {
+      id: '/admin/support'
+      path: '/support'
+      fullPath: '/admin/support'
+      preLoaderRoute: typeof AdminSupportRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/booking/$token': {
       id: '/booking/$token'
       path: '/booking/$token'
@@ -686,6 +705,7 @@ interface AdminRouteChildren {
   AdminRoomsRoute: typeof AdminRoomsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStaffRoute: typeof AdminStaffRoute
+  AdminSupportRoute: typeof AdminSupportRoute
   AdminIndexRoute: typeof AdminIndexRoute
   AdminBookingsIdRoute: typeof AdminBookingsIdRoute
   AdminBookingsNewRoute: typeof AdminBookingsNewRoute
@@ -711,6 +731,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminRoomsRoute: AdminRoomsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStaffRoute: AdminStaffRoute,
+  AdminSupportRoute: AdminSupportRoute,
   AdminIndexRoute: AdminIndexRoute,
   AdminBookingsIdRoute: AdminBookingsIdRoute,
   AdminBookingsNewRoute: AdminBookingsNewRoute,

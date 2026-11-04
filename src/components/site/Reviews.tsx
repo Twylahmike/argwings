@@ -1,9 +1,9 @@
 import { Star } from 'lucide-react'
-import { siteContent } from '~/lib/site-content'
+import { useBrand } from '~/lib/brand'
 
 /** Guest reviews from site-content.ts. Hidden when there are none (we never invent reviews). */
 export function Reviews() {
-  const list = siteContent.reviews
+  const list = useBrand().site.reviews
   if (!list.length) return null
   const marquee = list.length >= 3
   const card = (r: (typeof list)[number], key: string, hidden = false) => (

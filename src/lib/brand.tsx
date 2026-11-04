@@ -1,6 +1,7 @@
 import { createContext, useContext } from 'react'
 import { pub } from './public-client'
 import { isSupabaseConfigured } from './config'
+import { DEFAULT_SITE_CONTENT, sanitizeSiteContent, type SiteContent } from './site-content'
 
 export type Brand = {
   businessName: string
@@ -12,6 +13,8 @@ export type Brand = {
   manualInstructions: string
   mpesaPaybillDisplay: string
   brandColor: string
+  /** Marketing copy edited in Admin > Settings > Website. */
+  site: SiteContent
 }
 
 export const DEFAULT_BRAND: Brand = {
@@ -24,6 +27,7 @@ export const DEFAULT_BRAND: Brand = {
   manualInstructions: 'Pay to the Paybill/Till shown below, using your booking reference as the account number.',
   mpesaPaybillDisplay: (import.meta.env.VITE_MPESA_PAYBILL_DISPLAY as string | undefined) ?? '',
   brandColor: '',
+  site: DEFAULT_SITE_CONTENT,
 }
 
 /** Public settings (business name, logo, policy...). Falls back to defaults so pages still render if the DB is unreachable. */
@@ -45,6 +49,7 @@ export async function fetchBrand(): Promise<Brand> {
       manualInstructions: str('mpesa_manual_instructions', DEFAULT_BRAND.manualInstructions),
       mpesaPaybillDisplay: str('mpesa_paybill_display', DEFAULT_BRAND.mpesaPaybillDisplay),
       brandColor: str('brand_color', ''),
+      site: sanitizeSiteContent(m.site_content),
     }
   } catch {
     return DEFAULT_BRAND

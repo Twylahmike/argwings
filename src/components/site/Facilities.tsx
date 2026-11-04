@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { siteContent } from '~/lib/site-content'
+import { useBrand } from '~/lib/brand'
 import { buttonVariants } from '~/components/ui/button'
 import { cn } from '~/lib/utils'
 
 /** Optional full-width feature band (pool, rooftop, gym...). Fully driven by site-content.ts; hidden when empty. */
 export function Facilities() {
-  const f = siteContent.facility
+  const f = useBrand().site.facility
   const ref = useRef<HTMLElement>(null)
   const [y, setY] = useState(0)
   useEffect(() => {

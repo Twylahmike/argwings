@@ -1,11 +1,11 @@
-import { siteContent } from '~/lib/site-content'
+import type { SiteContent } from '~/lib/site-content'
 
 /** Page meta (title, description, Open Graph, canonical when a production domain is configured). */
-export function pageMeta(o: { brand: string; title: string; description: string; path?: string }) {
+export function pageMeta(o: { brand: string; site: SiteContent; title: string; description: string; path?: string }) {
   const full = `${o.title} | ${o.brand}`
-  const base = siteContent.siteUrl.replace(/\/$/, '')
+  const base = o.site.siteUrl.replace(/\/$/, '')
   const url = base && o.path ? `${base}${o.path}` : ''
-  const img = siteContent.ogImage ? (siteContent.ogImage.startsWith('http') ? siteContent.ogImage : `${base}${siteContent.ogImage}`) : ''
+  const img = o.site.ogImage ? (o.site.ogImage.startsWith('http') ? o.site.ogImage : `${base}${o.site.ogImage}`) : ''
   return {
     meta: [
       { title: full },

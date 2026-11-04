@@ -104,3 +104,9 @@ Collected in `src/lib/site-content.ts` once created (Phase 1).
 ## Logo (owner-supplied, 2026-11-04)
 - public/logo.webp (trimmed from the owner's file) is the default logo in the header, footer and Wordmark; a logo uploaded in Admin > Settings still wins. PWA icons, apple-touch icon and favicon are now generated from it (no longer placeholders). Manifest/theme-color set to black to match.
 - Suggestion: set Admin > Settings > Brand colour to a gold that matches the logo (default is the existing green).
+
+## Website content moved to Admin (owner-approved, 2026-11-04)
+- New migration `0006_site_content.sql` (applied to bnb-system): only widens the public-read allowlist on `settings` with the key `site_content`. No new tables or functions.
+- Content = one jsonb value, edited in Admin > Settings > Website (headline, tagline, ticker, location, email, socials, announcement, feature band + image upload, reviews, site URL, share image). Validated by `sanitizeSiteContent` (https-only links, length caps); defaults in `DEFAULT_SITE_CONTENT` apply until saved.
+- Public components read it through `useBrand().site` (loaded with the other brand settings). Verified live: anon read OK, page renders stored values; test row deleted.
+- The old per-file TODO(owner) list for copy is now: fill Admin > Settings > Website.

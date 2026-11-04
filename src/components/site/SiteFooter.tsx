@@ -4,13 +4,13 @@ import { Wordmark } from '~/components/layout/Wordmark'
 import { InstallAppButton } from './InstallAppButton'
 import { useBrand } from '~/lib/brand'
 import { useWhatsApp } from '~/lib/contact'
-import { siteContent, safeUrl } from '~/lib/site-content'
+import { safeUrl } from '~/lib/site-content'
 
 export function SiteFooter() {
   const brand = useBrand()
   const wa = useWhatsApp()
   const waHref = wa('Hello!')
-  const c = siteContent
+  const c = brand.site
   const socialLinks = [
     { label: 'Instagram', href: safeUrl(c.social.instagram), icon: <span className="text-xs font-bold" aria-hidden>IG</span> },
     { label: 'Facebook', href: safeUrl(c.social.facebook), icon: <span className="text-xs font-bold" aria-hidden>FB</span> },

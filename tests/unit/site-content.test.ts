@@ -18,3 +18,36 @@ describe('safeUrl', () => {
     expect(safeUrl('')).toBeNull()
   })
 })
+
+import { DEFAULT_SITE_CONTENT, sanitizeSiteContent } from '../../src/lib/site-content'
+
+describe('sanitizeSiteContent', () => {
+  it('returns the defaults for empty or garbage input', () => {
+    expect(sanitizeSiteContent(undefined)).toEqual(DEFAULT_SITE_CONTENT)
+    expect(sanitizeSiteContent('nope')).toEqual(DEFAULT_SITE_CONTENT)
+    expect(sanitizeSiteContent([1, 2])).toEqual(DEFAULT_SITE_CONTENT)
+  })
+  it('drops unsafe links and trims the site address', () => {
+    const c = sanitizeSiteContent({ social: { instagram: 'javascript:alert(1)', facebook: 'https://facebook.com/x' }, siteUrl: 'https://example.com/', ogImage: '//evil.com/x.png' })
+    expect(c.social.instagram).toBe('')
+    expect(c.social.facebook).toBe('https://facebook.com/x')
+    expect(c.siteUrl).toBe('https://example.com')
+    expect(c.ogImage).toBe('')
+  })
+  it('keeps valid reviews, clamps stars and skips incomplete ones', () => {
+    const c = sanitizeSiteContent({ reviews: [{ guest: 'A', quote: 'Great', rating: 9 }, { guest: '', quote: 'x' }, { guest: 'B' }] })
+    expect(c.reviews).toHaveLength(1)
+    expect(c.reviews[0].rating).toBe(5)
+  })
+  it('skips empty announcements and validates the link', () => {
+    const c = sanitizeSiteContent({ announcements: [{ text: '' }, { text: 'Offer', href: 'javascript:x', variant: 'promo' }] })
+    expect(c.announcements).toHaveLength(1)
+    expect(c.announcements[0].href).toBeUndefined()
+    expect(c.announcements[0].variant).toBe('promo')
+  })
+  it('an empty heading falls back to the default; an emptied tagline stays empty', () => {
+    const c = sanitizeSiteContent({ heroHeadline: '  ', tagline: '' })
+    expect(c.heroHeadline).toBe(DEFAULT_SITE_CONTENT.heroHeadline)
+    expect(c.tagline).toBe('')
+  })
+})

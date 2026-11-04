@@ -20,7 +20,7 @@ export const Route = createFileRoute('/')({
   loader: async () => ({ properties: isSupabaseConfigured ? await fetchProperties().catch(() => []) : [] }),
   head: ({ matches }) => {
     const brand = (matches[0]?.loaderData as { brand?: Brand } | undefined)?.brand ?? DEFAULT_BRAND
-    return pageMeta({ brand: brand.businessName, title: 'Book your stay', description: `Book direct with ${brand.businessName}. Check availability and pay your deposit by M-Pesa.`, path: '/' })
+    return pageMeta({ brand: brand.businessName, site: brand.site, title: 'Book your stay', description: `Book direct with ${brand.businessName}. Check availability and pay your deposit by M-Pesa.`, path: '/' })
   },
   component: Home,
 })

@@ -1,8 +1,8 @@
 /**
- * Editable marketing content for the public site: the ONE place to fill in what the database does not hold.
- * Everything here is optional. A field left empty hides the part of the page that would show it.
- * Business name, WhatsApp number, brand colour, deposit % and cancellation policy are NOT here: they come from
- * Admin > Settings (see ~/lib/brand.tsx).
+ * Marketing content for the public site. The owner edits it in Admin > Settings > Website (stored as settings.site_content);
+ * the values below are only the defaults used until something is saved there.
+ * Everything is optional: a field left empty hides the part of the page that would show it.
+ * Business name, WhatsApp number, brand colour, deposit % and cancellation policy live in the other Settings tabs.
  */
 export type Announcement = { id: string; text: string; href?: string; variant?: 'info' | 'promo' }
 export type Review = { id: string; guest: string; stay?: string; rating: 1 | 2 | 3 | 4 | 5; quote: string }
@@ -30,7 +30,7 @@ export type SiteContent = {
   ogImage: string
 }
 
-export const siteContent: SiteContent = {
+export const DEFAULT_SITE_CONTENT: SiteContent = {
   // TODO(owner): tagline for RG Wings Stays.
   tagline: '',
   // TODO(owner): hero headline. This default is generic copy, not a claim about the business.
@@ -64,4 +64,47 @@ export function parseHeadline(h: string): Array<{ text: string; accent: boolean 
 /** Only https links the owner typed, never javascript: or data: URLs. */
 export function safeUrl(u: string): string | null {
   try { const x = new URL(u); return x.protocol === 'https:' ? x.href : null } catch { return null }
+}
+
+const text = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
+const httpsOrEmpty = (v: unknown) => { const t = text(v, 500); return t ? (safeUrl(t) ?? '') : '' }
+const imageOrEmpty = (v: unknown) => { const t = text(v, 500); return t.startsWith('/') && !t.startsWith('//') ? t : httpsOrEmpty(t) }
+
+/** Validates whatever is stored in settings.site_content. Unknown or malformed parts fall back to the defaults. */
+export function sanitizeSiteContent(raw: unknown): SiteContent {
+  const d = DEFAULT_SITE_CONTENT
+  const r = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>
+  const obj = (k: string) => (r[k] && typeof r[k] === 'object' && !Array.isArray(r[k]) ? (r[k] as Record<string, unknown>) : {})
+  const has = (k: string) => k in r
+  const social = obj('social'), fac = obj('facility')
+  const siteUrl = httpsOrEmpty(r.siteUrl).replace(/\/+$/, '')
+  return {
+    tagline: has('tagline') ? text(r.tagline, 120) : d.tagline,
+    heroHeadline: text(r.heroHeadline, 80) || d.heroHeadline,
+    heroSubline: has('heroSubline') ? text(r.heroSubline, 200) : d.heroSubline,
+    tickerItems: Array.isArray(r.tickerItems) ? r.tickerItems.map((t) => text(t, 60)).filter(Boolean).slice(0, 8) : d.tickerItems,
+    location: has('location') ? text(r.location, 120) : d.location,
+    contactEmail: has('contactEmail') ? (/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(text(r.contactEmail, 120)) ? text(r.contactEmail, 120) : '') : d.contactEmail,
+    social: { instagram: httpsOrEmpty(social.instagram), facebook: httpsOrEmpty(social.facebook), tiktok: httpsOrEmpty(social.tiktok), x: httpsOrEmpty(social.x) },
+    facility: { eyebrow: text(fac.eyebrow, 60), title: text(fac.title, 80), body: text(fac.body, 300), image: imageOrEmpty(fac.image) },
+    announcements: Array.isArray(r.announcements)
+      ? r.announcements.flatMap((a, i): Announcement[] => {
+          const o = (a && typeof a === 'object' ? a : {}) as Record<string, unknown>
+          const t = text(o.text, 160)
+          if (!t) return []
+          const href = text(o.href, 300)
+          return [{ id: text(o.id, 40) || `a${i}`, text: t, href: href.startsWith('/') && !href.startsWith('//') ? href : (safeUrl(href) ?? undefined), variant: o.variant === 'promo' ? 'promo' : 'info' }]
+        }).slice(0, 3)
+      : d.announcements,
+    reviews: Array.isArray(r.reviews)
+      ? r.reviews.flatMap((x, i): Review[] => {
+          const o = (x && typeof x === 'object' ? x : {}) as Record<string, unknown>
+          const quote = text(o.quote, 500), guest = text(o.guest, 60)
+          const rating = Math.min(5, Math.max(1, Math.round(Number(o.rating) || 5))) as Review['rating']
+          return quote && guest ? [{ id: text(o.id, 40) || `r${i}`, guest, stay: text(o.stay, 80) || undefined, rating, quote }] : []
+        }).slice(0, 12)
+      : d.reviews,
+    siteUrl,
+    ogImage: imageOrEmpty(r.ogImage),
+  }
 }

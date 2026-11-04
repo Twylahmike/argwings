@@ -1,11 +1,13 @@
 import { useState } from 'react'
 import { X } from 'lucide-react'
-import { siteContent, safeUrl } from '~/lib/site-content'
+import { safeUrl } from '~/lib/site-content'
+import { useBrand } from '~/lib/brand'
 
 /** Driven by site-content.ts. Renders nothing when there are no announcements. */
 export function AnnouncementBar() {
+  const { site } = useBrand()
   const [dismissed, setDismissed] = useState<string[]>([])
-  const a = siteContent.announcements.find((x) => !dismissed.includes(x.id))
+  const a = site.announcements.find((x) => !dismissed.includes(x.id))
   if (!a) return null
   const href = a.href ? (a.href.startsWith('/') ? a.href : safeUrl(a.href)) : null
   const tone = a.variant === 'promo' ? 'bg-brand text-brand-foreground' : 'bg-ink text-ink-foreground'

@@ -4,12 +4,13 @@ import { useBrand } from '~/lib/brand'
 import { SearchBar } from '~/components/booking/SearchBar'
 import { buttonVariants } from '~/components/ui/button'
 import { cn } from '~/lib/utils'
-import { parseHeadline, siteContent } from '~/lib/site-content'
+import { parseHeadline } from '~/lib/site-content'
 import { heroSlides } from '~/lib/gallery'
 import type { PropertyWithUnits } from '~/lib/public-api'
 
 export function Hero({ properties }: { properties: PropertyWithUnits[] }) {
   const brand = useBrand()
+  const site = brand.site
   const slides = heroSlides(properties)
   const [i, setI] = useState(0)
   useEffect(() => {
@@ -20,7 +21,7 @@ export function Hero({ properties }: { properties: PropertyWithUnits[] }) {
   // Word-by-word entrance. Punctuation stays attached to its word; the accent word is italic.
   const words: { segs: { text: string; accent: boolean }[] }[] = []
   let open = false
-  for (const part of parseHeadline(siteContent.heroHeadline)) {
+  for (const part of parseHeadline(site.heroHeadline)) {
     part.text.split(/(\s+)/).forEach((tok) => {
       if (!tok) return
       if (/^\s+$/.test(tok)) { open = false; return }
@@ -28,7 +29,7 @@ export function Hero({ properties }: { properties: PropertyWithUnits[] }) {
       words[words.length - 1].segs.push({ text: tok, accent: part.accent })
     })
   }
-  const ticker = siteContent.tickerItems
+  const ticker = site.tickerItems
   return (
     <section className="relative isolate flex min-h-[100svh] w-full flex-col justify-center overflow-hidden bg-ink text-white">
       {slides.map((s, idx) => (
@@ -45,7 +46,7 @@ export function Hero({ properties }: { properties: PropertyWithUnits[] }) {
           ))}
         </h1>
         <div className="mt-3 h-[3px] w-40 origin-left scale-x-0 bg-brand-glow" style={{ animation: 'draw-line 1s 1.2s cubic-bezier(.16,1,.3,1) forwards' }} aria-hidden />
-        {siteContent.heroSubline && <p className="animate-fade-in mt-6 max-w-2xl text-base text-white/85 md:text-lg" style={{ animationDelay: '1.4s' }}>{siteContent.heroSubline}</p>}
+        {site.heroSubline && <p className="animate-fade-in mt-6 max-w-2xl text-base text-white/85 md:text-lg" style={{ animationDelay: '1.4s' }}>{site.heroSubline}</p>}
         <div className="animate-fade-up mt-8 flex flex-col gap-3 sm:flex-row" style={{ animationDelay: '1.6s' }}>
           <Link to="/" hash="properties" className={cn(buttonVariants({ size: 'lg' }), 'rounded-full bg-white px-8 text-ink hover:bg-white/90')}>View our properties</Link>
           <Link to="/search" className={cn(buttonVariants({ size: 'lg' }), 'rounded-full px-8')}>Book direct</Link>

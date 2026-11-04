@@ -32,7 +32,8 @@ export async function fetchBrand(): Promise<Brand> {
   try {
     const { data } = await pub().from('settings').select('key, value')
     const m = Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value]))
-    const str = (k: string, d: string) => (typeof m[k] === 'string' && m[k] ? (m[k] as string) : d)
+    // The migration seeds a placeholder name; treat it as "not set yet" so the public site shows the default brand.
+    const str = (k: string, d: string) => (typeof m[k] === 'string' && m[k] && m[k] !== 'Your BNB Brand' ? (m[k] as string) : d)
     const num = (k: string, d: number) => (Number.isFinite(Number(m[k])) && m[k] != null ? Number(m[k]) : d)
     return {
       businessName: str('business_name', DEFAULT_BRAND.businessName),

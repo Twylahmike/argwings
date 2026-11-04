@@ -17,8 +17,17 @@ export function Hero({ properties }: { properties: PropertyWithUnits[] }) {
     const t = setInterval(() => setI((p) => (p + 1) % slides.length), 5500)
     return () => clearInterval(t)
   }, [slides.length])
-  // Word-by-word entrance, with the accent word in italics.
-  const words = parseHeadline(siteContent.heroHeadline).flatMap((part) => part.text.split(/\s+/).filter(Boolean).map((w) => ({ w, accent: part.accent })))
+  // Word-by-word entrance. Punctuation stays attached to its word; the accent word is italic.
+  const words: { segs: { text: string; accent: boolean }[] }[] = []
+  let open = false
+  for (const part of parseHeadline(siteContent.heroHeadline)) {
+    part.text.split(/(\s+)/).forEach((tok) => {
+      if (!tok) return
+      if (/^\s+$/.test(tok)) { open = false; return }
+      if (!open) { words.push({ segs: [] }); open = true }
+      words[words.length - 1].segs.push({ text: tok, accent: part.accent })
+    })
+  }
   const ticker = siteContent.tickerItems
   return (
     <section className="relative isolate flex min-h-[100svh] w-full flex-col justify-center overflow-hidden bg-ink text-white">
@@ -32,7 +41,7 @@ export function Hero({ properties }: { properties: PropertyWithUnits[] }) {
         <p className="eyebrow animate-fade-in mb-5 text-white/80" style={{ animationDelay: '.2s' }}>{brand.businessName}</p>
         <h1 className="font-display text-5xl font-medium leading-[1.05] sm:text-6xl md:text-7xl lg:text-8xl">
           {words.map((x, idx) => (
-            <span key={idx} className={cn('word-in mr-[0.25em] inline-block', x.accent && 'italic text-brand-glow')} style={{ animationDelay: `${0.35 + idx * 0.18}s` }}>{x.w}</span>
+            <span key={idx} className="word-in mr-[0.25em] inline-block" style={{ animationDelay: `${0.35 + idx * 0.18}s` }}>{x.segs.map((g, k) => g.accent ? <em key={k} className="italic underline decoration-brand-glow decoration-[3px] underline-offset-8">{g.text}</em> : <span key={k}>{g.text}</span>)}</span>
           ))}
         </h1>
         <div className="mt-3 h-[3px] w-40 origin-left scale-x-0 bg-brand-glow" style={{ animation: 'draw-line 1s 1.2s cubic-bezier(.16,1,.3,1) forwards' }} aria-hidden />

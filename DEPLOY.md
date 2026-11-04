@@ -1,6 +1,6 @@
 # Deploying to production
 
-Work through this top to bottom. Each step says how to check it worked. Run commands from the `bnb-system/` folder. Windows CMD/PowerShell and macOS/Linux both work; where syntax differs both are shown.
+Work through this top to bottom. Each step says how to check it worked. Run commands from the project root folder. Windows CMD/PowerShell and macOS/Linux both work; where syntax differs both are shown.
 
 ## 0. Before you start
 
@@ -56,7 +56,7 @@ node -e "console.log(require('crypto').randomBytes(24).toString('hex'))"
 Then set the secrets (one line; replace the values). The `SUPABASE_*` variables are provided automatically.
 
 ```
-npx supabase secrets set SITE_URL=https://yourdomain.co.ke BUSINESS_NAME="Your BNB Brand" SUPPORT_WHATSAPP=2547XXXXXXXX MPESA_ENV=mock MPESA_CALLBACK_SECRET=<the random value> WHATSAPP_ENABLED=false
+npx supabase secrets set SITE_URL=https://yourdomain.co.ke BUSINESS_NAME="RG Wings Stays" SUPPORT_WHATSAPP=2547XXXXXXXX MPESA_ENV=mock MPESA_CALLBACK_SECRET=<the random value> WHATSAPP_ENABLED=false
 ```
 
 Start with `MPESA_ENV=mock` so you can test the whole flow without real money, then switch (step 8). Allowed values are `mock`, `sandbox`, `production`; anything else makes payment functions refuse to run (on purpose).

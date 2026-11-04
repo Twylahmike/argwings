@@ -1,6 +1,6 @@
 # Front-end port progress: RG Wings Stays
 
-Branch: `feat/rg-wings-frontend`. Reference (read-only, never committed): Everlett Stays public site.
+Branch: `feat/rg-wings-frontend`. Reference (read-only, never committed): reference site.
 Alias: argwings uses `~/`. No DB changes, no edits to `supabase/migrations`, `supabase/functions`, `supabase/seed.sql`.
 
 ## Phases
@@ -8,18 +8,18 @@ Alias: argwings uses `~/`. No DB changes, no edits to `supabase/migrations`, `su
 - [x] Phase 1 - Foundation (theme tokens, fonts, site-content.ts, placeholder-images.ts, placeholder photos, check-no-placeholders)
 - [x] Phase 2 - Shell (SiteHeader, SiteFooter, AnnouncementBar, FloatingWA in PublicLayout)
 - [x] Phase 3 - Home sections (Hero, TrustBar, Spaces, Facilities, Amenities, HowToBook, PaymentExplainer, Reviews, Gallery teaser, Faq, FinalCTA)
-- [ ] Phase 4 - /gallery (done in Phase 3 commit), PWA (todo)
-- [ ] Phase 5 - Booking CTAs wired to existing flow, mock M-Pesa e2e
-- [ ] Phase 6 - Rebrand sweep + gate
-- [ ] Phase 7 - Verify (typecheck, lint, test, build, check:bundle, e2e, screenshots)
+- [x] Phase 4 - /gallery route, PWA (manifest, generated placeholder icons, InstallAppButton; no service worker)
+- [x] Phase 5 - Booking CTAs wired to existing flow (e2e NOT run: needs live Supabase)
+- [x] Phase 6 - Rebrand sweep + gate (2026-11-04)
+- [x] Phase 7 - Verify: typecheck, lint, 104 unit tests, build, check:bundle green; screenshots 390/1280 light+dark of /, /gallery, /search; e2e + /properties/<slug> not run (no Supabase)
 
 ## Baseline (main 661dda2)
 typecheck, lint, vitest all green. No manifest, no service worker, no fonts shipped. `public/` has only `placeholders/*.svg`.
 Existing: PublicLayout (header/footer inline), Wordmark, ThemeToggle (`data-theme` attr, not `.dark`), brandCss() overrides `--brand`,
 SearchBar, PropertyCard (booking), ui/{badge,button,card,dialog,form,misc}. Property has `cover_image`, `gallery[]`, `amenities[]`, `area`, `city`, `tagline`.
 
-## Port map (Everlett file -> argwings target -> data -> placeholders)
-| Everlett | argwings target | Data source | Placeholders / notes |
+## Port map (the reference site file -> argwings target -> data -> placeholders)
+| the reference site | argwings target | Data source | Placeholders / notes |
 |---|---|---|---|
 | styles.css (tokens, keyframes, btn-*) | src/styles/theme.css | `--brand` token only (HSL triplets) | No ivory/terracotta. Neutral warm surfaces derived from existing tokens. Motion keyframes ported, honour prefers-reduced-motion |
 | Header.tsx (fixed, transparent over hero, blur on scroll) | components/site/SiteHeader.tsx | brand (name/logo), nav links | Drop Admin-role Supabase check; keep "Staff login" link. Adds ThemeToggle. No "Brochure"/"Spaces" links |
@@ -45,10 +45,10 @@ SearchBar, PropertyCard (booking), ui/{badge,button,card,dialog,form,misc}. Prop
 
 ## Decisions / findings
 - Branch: task names `feat/rg-wings-frontend`; used in preference to the harness default branch (explicit instruction).
-- Everlett repo was not in session scope; attached read-only via add_repo, cloned to /home/user/everlettstays (outside the argwings tree).
+- the reference site repo was not in session scope; attached read-only via add_repo, cloned to /home/user/referencestays (outside the argwings tree).
 - Fonts: `@fontsource/cormorant-garamond` and `@fontsource/inter` (new deps, self-hosted, CSP `font-src 'self' data:` OK).
 - CSP: `frame-src` falls back to `default-src 'self'`, so third-party map embeds would be blocked. Maps are not embedded; "Directions" links open Google Maps via `mapsLink()`.
-- **Gate conflict (needs owner decision):** gate (a) demands zero "Lavington" hits, but the pre-existing, off-limits `supabase/seed.sql` (lines 12, 24-27) and `tests/sql/db.test.mjs:405` contain it as demo seed data (a real Nairobi suburb, argwings' own demo). `public/placeholders/lavington.svg` filename too. I will not edit seed.sql. Gate (a) is run excluding those pre-existing paths; everything I author is clean.
+- **Gate conflict (needs owner decision):** gate (a) demands zero "[demo suburb]" hits, but the pre-existing, off-limits `supabase/seed.sql` (lines 12, 24-27) and `tests/sql/db.test.mjs:405` contain it as demo seed data (a real Nairobi suburb, argwings' own demo). a demo SVG filename under `public/placeholders/` too. I will not edit seed.sql. Gate (a) is run excluding those pre-existing paths; everything I author is clean.
 - Packaging text "BNB Management System" also appears in `supabase/migrations/0001_schema.sql` and `supabase/functions/_shared/messaging.ts` (off-limits). Flagged, not edited.
 - `.env.example` has `SUPPORT_WHATSAPP` twice (pre-existing). Will set example value on both.
 - wrangler.jsonc worker `name` stays `bnb-system` (flag in PR).
@@ -71,11 +71,25 @@ Collected in `src/lib/site-content.ts` once created (Phase 1).
 - WhatsApp: `useWhatsApp()` (src/lib/contact.ts) validates the configured number with `normalizePhone`; invalid/empty -> no link rendered anywhere (header, floating button, footer, FAQ, CTA).
 - TrustBar shows only configured facts (deposit %, hold minutes). No invented stats.
 - Amenities derived from property/unit `amenities[]`; hidden when none. Facilities, Reviews, AnnouncementBar driven by site-content.ts, hidden when empty.
-- PaymentExplainer replaces Everlett's "request booking" form: explains the M-Pesa flow (no card claims) and embeds the real SearchBar. No inquiries insert, no wa.me form submit.
-- FinalCTA: deterministic particles (Everlett used Math.random in render = hydration mismatch), no map iframes (CSP), "Directions" via `mapsLink()`.
+- PaymentExplainer replaces the reference site's "request booking" form: explains the M-Pesa flow (no card claims) and embeds the real SearchBar. No inquiries insert, no wa.me form submit.
+- FinalCTA: deterministic particles (the reference site used Math.random in render = hydration mismatch), no map iframes (CSP), "Directions" via `mapsLink()`.
 - Gallery fed from property cover_image + gallery[] (no new table); placeholders only when no real photo exists at all. Filter chips = property names.
 - lucide-react v1 has no brand icons: socials are text badges.
 - Kept the existing FAQ block (real answers) as `Faq`.
 
 ## Surprises
 - Supabase isn't configured in this sandbox, so previews render with zero properties (placeholder hero/gallery only).
+
+## Phase 4-7 notes
+- PWA: public/manifest.webmanifest + generated placeholder icons (flat colour + "RG"; **replace**). No service worker (not needed to install; avoids caching risk). Install button in footer, hidden when installed / unsupported.
+- Booking CTAs: every "Book direct"/search form goes to `/search` (SearchBar) or `/properties/$slug`; the unchanged flow continues /book -> create-booking -> STK push -> /booking/$token -> /receipt/$paymentId. Not exercised end to end here: no Supabase/MPESA_ENV=mock backend is reachable in this sandbox. Playwright specs only start at /search and property pages, so no copy assertions needed changing.
+- Fixed a real bug in theme.css: the unlayered `* { border-color }` overrode Tailwind border utilities; now in `@layer base`.
+- brand.tsx treats the migration-seeded name "Your BNB Brand" as unset, so the public site shows "RG Wings Stays" until the owner sets a name in Settings.
+- Rebrand: README, DEPLOY.md, .env.example (BUSINESS_NAME; SUPPORT_WHATSAPP example for the owner's number), package.json + lockfile name. Off-limits and left: migration 0001 seed value, `supabase/config.toml` project_id, `_shared/messaging.ts` fallback text, wrangler `name`.
+- Migration 0005 in production: not verified (no Supabase access in this session); left for the owner.
+
+## Gate result (2026-11-04)
+- (a) Zero hits for the banned terms in everything authored, except: (i) the mandated placeholder folder name in src/lib/placeholder-images.ts and scripts/check-no-placeholders.mjs (path strings) and its README; (ii) pre-existing off-limits supabase/seed.sql and tests/sql/db.test.mjs (demo suburb). **Owner decision needed on (ii).**
+- (b) 4 secret/host values from the reference .env checked: zero hits.
+- (c) sha256 of every reference-repo file vs argwings tree: zero matches (photos were resized/re-encoded).
+- (d) `npm run check:placeholders` fails as intended while the folder exists.

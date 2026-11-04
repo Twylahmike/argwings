@@ -1,0 +1,23 @@
+{
+  "name": "RG Wings Stays",
+  "short_name": "RG Wings",
+  "description": "Book direct and pay by M-Pesa.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#ffffff",
+  "theme_color": "#187058",
+  "lang": "en",
+  "categories": ["travel", "lifestyle"],
+  "icons": [
+    { "src": "/app-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/app-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Search availability", "url": "/search?source=pwa", "icons": [{ "src": "/app-icon-192.png", "sizes": "192x192" }] },
+    { "name": "Gallery", "url": "/gallery?source=pwa", "icons": [{ "src": "/app-icon-192.png", "sizes": "192x192" }] }
+  ]
+}

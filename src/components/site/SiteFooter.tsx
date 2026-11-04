@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Mail, MapPin, MessageCircle } from 'lucide-react'
+import { InstallAppButton } from './InstallAppButton'
 import { useBrand } from '~/lib/brand'
 import { useWhatsApp } from '~/lib/contact'
 import { siteContent, safeUrl } from '~/lib/site-content'
@@ -38,6 +39,7 @@ export function SiteFooter() {
             <li><Link to="/search" className="inline-flex h-9 items-center hover:underline">Search availability</Link></li>
             <li><Link to="/gallery" className="inline-flex h-9 items-center hover:underline">Gallery</Link></li>
             <li><Link to="/login" className="inline-flex h-9 items-center hover:underline">Staff login</Link></li>
+            <li><InstallAppButton /></li>
           </ul>
         </div>
         <div>

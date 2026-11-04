@@ -79,7 +79,7 @@
 
 html { background: hsl(var(--background)); color: hsl(var(--foreground)); font-family: var(--font-sans); -webkit-text-size-adjust: 100%; }
 body { margin: 0; min-height: 100dvh; background: hsl(var(--background)); }
-* { border-color: hsl(var(--border)); }
+@layer base { * { border-color: hsl(var(--border)); } }
 :focus-visible { outline: 2px solid hsl(var(--ring)); outline-offset: 2px; }
 button, [role='button'], a, select, input { touch-action: manipulation; }
 html { scroll-behavior: smooth; }

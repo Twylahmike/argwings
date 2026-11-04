@@ -11,11 +11,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
+      { name: 'theme-color', content: '#187058' },
       { title: 'Book your stay' },
-      { name: 'description', content: 'Book a BNB stay in Nairobi and pay by M-Pesa.' },
+      { name: 'description', content: 'Book direct and pay by M-Pesa.' },
     ],
     links: [
       { rel: 'stylesheet', href: appCss },
+      { rel: 'manifest', href: '/manifest.webmanifest' },
+      { rel: 'icon', href: '/favicon.ico', sizes: '32x32' },
+      { rel: 'apple-touch-icon', href: '/apple-touch-icon.png' },
     ],
   }),
   loader: async () => ({ brand: await fetchBrand() }),

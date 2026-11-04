@@ -1,4 +1,4 @@
-# BNB Management System
+# RG Wings Stays
 
 One dashboard for every BNB you run: bookings, a master calendar, M-Pesa payments, guests, housekeeping, finances and WhatsApp messages, plus a public booking site guests can use from their phones.
 
@@ -146,3 +146,9 @@ Secrets are never logged; phone numbers are redacted to the last 3 digits in log
 - When a payment is settled by status query (callback missed), Daraja returns no receipt number, so staff can add the code from the SMS.
 - The calendar renders every cell (fine for 5 properties; virtualise if you grow past ~50 units).
 - Out of scope by design: WhatsApp chatbot, Airbnb/Booking.com iCal sync, multi-owner tenancy, card payments. Extension points are marked in the code (`whatsapp-webhook` inbound messages, `PaymentProvider` interface).
+
+## Public site content
+
+The public pages (home, gallery) take their business name, WhatsApp number, brand colour, deposit % and policy from Admin > Settings.
+Everything else that is marketing copy (tagline, hero headline, contact email, social links, announcement, reviews, optional feature band,
+production domain and share image) lives in one typed file: `src/lib/site-content.ts`. Empty fields hide their section. Search it for `TODO(owner)`.

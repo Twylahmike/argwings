@@ -1,21 +1,43 @@
--- RG Wings Stays SQL: 1 of 3, the database (migrations 0001 to 0006)
--- Run in Supabase dashboard > SQL Editor of the project named bnb-system. CHECK THE PROJECT NAME (top-left) BEFORE PRESSING RUN.
--- ONLY for a brand-new EMPTY project. bnb-system already has all of this: do not run it there (the guard below will stop you).
+-- =====================================================================================
+-- RG Wings Stays: ALL THE SQL IN ONE FILE (safe to run more than once).
+-- Supabase dashboard > SQL Editor > a NEW empty query tab > paste everything > Run.
+--
+-- BEFORE YOU PRESS RUN:  check the project name at the top-left. It must be "bnb-system".
+--   1. Replace PASTE-YOUR-REAL-SERVICE-ROLE-KEY-HERE (in STEP 3 below) with your service_role key
+--      (Project Settings > API Keys > the secret one). Never share it or commit it.
+--      If you leave it as is, STEP 3 is skipped with a notice and everything else still runs.
+--   2. Nothing else to edit.
+--
+-- What it does, in order:
+--   STEP 0  Safety check: refuses to run in another app's project (one with orders / products tables).
+--   STEP 1  Installs the database (migrations 0001 to 0006), but ONLY if it is not installed yet.
+--           On bnb-system it is already installed, so this step is skipped by itself.
+--   STEP 3  Stores the two secrets the scheduled jobs need (updates them if they already exist).
+--   STEP 4  Removes the E2E test property / bookings / test guest if they exist.
+--   STEP 5  Prints a check. Both rows should say true.
+-- =====================================================================================
 
--- SAFETY GUARD: stops this file unless the project is EMPTY (no booking tables, no other app's tables).
+-- STEP 0: wrong-project guard
 do $guard$
 begin
-  if to_regclass('public.bookings') is not null or to_regclass('public.units') is not null or to_regclass('public.properties') is not null then
-    raise exception 'STOP: this project already has the RG Wings booking tables. Part 1 is already applied here. Do not run it again.';
-  end if;
-  if to_regclass('public.orders') is not null or to_regclass('public.products') is not null or to_regclass('public.payments') is not null
-     or to_regclass('public.settings') is not null or to_regclass('public.audit_log') is not null then
-    raise exception 'STOP: this looks like a DIFFERENT app (it already has orders/products/payments/settings tables). Open the correct Supabase project and try again. Nothing was changed.';
+  if to_regclass('public.orders') is not null or to_regclass('public.products') is not null then
+    raise exception 'STOP: this looks like a DIFFERENT app (it has orders/products tables). Open the bnb-system project and try again. Nothing was changed.';
   end if;
 end
 $guard$;
 
--- ===================== 0001_schema.sql =====================
+-- STEP 1: install the database only if it is not there yet
+do $install$
+begin
+  if to_regclass('public.bookings') is not null then
+    raise notice 'STEP 1 skipped: the RG Wings tables already exist in this project.';
+    return;
+  end if;
+  if to_regclass('public.settings') is not null or to_regclass('public.payments') is not null or to_regclass('public.audit_log') is not null then
+    raise exception 'STOP: this project already has tables named settings/payments/audit_log from something else. Use a new empty project. Nothing was changed.';
+  end if;
+    -- ---- 0001_schema.sql ----
+    execute $mig1$
 -- 0001_schema.sql: core tables, enums, constraints.
 -- All money is integer KES. Dates are `date` (no timezone drift). Timestamps are timestamptz.
 -- Changes vs the baseline spec DDL (intent unchanged):
@@ -298,8 +320,10 @@ create table rate_limit_events (
 );
 create index on rate_limit_events (key, created_at desc);
 
+$mig1$;
 
--- ===================== 0002_functions.sql =====================
+    -- ---- 0002_functions.sql ----
+    execute $mig2$
 -- 0002_functions.sql: pricing, availability, payments->booking triggers, booking RPCs, audit, reporting.
 
 -- ---------------------------------------------------------------------------
@@ -879,8 +903,10 @@ language sql stable as $$
   group by e.category order by 2 desc
 $$;
 
+$mig2$;
 
--- ===================== 0003_rls.sql =====================
+    -- ---- 0003_rls.sql ----
+    execute $mig3$
 -- 0003_rls.sql: Row Level Security on EVERY table. UI hiding is never the security layer.
 -- Matrix (see build spec 5.3). Deactivated users have no roles (see has_role), so they match nothing here.
 
@@ -1063,8 +1089,10 @@ do $$ begin
   end if;
 end $$;
 
+$mig3$;
 
--- ===================== 0004_cron.sql =====================
+    -- ---- 0004_cron.sql ----
+    execute $mig4$
 -- 0004_cron.sql: scheduled jobs. Requires the pg_cron and pg_net extensions (enabled by default on Supabase;
 -- enable them under Database > Extensions on a fresh project). Skipped silently where they are unavailable
 -- (plain Postgres in the SQL test runner).
@@ -1113,8 +1141,10 @@ begin
   end if;
 end $$;
 
+$mig4$;
 
--- ===================== 0005_brand_color.sql =====================
+    -- ---- 0005_brand_color.sql ----
+    execute $mig5$
 -- 0005_brand_color.sql: owner-editable brand colour (Settings > Brand), readable by the public site.
 insert into settings(key, value) values ('brand_color', '"#0f766e"') on conflict (key) do nothing;
 
@@ -1123,8 +1153,10 @@ create policy settings_public_read on settings for select to anon, authenticated
   using (key in ('business_name','cancellation_policy','logo_url','support_whatsapp','deposit_percent','hold_minutes',
                  'mpesa_manual_instructions','mpesa_paybill_display','brand_color'));
 
+$mig5$;
 
--- ===================== 0006_site_content.sql =====================
+    -- ---- 0006_site_content.sql ----
+    execute $mig6$
 -- 0006_site_content.sql: marketing copy for the public site (hero headline, reviews, socials...) is edited in
 -- Admin > Settings > Website and stored as ONE jsonb value under settings.key = 'site_content'.
 -- The only change needed is to let the public site read that key (same allowlist approach as 0005).
@@ -1133,3 +1165,45 @@ create policy settings_public_read on settings for select to anon, authenticated
   using (key in ('business_name','cancellation_policy','logo_url','support_whatsapp','deposit_percent','hold_minutes',
                  'mpesa_manual_instructions','mpesa_paybill_display','brand_color','site_content'));
 
+$mig6$;
+end
+$install$;
+
+-- STEP 3: secrets for the scheduled jobs (reminders + M-Pesa reconcile)
+do $secrets$
+declare
+  v_url  constant text := 'https://bxpgpzrtoxjmynyjnfkg.supabase.co';
+  v_key  constant text := 'PASTE-YOUR-REAL-SERVICE-ROLE-KEY-HERE';
+  v_id   uuid;
+begin
+  if v_key like 'PASTE-%' or length(v_key) < 40 then
+    raise notice 'STEP 3 skipped: you have not pasted your real service_role key yet (the check at the end will show false).';
+    return;
+  end if;
+  select id into v_id from vault.secrets where name = 'functions_base_url';
+  if v_id is null then perform vault.create_secret(v_url, 'functions_base_url');
+  else perform vault.update_secret(v_id, v_url); end if;
+  select id into v_id from vault.secrets where name = 'service_role_key';
+  if v_id is null then perform vault.create_secret(v_key, 'service_role_key');
+  else perform vault.update_secret(v_id, v_key); end if;
+end
+$secrets$;
+
+-- STEP 4: remove the E2E test data (only rows for slug e2e-test-property and the guest "E2E Test Guest")
+do $cleanup$
+begin
+  delete from payments where booking_id in (select b.id from bookings b join properties p on p.id = b.property_id where p.slug = 'e2e-test-property');
+  delete from message_log where property_id in (select id from properties where slug = 'e2e-test-property');
+  delete from housekeeping_tasks where property_id in (select id from properties where slug = 'e2e-test-property');
+  delete from bookings where property_id in (select id from properties where slug = 'e2e-test-property');
+  delete from guests where full_name = 'E2E Test Guest';
+  delete from units where property_id in (select id from properties where slug = 'e2e-test-property');
+  delete from properties where slug = 'e2e-test-property';
+end
+$cleanup$;
+
+-- STEP 5: check (does not show the key). Both should say true.
+select name,
+  case when name = 'functions_base_url' then decrypted_secret = 'https://bxpgpzrtoxjmynyjnfkg.supabase.co'
+       else length(decrypted_secret) > 40 and decrypted_secret not like 'PASTE-%' end as looks_right
+from vault.decrypted_secrets where name in ('functions_base_url', 'service_role_key');

@@ -114,3 +114,7 @@ Collected in `src/lib/site-content.ts` once created (Phase 1).
 ## SQL files (docs/sql/), 2026-11-04
 - Replaced the single docs/ALL_SQL.sql with three files, each starting with a guard that raises an exception on the wrong project: `1_database.sql` (empty project only), `2_cron_secrets.sql` and `3_cleanup_test_data.sql` (booking project only, never a store).
 - Incident: the earlier combined file was run by mistake in another live project (afriklad-kenya). It rolled back on its first collision; read-only checks confirmed nothing was applied there.
+
+## Single SQL file (2026-11-04)
+- `docs/sql/ALL_IN_ONE.sql` replaces the three split files. STEP 0 refuses other apps' projects; STEP 1 installs migrations 0001-0006 only if the booking tables are absent (EXECUTE inside a DO block); STEP 3 upserts the two Vault secrets (skips with a notice while the key is still the placeholder); STEP 4 deletes only e2e-test rows; STEP 5 prints a check.
+- Tested on a throwaway Postgres 16: fresh install (15 tables), re-runs (idempotent), other-app guard, placeholder key, test-data cleanup leaves real rows. On bnb-system only the read-only guard and skip branch were run.

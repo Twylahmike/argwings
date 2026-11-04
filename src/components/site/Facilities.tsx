@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useBrand } from '~/lib/brand'
 import { parseHeadline } from '~/lib/site-content'
-import { photoByLabel } from '~/lib/placeholder-images'
+import { photoByLabel } from '~/lib/stay-photos'
 
 /** Optional full-width feature band (pool, rooftop, gym...). Fully driven by site-content.ts; hidden when empty. */
 export function Facilities() {

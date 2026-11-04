@@ -1,5 +1,5 @@
 import type { PropertyWithUnits } from '~/lib/public-api'
-import { PLACEHOLDER_PHOTOS } from '~/lib/placeholder-images'
+import { STAY_PHOTOS } from '~/lib/stay-photos'
 
 export type GalleryItem = { src: string; alt: string; caption: string; group: string }
 
@@ -13,7 +13,7 @@ export function galleryItems(properties: PropertyWithUnits[]): GalleryItem[] {
   const real: GalleryItem[] = properties.flatMap((p) =>
     propertyImages(p).map((src, i) => ({ src, alt: `${p.name} photo ${i + 1}`, caption: p.name, group: p.name })))
   if (real.length) return real
-  return PLACEHOLDER_PHOTOS.map((p) => ({ src: p.src, alt: p.alt, caption: p.label, group: p.category }))
+  return STAY_PHOTOS.map((p) => ({ src: p.src, alt: p.alt, caption: p.label, group: p.category }))
 }
 
 /** Hero slides: real photos first, placeholders only when there are none. */

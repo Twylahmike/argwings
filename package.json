@@ -8,7 +8,7 @@
     "dev": "vite dev --port 3000",
     "build": "vite build",
     "preview": "vite preview",
-    "deploy": "npm run check:placeholders && npm run build && wrangler deploy",
+    "deploy": "npm run build && wrangler deploy",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -22,8 +22,7 @@
     "check:functions": "deno check --config scripts/deno.check.json supabase/functions/*/index.ts",
     "dev:functions": "node scripts/dev-functions.mjs",
     "test:api": "node --test --test-concurrency=1 tests/api/payments.test.mjs",
-    "check:bundle": "node scripts/check-bundle.mjs",
-    "check:placeholders": "node scripts/check-no-placeholders.mjs"
+    "check:bundle": "node scripts/check-bundle.mjs"
   },
   "dependencies": {
     "@fontsource/cormorant-garamond": "^5.3.0",

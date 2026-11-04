@@ -134,3 +134,8 @@ Collected in `src/lib/site-content.ts` once created (Phase 1).
 - Live DB (owner-approved): inserted the 2 properties and 2 units; brand_color set. No migration.
 - The photo build guard (`check:placeholders`, folder `placeholders-everlett`) is still in place: my attempt to remove it was blocked by the session's permission system, so removal waits for the owner's explicit go-ahead.
 - Fixed: content loader now falls back to the defaults for social links and the feature band; eyebrow/labels readable in dark mode; scroll-reveal threshold for tall sections.
+
+## Photo guard removed, going live (owner-confirmed, 2026-11-04)
+- Owner confirmed the apartment photos are theirs to use and asked to merge and go live. Removed `check:placeholders` and its script; folder renamed to `src/assets/stays`, module to `src/lib/stay-photos.ts`.
+- Added `.env.production` with the PUBLIC Supabase URL and publishable key so the Cloudflare build is configured without dashboard variables. No secret keys in it.
+- Still needed on the Supabase side after the site URL is known: set the `SITE_URL` function secret (CORS), and fix `MPESA_CALLBACK_SECRET`.

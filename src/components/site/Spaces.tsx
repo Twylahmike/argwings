@@ -4,7 +4,7 @@ import { Building2, CalendarDays, ChefHat, Car, Dumbbell, MapPin, ShieldCheck, W
 import { formatKES } from '~/lib/money'
 import { fromRate } from '~/lib/pricing'
 import { mapsLink, type PropertyWithUnits } from '~/lib/public-api'
-import { placeholderSet } from '~/lib/placeholder-images'
+import { photoSet } from '~/lib/stay-photos'
 import { propertyImages } from '~/lib/gallery'
 import { useWhatsApp } from '~/lib/contact'
 import { useBrand } from '~/lib/brand'
@@ -18,7 +18,7 @@ function Showcase({ p, idx }: { p: PropertyWithUnits; idx: number }) {
   const ref = useReveal<HTMLDivElement>()
   const wa = useWhatsApp()
   const real = propertyImages(p)
-  const images = real.length ? real.map((src) => ({ src, alt: p.name })) : placeholderSet(idx, 4, p.slug).map((x) => ({ src: x.src, alt: x.alt }))
+  const images = real.length ? real.map((src) => ({ src, alt: p.name })) : photoSet(idx, 4, p.slug).map((x) => ({ src: x.src, alt: x.alt }))
   const [i, setI] = useState(0)
   useEffect(() => {
     if (images.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return

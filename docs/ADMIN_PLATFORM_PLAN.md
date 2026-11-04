@@ -18,7 +18,7 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 | Phase | Topic | Status | Notes |
 |---|---|---|---|
 | 2 | Brand identity (admin) | PARTIAL | Public site is black/gold from the logo; admin inherits tokens. Full admin restyle (serif headings, champagne) TODO |
-| 3 | Executive dashboard | PARTIAL | Exists; comparisons (day/week/month/year), 8 KPI set, charts by source/method, date filters TODO |
+| 3 | Executive dashboard | **MOSTLY DONE** | Slice 4 (migration 0010): period picker (today/7d/30d/month/year/custom), 8 KPIs with change vs previous period, revenue and occupancy charts, revenue by method, bookings by source. All numbers come from `dashboard_overview`, computed under RLS |
 | 4 | Listings management | **MOSTLY DONE** | Slice 2: publish/unpublish, featured, archive/restore, per-property cancellation policy, bathrooms, bed setup, min/max stay, maintenance flag. Video upload and length-of-stay discounts TODO |
 | 5 | Rooms and occupancy | **DONE** | Slice 2: Admin > Rooms board (7 colour-coded statuses for any day), room condition control; overlap prevention already in the database |
 | 6 | Occupancy calendar | PARTIAL | Exists (timeline); week/day views, drag to reschedule TODO |
@@ -42,7 +42,7 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 | 24 | Database and security | ONGOING | Every new table ships with RLS, indexes, checks, audit trigger and SQL tests |
 | 25 | Admin UX | PARTIAL | Grouped sidebar + "Back to website" added. Breadcrumbs, global search TODO |
 | 26 | Interaction quality | ONGOING | New pages have search/filters, empty/error/loading states, confirmations |
-| 27 | Testing | ONGOING | 109 app tests, 26 SQL tests, browser checks of public pages |
+| 27 | Testing | ONGOING | 111 app tests, 27 SQL tests, browser checks of public pages |
 
 ## Slice 1 (this change): Inquiries, Reviews, Announcements
 - Migration `0007_inquiries_reviews_announcements.sql` (applied to the live project): tables `inquiries`, `inquiry_notes`,

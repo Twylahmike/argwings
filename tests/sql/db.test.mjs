@@ -777,3 +777,41 @@ test('daily notifications: arrivals, departures and balances once; stale request
     assert.equal((await one(c, 'select generate_daily_notifications() n')).n, 0, 'second run adds nothing')
     assert.equal((await one(c, `select status from booking_requests where name='Old'`)).status, 'expired')
   }))
+
+test('dashboard_overview: hand-computed KPIs, previous period, property filter and role scoping', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    // 3 nights confirmed in property A, paid 5000 cash; one refund of 1000
+    const b = await booking(c, f, { from: d0, to: day(d0, 3), status: 'confirmed' })
+    await c.query(`insert into payments(booking_id,kind,method,status,amount,confirmed_at) values ($1,'deposit','cash','succeeded',5000,now())`, [b.id])
+    await c.query(`insert into payments(booking_id,kind,method,status,amount,confirmed_at) values ($1,'refund','cash','succeeded',1000,now())`, [b.id])
+    // revenue only counts succeeded
+    await c.query(`insert into payments(booking_id,kind,method,status,amount) values ($1,'balance','cash','pending',9999)`, [b.id])
+
+    await as(c, 'authenticated', f.owner)
+    const today = (await one(c, 'select nairobi_today()::text d')).d
+    const o = (await one(c, 'select dashboard_overview($1::date, $2::date, $3) o', [today, today, f.pa])).o
+    assert.equal(Number(o.current.revenue), 4000, 'income minus refunds, succeeded only')
+    assert.equal(o.days, 1)
+    assert.equal(o.daily.length, 1)
+    assert.ok(o.by_method.some((m) => m.key === 'cash' && Number(m.amount) === 4000))
+    assert.equal(o.previous.revenue, 0)
+
+    // the booking's three nights are fully inside a 3-day window starting at check-in
+    const w = (await one(c, 'select dashboard_overview($1::date, ($1::date + 2), $2) o', [d0, f.pa])).o
+    assert.equal(Number(w.current.occupied_nights), 3)
+    assert.equal(Number(w.current.available_nights), Number(w.units) * 3)
+    assert.equal(Number(w.current.arrivals), 1)
+    const other = (await one(c, 'select dashboard_overview($1::date, ($1::date + 2), $2) o', [d0, f.pb])).o
+    assert.equal(Number(other.current.occupied_nights), 0, 'property filter')
+    assert.equal(Number(other.current.revenue), 0)
+
+    await as(c, 'authenticated', f.manager)
+    const m = (await one(c, 'select dashboard_overview($1::date, $1::date, null) o', [today])).o
+    assert.equal(Number(m.current.revenue), 4000)
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, 'select dashboard_overview($1::date, $1::date, null)', [today], '42501')
+    await as(c, 'authenticated', f.owner)
+    await fails(c, `select dashboard_overview('2026-02-01', '2026-01-01', null)`, [], '23514')
+  }))

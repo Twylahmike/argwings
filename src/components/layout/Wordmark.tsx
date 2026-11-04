@@ -9,7 +9,7 @@ export function Wordmark({ className = '', compact = false }: { className?: stri
   const { businessName, logoUrl } = useBrand()
   // Logo uploaded in Admin > Settings wins; otherwise the bundled brand logo (public/logo.webp).
   const src = logoUrl || DEFAULT_LOGO
-  if (src) return <img src={src} alt={businessName} className={cn('h-12 w-auto rounded-md', className)} />
+  if (src) return <img src={src} alt={businessName} className={cn('h-14 w-auto rounded-md', className)} />
   return (
     <span className={`inline-flex items-center gap-2 font-semibold tracking-tight ${className}`}>
       <span aria-hidden className="grid h-8 w-8 place-items-center rounded-lg bg-brand text-sm font-bold text-brand-foreground">

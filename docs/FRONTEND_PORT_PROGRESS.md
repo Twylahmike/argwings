@@ -139,3 +139,6 @@ Collected in `src/lib/site-content.ts` once created (Phase 1).
 - Owner confirmed the apartment photos are theirs to use and asked to merge and go live. Removed `check:placeholders` and its script; folder renamed to `src/assets/stays`, module to `src/lib/stay-photos.ts`.
 - Added `.env.production` with the PUBLIC Supabase URL and publishable key so the Cloudflare build is configured without dashboard variables. No secret keys in it.
 - Still needed on the Supabase side after the site URL is known: set the `SITE_URL` function secret (CORS), and fix `MPESA_CALLBACK_SECRET`.
+
+## New logo (owner-supplied, 2026-11-04)
+- public/logo.webp, favicon and PWA icons regenerated from the new cream-background logo (house roof + wing, gold and black). Manifest colours: background #f7f1ec, theme #a9761f.

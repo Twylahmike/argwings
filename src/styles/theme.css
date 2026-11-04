@@ -143,35 +143,35 @@ h1, h2, h3 { text-wrap: balance; }
 
 /* ---------- Public site theme: warm ivory / charcoal / olive, with the owner's brand colour as the accent ---------- */
 .site-theme {
-  --background: 48 58% 94%;
-  --foreground: 211 11% 7%;
-  --card: 48 79% 98%;
-  --muted: 44 31% 91%;
-  --muted-foreground: 211 6% 34%;
-  --border: 40 23% 83%;
-  --ink: 211 11% 7%;
-  --ink-foreground: 48 58% 94%;
-  --olive: 91 14% 38%;
+  --background: 45 38% 96%;
+  --foreground: 40 10% 7%;
+  --card: 45 45% 99%;
+  --muted: 44 24% 92%;
+  --muted-foreground: 40 6% 32%;
+  --border: 42 20% 84%;
+  --ink: 40 8% 5%;
+  --ink-foreground: 45 40% 94%;
+  --olive: 40 8% 11%;
   --radius: 0.5rem;
   background: hsl(var(--background));
   color: hsl(var(--foreground));
 }
 :root[data-theme='dark'] .site-theme {
-  --background: 211 11% 8%;
-  --foreground: 48 58% 94%;
-  --card: 211 10% 12%;
-  --muted: 211 9% 15%;
-  --muted-foreground: 48 12% 68%;
-  --border: 211 8% 22%;
-  --ink: 211 12% 4%;
-  --olive: 91 14% 40%;
+  --background: 40 8% 7%;
+  --foreground: 45 40% 94%;
+  --card: 40 7% 11%;
+  --muted: 40 6% 14%;
+  --muted-foreground: 45 14% 68%;
+  --border: 40 6% 22%;
+  --ink: 40 10% 3%;
+  --olive: 40 7% 15%;
 }
 .site-theme h1, .site-theme h2, .site-theme h3 { font-family: var(--font-display); letter-spacing: -0.01em; }
 
 .btn-brand { background: hsl(var(--brand)); color: hsl(var(--brand-foreground)); transition: all 0.3s ease; }
 .btn-brand:hover { background: var(--color-brand-glow); box-shadow: 0 12px 30px -8px hsl(var(--brand) / 0.55); transform: translateY(-2px); }
-.btn-olive { background: hsl(var(--olive)); color: #fff; transition: all 0.3s ease; }
-.btn-olive:hover { filter: brightness(1.1); box-shadow: 0 12px 30px -8px hsl(var(--olive) / 0.5); transform: translateY(-2px); }
+.btn-olive { background: hsl(var(--olive)); color: var(--color-brand-glow); border: 1px solid hsl(var(--brand) / 0.5); transition: all 0.3s ease; }
+.btn-olive:hover { filter: brightness(1.25); box-shadow: 0 12px 30px -8px hsl(var(--brand) / 0.45); transform: translateY(-2px); }
 .btn-ivory { background: hsl(48 58% 94%); color: hsl(211 11% 7%); transition: all 0.3s ease; }
 .btn-ivory:hover { box-shadow: 0 0 40px hsl(48 58% 94% / 0.6); transform: translateY(-2px); }
 

@@ -1,10 +1,9 @@
 /**
- * TEMPORARY stand-in photos (owned by another client, dev branch only). See src/assets/placeholders-everlett/README.md.
- * This is the ONLY module allowed to reference that folder. Real photos (property cover_image / gallery) always win;
- * these appear only when a property has none.
+ * Apartment photos (supplied by the owner; folder still guarded by `npm run check:placeholders` until the owner
+ * confirms the guard can go). This is the ONLY module that references that folder. A property's own photos
+ * uploaded in Admin always come first; these fill in for properties that have none.
  *
- * To switch to RG Wings' own photos: delete the folder and replace PLACEHOLDER_PHOTOS with `[]` (or your own files).
- * Nothing else in the app needs to change.
+ * To switch to other photos: replace the files in the folder and edit the list below. Nothing else changes.
  */
 import livingRoom from '~/assets/placeholders-everlett/living-room.webp'
 import bedroom from '~/assets/placeholders-everlett/bedroom.webp'
@@ -17,22 +16,47 @@ import dining from '~/assets/placeholders-everlett/dining-area.webp'
 import gym from '~/assets/placeholders-everlett/gym.webp'
 import pool from '~/assets/placeholders-everlett/pool.webp'
 import laundry from '~/assets/placeholders-everlett/laundry.webp'
+import rooftopDay from '~/assets/placeholders-everlett/rooftop-day.webp'
+import rooftopEvening from '~/assets/placeholders-everlett/rooftop-evening.webp'
+import bathroom from '~/assets/placeholders-everlett/bathroom.webp'
+import studioBedroom from '~/assets/placeholders-everlett/studio-bedroom.webp'
+import studioSofa from '~/assets/placeholders-everlett/studio-sofa.webp'
+import studioKitchen from '~/assets/placeholders-everlett/studio-kitchen.webp'
+import studioTv from '~/assets/placeholders-everlett/studio-tv-area.webp'
 
 export type PlaceholderPhoto = { src: string; alt: string; label: string; category: string }
+const P = (src: string, label: string, category: string, alt = label): PlaceholderPhoto => ({ src, alt, label, category })
 
+const balconyP = P(balcony, 'Balcony', 'Balcony', 'Balcony seating')
+const bedroomP = P(bedroom, 'Bedroom', 'Bedroom')
+const gymP = P(gym, 'Gym', 'Amenities')
+const kitchenP = P(kitchen, 'Kitchen', 'Amenities')
+const livingP = P(livingRoom, 'Living area', 'Living')
+const masterP = P(masterBedroom, 'Master bedroom', 'Bedroom')
+const balconyViewP = P(balconyView, 'Balcony view', 'Balcony')
+const poolP = P(pool, 'Pool', 'Pool', 'Indoor swimming pool')
+const diningP = P(dining, 'Dining area', 'Living')
+const terraceP = P(terrace, 'Terrace', 'Balcony')
+const laundryP = P(laundry, 'Laundry', 'Amenities')
+const roofDayP = P(rooftopDay, 'Rooftop', 'Exterior')
+const roofEveP = P(rooftopEvening, 'Rooftop at dusk', 'Exterior')
+const bathP = P(bathroom, 'Bathroom', 'Studio')
+const sBedP = P(studioBedroom, 'Studio bedroom', 'Studio')
+const sSofaP = P(studioSofa, 'Studio lounge', 'Studio')
+const sKitP = P(studioKitchen, 'Studio kitchen', 'Studio')
+const sTvP = P(studioTv, 'Studio TV area', 'Studio')
+
+/** Everything, in the order the hero and gallery use. */
 export const PLACEHOLDER_PHOTOS: PlaceholderPhoto[] = [
-  { src: balcony, alt: 'Apartment balcony seating', label: 'Balcony', category: 'Balcony' },
-  { src: bedroom, alt: 'Apartment bedroom', label: 'Bedroom', category: 'Bedroom' },
-  { src: gym, alt: 'Residents gym', label: 'Gym', category: 'Amenities' },
-  { src: kitchen, alt: 'Apartment kitchen', label: 'Kitchen', category: 'Kitchen' },
-  { src: livingRoom, alt: 'Apartment living room', label: 'Living area', category: 'Living' },
-  { src: masterBedroom, alt: 'Apartment main bedroom', label: 'Main bedroom', category: 'Bedroom' },
-  { src: balconyView, alt: 'View from the apartment balcony', label: 'Balcony view', category: 'Balcony' },
-  { src: pool, alt: 'Indoor swimming pool', label: 'Pool', category: 'Amenities' },
-  { src: dining, alt: 'Dining area', label: 'Dining area', category: 'Living' },
-  { src: terrace, alt: 'Terrace seating', label: 'Terrace', category: 'Balcony' },
-  { src: laundry, alt: 'Laundry corner', label: 'Laundry', category: 'Amenities' },
+  balconyP, bedroomP, gymP, kitchenP, livingP, masterP, balconyViewP, poolP,
+  diningP, terraceP, laundryP, roofDayP, roofEveP, sSofaP, sKitP, sBedP, sTvP, bathP,
 ]
+
+/** Which photos belong to which apartment (by property slug). */
+const BY_SLUG: Record<string, PlaceholderPhoto[]> = {
+  'lavington-1-bedroom': [poolP, livingP, bedroomP, balconyP, masterP, kitchenP, balconyViewP, terraceP, diningP, laundryP, gymP],
+  'fedha-studio': [sKitP, sSofaP, sTvP, sBedP, bathP],
+}
 
 /** Placeholder number `i` (wraps around), or null when there are none. */
 export function placeholderAt(i: number): PlaceholderPhoto | null {
@@ -40,15 +64,20 @@ export function placeholderAt(i: number): PlaceholderPhoto | null {
   return n ? PLACEHOLDER_PHOTOS[((i % n) + n) % n] : null
 }
 
-/** A few placeholders for a property that has no photos of its own (each slot rotates the starting point). */
-export function placeholderSet(slot: number, count = 4): PlaceholderPhoto[] {
+/** Photos for a property that has none of its own: its own set if we know the slug, otherwise a rotating few. */
+export function placeholderSet(slot: number, count = 4, slug?: string): PlaceholderPhoto[] {
+  if (slug && BY_SLUG[slug]) return BY_SLUG[slug]
   const n = PLACEHOLDER_PHOTOS.length
   return n ? Array.from({ length: Math.min(count, n) }, (_, k) => PLACEHOLDER_PHOTOS[(slot * count + k) % n]) : []
 }
 
-/** The property's own cover image if it has one, otherwise a stable placeholder for slot `i`. Null when neither exists. */
-export function coverOrPlaceholder(cover: string | null | undefined, i: number): { src: string; alt?: string; placeholder: boolean } | null {
+export function photoByLabel(label: string): string | null {
+  return PLACEHOLDER_PHOTOS.find((p) => p.label === label)?.src ?? null
+}
+
+/** The property's own cover image if it has one, otherwise its first stand-in. Null when neither exists. */
+export function coverOrPlaceholder(cover: string | null | undefined, i: number, slug?: string): { src: string; alt?: string; placeholder: boolean } | null {
   if (cover) return { src: cover, placeholder: false }
-  const p = placeholderAt(i)
+  const p = (slug && BY_SLUG[slug]?.[0]) || placeholderAt(i)
   return p ? { src: p.src, alt: p.alt, placeholder: true } : null
 }

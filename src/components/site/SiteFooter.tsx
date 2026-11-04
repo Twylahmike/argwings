@@ -43,11 +43,11 @@ export function SiteFooter() {
           </ul>
         </div>
         <div>
-          <h2 className="mb-4 font-display text-lg text-brand-glow">Book with us</h2>
+          <h2 className="mb-4 font-display text-lg text-brand-glow">Our spaces</h2>
           <ul className="space-y-1 text-sm opacity-80">
+            {brand.spaces.map((sp) => <li key={sp.slug}><Link to="/properties/$slug" params={{ slug: sp.slug }} className="inline-flex h-9 items-center hover:text-brand-glow">{sp.name}</Link></li>)}
+            <li className="flex h-9 items-center">Direct Booking &middot; No Fees</li>
             <li><Link to="/search" className="inline-flex h-9 items-center hover:text-brand-glow">Check availability</Link></li>
-            <li className="flex h-9 items-center">Direct booking &middot; No fees</li>
-            <li className="flex h-9 items-center">Pay securely with M-Pesa</li>
             <li><InstallAppButton /></li>
           </ul>
         </div>

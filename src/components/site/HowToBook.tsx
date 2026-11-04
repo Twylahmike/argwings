@@ -1,28 +1,26 @@
-import { CalendarSearch, CheckCircle2, Home, Smartphone } from 'lucide-react'
-
-const steps = [
-  { Icon: CalendarSearch, title: 'Choose your dates', text: 'Enter check-in, check-out and guests. We show what is free, with the full price.' },
-  { Icon: Home, title: 'Pick your place', text: 'Choose the property and room that suits you and review the details.' },
-  { Icon: Smartphone, title: 'Pay the deposit', text: 'Approve the M-Pesa prompt on your phone. Your dates are held while you pay.' },
-  { Icon: CheckCircle2, title: 'Get confirmed', text: 'Your booking page and receipt are ready straight away. Pay the balance before you arrive.' },
+const steps: [string, string, string][] = [
+  ['🏠', 'Book Direct', 'Click the Book Direct button'],
+  ['📅', 'Choose Your Dates', 'Select your preferred check-in and check-out dates'],
+  ['✅', 'Check Availability', 'Confirm your dates are open'],
+  ['🔑', 'Reserve Your Stay', 'Complete your booking'],
 ]
 
 export function HowToBook() {
   return (
-    <section className="bg-background px-4 py-24 sm:px-6" aria-labelledby="how-h">
+    <section className="bg-background px-6 py-24" aria-labelledby="how-h">
       <div className="mx-auto max-w-6xl text-center">
-        <p className="eyebrow mb-3 text-olive">Process</p>
-        <h2 id="how-h" className="section-title mb-16 text-brand">Booking is simple.</h2>
+        <p className="eyebrow mb-3 text-muted-foreground">Process</p>
+        <h2 id="how-h" className="section-title mb-16 text-brand">Booking Is Simple.</h2>
         <ol className="relative grid gap-12 md:grid-cols-4 md:gap-8">
-          {steps.map(({ Icon, title, text }, i) => (
-            <li key={title} className="animate-fade-up relative" style={{ animationDelay: `${i * 0.12}s` }}>
-              <span className="relative mx-auto mb-5 grid h-20 w-20 place-items-center rounded-full bg-brand text-brand-foreground shadow-lg">
-                <Icon className="h-8 w-8" aria-hidden />
-                <span className="absolute -right-2 -top-2 grid h-8 w-8 place-items-center rounded-full bg-olive text-sm font-medium text-white">{i + 1}</span>
+          {steps.map(([icon, title, desc], i) => (
+            <li key={title} className="animate-fade-up relative" style={{ animationDelay: `${i * 0.15}s` }}>
+              <span className="relative mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-brand text-3xl text-brand-foreground shadow-lg" aria-hidden>
+                {icon}
+                <span className="absolute -right-2 -top-2 flex h-8 w-8 items-center justify-center rounded-full bg-olive text-sm font-medium text-white">{i + 1}</span>
               </span>
-              {i < steps.length - 1 && <span className="absolute left-[calc(50%+3.5rem)] right-[-50%] top-10 hidden h-[2px] origin-left bg-olive/40 md:block" aria-hidden style={{ animation: `draw-line 1s ${0.4 + i * 0.15}s both` }} />}
-              <h3 className="font-display text-2xl">{title}</h3>
-              <p className="mt-2 text-sm text-muted-foreground">{text}</p>
+              {i < steps.length - 1 && <span className="absolute left-[calc(50%+50px)] right-[-50%] top-10 hidden h-[2px] origin-left bg-olive/40 md:block" aria-hidden style={{ animation: `draw-line 1s ${0.4 + i * 0.15}s both` }} />}
+              <h3 className="mb-2 font-display text-xl">{title}</h3>
+              <p className="text-sm text-muted-foreground">{desc}</p>
             </li>
           ))}
         </ol>

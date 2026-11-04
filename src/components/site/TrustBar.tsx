@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Clock, MessageCircle, Smartphone } from 'lucide-react'
-import { useBrand } from '~/lib/brand'
+import { KeyRound, MessageCircle } from 'lucide-react'
 import { useWhatsApp } from '~/lib/contact'
 
 function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
@@ -15,7 +14,7 @@ function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
       io.disconnect()
       const t0 = performance.now()
       const tick = (t: number) => {
-        const p = Math.min(1, (t - t0) / 1200)
+        const p = Math.min(1, (t - t0) / 1400)
         setN(Math.round(to * (1 - Math.pow(1 - p, 3))))
         if (p < 1) raf = requestAnimationFrame(tick)
       }
@@ -28,23 +27,20 @@ function Counter({ to, suffix = '' }: { to: number; suffix?: string }) {
   return <span ref={ref}>{n}{suffix}</span>
 }
 
-/** Facts only: every figure comes from Admin > Settings (deposit %, hold minutes), never from invented statistics. */
 export function TrustBar() {
-  const { depositPercent, holdMinutes } = useBrand()
   const wa = useWhatsApp()
   const items = [
-    { Icon: Smartphone, value: <Counter to={depositPercent} suffix="%" />, label: 'Deposit secures your dates, paid by M-Pesa' },
-    { Icon: Clock, value: <Counter to={holdMinutes} suffix=" min" />, label: 'Your dates are held while you pay' },
-    ...(wa('') ? [{ Icon: MessageCircle, value: <span>WhatsApp</span>, label: 'Questions? Real people reply on WhatsApp' }] : []),
+    { Icon: KeyRound, value: <Counter to={24} suffix="/7" />, label: 'Flexible Check-in & Check-out' },
+    ...(wa('') ? [{ Icon: MessageCircle, value: <Counter to={100} suffix="%" />, label: 'Instant WhatsApp Response' }] : []),
   ]
   return (
     <div className="border-y bg-background">
-      <div className={`mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 ${items.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
+      <div className={`mx-auto grid max-w-7xl gap-4 px-6 py-10 ${items.length > 1 ? 'md:grid-cols-2' : ''}`}>
         {items.map((it, i) => (
           <div key={i} className="text-center">
-            <it.Icon className="mx-auto mb-2 h-7 w-7 text-brand" aria-hidden />
-            <div className="font-display text-3xl font-semibold text-brand">{it.value}</div>
-            <div className="mt-1 text-sm text-muted-foreground">{it.label}</div>
+            <it.Icon className="mx-auto mb-2 h-8 w-8 text-brand" aria-hidden />
+            <div className="font-display text-2xl font-semibold text-brand">{it.value}</div>
+            <div className="mt-1 text-xs text-muted-foreground md:text-sm">{it.label}</div>
           </div>
         ))}
       </div>

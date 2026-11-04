@@ -33,7 +33,7 @@ function Home() {
       <TrustBar />
       <Spaces properties={properties} />
       <Facilities />
-      <Amenities properties={properties} />
+      <Amenities />
       <HowToBook />
       <PaymentExplainer />
       <Reviews />

@@ -31,28 +31,18 @@ export type SiteContent = {
 }
 
 export const DEFAULT_SITE_CONTENT: SiteContent = {
-  // TODO(owner): tagline for RG Wings Stays.
-  tagline: '',
-  // TODO(owner): hero headline. This default is generic copy, not a claim about the business.
-  heroHeadline: 'Book direct. Stay *well*.',
-  heroSubline: 'Pick your dates, pay a deposit by M-Pesa, and you are booked.',
-  // TODO(owner): short selling points for the hero strip (facts you can stand behind).
-  tickerItems: ['Direct booking', 'Pay by M-Pesa', 'Instant confirmation'],
-  // TODO(owner): city / neighbourhoods, e.g. "Nairobi". Left empty so nothing unverified is shown.
-  location: '',
-  // TODO(owner): public contact email.
+  tagline: 'Where Luxury Meets Home',
+  heroHeadline: 'Where *Luxury* Meets Home.',
+  heroSubline: 'Short & long-term stays in Lavington & Fedha, Nairobi.',
+  tickerItems: ['Lavington', 'Luxury BnB', 'Indoor Pool Access', '24/7 Check-in', 'Direct Booking'],
+  location: 'Lavington & Fedha, Nairobi',
+  // Personal email intentionally left out. Add a business email in Admin > Settings > Website.
   contactEmail: '',
-  // TODO(owner): social profile URLs (full https:// links). Empty ones are hidden.
-  social: { instagram: '', facebook: '', tiktok: '', x: '' },
-  // TODO(owner): optional feature band (pool, rooftop, gym...). Leave title empty to hide it.
-  facility: { eyebrow: '', title: '', body: '', image: '' },
-  // TODO(owner): announcement text (e.g. a promo). Empty = no bar.
+  social: { instagram: '', facebook: 'https://www.facebook.com/share/1CLcYs5jtu/', tiktok: 'https://www.tiktok.com/@everlett.living.h', x: '' },
+  facility: { eyebrow: 'Lavington Exclusive', title: 'Dive Into *Luxury*', body: 'Exclusive indoor pool access, only at our Lavington location.', image: '' },
   announcements: [],
-  // TODO(owner): real guest reviews, with permission. Empty = the section is hidden.
   reviews: [],
-  // TODO(owner): production domain for canonical/OG URLs.
   siteUrl: '',
-  // TODO(owner): social share image (1200x630).
   ogImage: '',
 }
 
@@ -76,7 +66,8 @@ export function sanitizeSiteContent(raw: unknown): SiteContent {
   const r = (raw && typeof raw === 'object' && !Array.isArray(raw) ? raw : {}) as Record<string, unknown>
   const obj = (k: string) => (r[k] && typeof r[k] === 'object' && !Array.isArray(r[k]) ? (r[k] as Record<string, unknown>) : {})
   const has = (k: string) => k in r
-  const social = obj('social'), fac = obj('facility')
+  const social = has('social') ? obj('social') : d.social
+  const fac = has('facility') ? obj('facility') : d.facility
   const siteUrl = httpsOrEmpty(r.siteUrl).replace(/\/+$/, '')
   return {
     tagline: has('tagline') ? text(r.tagline, 120) : d.tagline,

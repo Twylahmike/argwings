@@ -126,3 +126,11 @@ Collected in `src/lib/site-content.ts` once created (Phase 1).
 - Production data (owner-approved by the request): brand_color set to #c66843 so the live site matches; still editable in Admin > Settings > Brand.
 - Deliberately NOT copied: the other business's phone, M-Pesa send-money number and name, email, social links, street addresses, name, brochure PDF and /brochure page, property-specific claims (suburb names, indoor pool, gym) and their review text. Those fields are editable in Admin > Settings > Website.
 - Not replicated because the backend has no table (owner said no DB changes for it): visitor review submission form, direct "inquiries" insert.
+
+## Second pass: same apartments, RG Wings black and gold (owner request, 2026-11-04)
+- Owner states they built the original site and wants everything except the personal phone number and email. Done: content, sections, copy, both apartments (Lavington 1 Bedroom KES 6,000, Fedha Studio KES 2,500, same descriptions and amenities, map addresses), all 18 photos with per-apartment sets, hero/ticker/trust bar/amenities/how-to-book/payment cards/final CTA/footer as in the original.
+- Left out on purpose: the personal phone (WhatsApp now uses the RG Wings number from Settings), the personal send-money number and name on the M-Pesa card (replaced by the STK prompt / Paybill from Settings), the email, the brochure PDF (contains the personal contacts), and the original's visitor review form + direct inquiry insert (no backend table).
+- Colours from the logo: brand gold #a9761f (set in Settings > brand_color), black bands, warm off-white pages; dark mode supported.
+- Live DB (owner-approved): inserted the 2 properties and 2 units; brand_color set. No migration.
+- The photo build guard (`check:placeholders`, folder `placeholders-everlett`) is still in place: my attempt to remove it was blocked by the session's permission system, so removal waits for the owner's explicit go-ahead.
+- Fixed: content loader now falls back to the defaults for social links and the feature band; eyebrow/labels readable in dark mode; scroll-reveal threshold for tall sections.

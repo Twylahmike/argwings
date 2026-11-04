@@ -7,7 +7,7 @@ export function useReveal<T extends HTMLElement>() {
     const el = ref.current
     if (!el) return
     if (typeof IntersectionObserver === 'undefined') { el.classList.add('is-visible'); return }
-    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { el.classList.add('is-visible'); io.disconnect() } }, { threshold: 0.15 })
+    const io = new IntersectionObserver(([e]) => { if (e.isIntersecting) { el.classList.add('is-visible'); io.disconnect() } }, { threshold: 0, rootMargin: '0px 0px -8% 0px' })
     io.observe(el)
     return () => io.disconnect()
   }, [])

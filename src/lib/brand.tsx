@@ -15,6 +15,8 @@ export type Brand = {
   brandColor: string
   /** Marketing copy edited in Admin > Settings > Website. */
   site: SiteContent
+  /** Names of the active properties, for the footer. */
+  spaces: { name: string; slug: string }[]
 }
 
 export const DEFAULT_BRAND: Brand = {
@@ -28,13 +30,17 @@ export const DEFAULT_BRAND: Brand = {
   mpesaPaybillDisplay: (import.meta.env.VITE_MPESA_PAYBILL_DISPLAY as string | undefined) ?? '',
   brandColor: '',
   site: DEFAULT_SITE_CONTENT,
+  spaces: [],
 }
 
 /** Public settings (business name, logo, policy...). Falls back to defaults so pages still render if the DB is unreachable. */
 export async function fetchBrand(): Promise<Brand> {
   if (!isSupabaseConfigured) return DEFAULT_BRAND
   try {
-    const { data } = await pub().from('settings').select('key, value')
+    const [{ data }, props] = await Promise.all([
+      pub().from('settings').select('key, value'),
+      pub().from('properties').select('name, slug').eq('active', true).order('sort').order('name'),
+    ])
     const m = Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value]))
     // The migration seeds a placeholder name; treat it as "not set yet" so the public site shows the default brand.
     const str = (k: string, d: string) => (typeof m[k] === 'string' && m[k] && m[k] !== 'Your BNB Brand' ? (m[k] as string) : d)
@@ -50,6 +56,7 @@ export async function fetchBrand(): Promise<Brand> {
       mpesaPaybillDisplay: str('mpesa_paybill_display', DEFAULT_BRAND.mpesaPaybillDisplay),
       brandColor: str('brand_color', ''),
       site: sanitizeSiteContent(m.site_content),
+      spaces: ((props.data ?? []) as { name: string; slug: string }[]).slice(0, 6),
     }
   } catch {
     return DEFAULT_BRAND

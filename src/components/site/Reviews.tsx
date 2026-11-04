@@ -17,7 +17,7 @@ export function Reviews() {
   return (
     <section className="overflow-hidden bg-background py-24" aria-labelledby="rev-h">
       <div className="mx-auto mb-12 max-w-7xl px-4 text-center sm:px-6">
-        <p className="eyebrow mb-3 text-olive">Guest book</p>
+        <p className="eyebrow mb-3 text-muted-foreground">Guest book</p>
         <h2 id="rev-h" className="section-title text-brand">What our guests say.</h2>
       </div>
       {marquee

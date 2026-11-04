@@ -1,17 +1,21 @@
--- =====================================================================================
--- RG Wings Stays: ALL SQL, in the order to run it.   Supabase dashboard > SQL Editor.
---
--- PART 1 = the database itself (migrations 0001 to 0006). Run ONCE on a NEW, EMPTY project.
---          Your current project (bnb-system) already has all of PART 1 applied: do NOT run it again there
---          (it would fail with "already exists").
--- PART 2 = scheduled-job secrets (needs your service role key). Run once per project.
--- PART 3 = remove the test property and test bookings created during testing. Optional.
---
--- Tip for a phone: run PART 1 one migration at a time (each "-- ===== 000x" block separately).
--- =====================================================================================
+-- RG Wings Stays SQL: 1 of 3, the database (migrations 0001 to 0006)
+-- Run in Supabase dashboard > SQL Editor of the project named bnb-system. CHECK THE PROJECT NAME (top-left) BEFORE PRESSING RUN.
+-- ONLY for a brand-new EMPTY project. bnb-system already has all of this: do not run it there (the guard below will stop you).
 
+-- SAFETY GUARD: stops this file unless the project is EMPTY (no booking tables, no other app's tables).
+do $guard$
+begin
+  if to_regclass('public.bookings') is not null or to_regclass('public.units') is not null or to_regclass('public.properties') is not null then
+    raise exception 'STOP: this project already has the RG Wings booking tables. Part 1 is already applied here. Do not run it again.';
+  end if;
+  if to_regclass('public.orders') is not null or to_regclass('public.products') is not null or to_regclass('public.payments') is not null
+     or to_regclass('public.settings') is not null or to_regclass('public.audit_log') is not null then
+    raise exception 'STOP: this looks like a DIFFERENT app (it already has orders/products/payments/settings tables). Open the correct Supabase project and try again. Nothing was changed.';
+  end if;
+end
+$guard$;
 
--- ===================== PART 1: 0001_schema.sql =====================
+-- ===================== 0001_schema.sql =====================
 -- 0001_schema.sql: core tables, enums, constraints.
 -- All money is integer KES. Dates are `date` (no timezone drift). Timestamps are timestamptz.
 -- Changes vs the baseline spec DDL (intent unchanged):
@@ -295,7 +299,7 @@ create table rate_limit_events (
 create index on rate_limit_events (key, created_at desc);
 
 
--- ===================== PART 1: 0002_functions.sql =====================
+-- ===================== 0002_functions.sql =====================
 -- 0002_functions.sql: pricing, availability, payments->booking triggers, booking RPCs, audit, reporting.
 
 -- ---------------------------------------------------------------------------
@@ -876,7 +880,7 @@ language sql stable as $$
 $$;
 
 
--- ===================== PART 1: 0003_rls.sql =====================
+-- ===================== 0003_rls.sql =====================
 -- 0003_rls.sql: Row Level Security on EVERY table. UI hiding is never the security layer.
 -- Matrix (see build spec 5.3). Deactivated users have no roles (see has_role), so they match nothing here.
 
@@ -1060,7 +1064,7 @@ do $$ begin
 end $$;
 
 
--- ===================== PART 1: 0004_cron.sql =====================
+-- ===================== 0004_cron.sql =====================
 -- 0004_cron.sql: scheduled jobs. Requires the pg_cron and pg_net extensions (enabled by default on Supabase;
 -- enable them under Database > Extensions on a fresh project). Skipped silently where they are unavailable
 -- (plain Postgres in the SQL test runner).
@@ -1110,7 +1114,7 @@ begin
 end $$;
 
 
--- ===================== PART 1: 0005_brand_color.sql =====================
+-- ===================== 0005_brand_color.sql =====================
 -- 0005_brand_color.sql: owner-editable brand colour (Settings > Brand), readable by the public site.
 insert into settings(key, value) values ('brand_color', '"#0f766e"') on conflict (key) do nothing;
 
@@ -1120,7 +1124,7 @@ create policy settings_public_read on settings for select to anon, authenticated
                  'mpesa_manual_instructions','mpesa_paybill_display','brand_color'));
 
 
--- ===================== PART 1: 0006_site_content.sql =====================
+-- ===================== 0006_site_content.sql =====================
 -- 0006_site_content.sql: marketing copy for the public site (hero headline, reviews, socials...) is edited in
 -- Admin > Settings > Website and stored as ONE jsonb value under settings.key = 'site_content'.
 -- The only change needed is to let the public site read that key (same allowlist approach as 0005).
@@ -1129,25 +1133,3 @@ create policy settings_public_read on settings for select to anon, authenticated
   using (key in ('business_name','cancellation_policy','logo_url','support_whatsapp','deposit_percent','hold_minutes',
                  'mpesa_manual_instructions','mpesa_paybill_display','brand_color','site_content'));
 
-
--- =====================================================================================
--- PART 2: secrets for the scheduled jobs (reminders + M-Pesa reconcile). Replace BOTH values, then run.
---   functions_base_url = your project URL, e.g. https://bxpgpzrtoxjmynyjnfkg.supabase.co
---   service_role_key   = Project Settings > API Keys > service_role (secret). Never share it or commit it.
--- =====================================================================================
-select vault.create_secret('https://YOUR-PROJECT-REF.supabase.co', 'functions_base_url');
-select vault.create_secret('PASTE-SERVICE-ROLE-KEY-HERE', 'service_role_key');
-
--- =====================================================================================
--- PART 3: delete the test property, its bookings and payments (E2E testing only). Safe to skip.
--- =====================================================================================
-begin;
-  with t as (select b.id from bookings b join properties p on p.id = b.property_id where p.slug = 'e2e-test-property')
-  delete from payments where booking_id in (select id from t);
-  delete from message_log where property_id in (select id from properties where slug = 'e2e-test-property');
-  delete from housekeeping_tasks where property_id in (select id from properties where slug = 'e2e-test-property');
-  delete from bookings where property_id in (select id from properties where slug = 'e2e-test-property');
-  delete from guests where full_name = 'E2E Test Guest';
-  delete from units where property_id in (select id from properties where slug = 'e2e-test-property');
-  delete from properties where slug = 'e2e-test-property';
-commit;

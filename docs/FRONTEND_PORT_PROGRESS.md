@@ -110,3 +110,7 @@ Collected in `src/lib/site-content.ts` once created (Phase 1).
 - Content = one jsonb value, edited in Admin > Settings > Website (headline, tagline, ticker, location, email, socials, announcement, feature band + image upload, reviews, site URL, share image). Validated by `sanitizeSiteContent` (https-only links, length caps); defaults in `DEFAULT_SITE_CONTENT` apply until saved.
 - Public components read it through `useBrand().site` (loaded with the other brand settings). Verified live: anon read OK, page renders stored values; test row deleted.
 - The old per-file TODO(owner) list for copy is now: fill Admin > Settings > Website.
+
+## SQL files (docs/sql/), 2026-11-04
+- Replaced the single docs/ALL_SQL.sql with three files, each starting with a guard that raises an exception on the wrong project: `1_database.sql` (empty project only), `2_cron_secrets.sql` and `3_cleanup_test_data.sql` (booking project only, never a store).
+- Incident: the earlier combined file was run by mistake in another live project (afriklad-kenya). It rolled back on its first collision; read-only checks confirmed nothing was applied there.

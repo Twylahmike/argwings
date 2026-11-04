@@ -5,7 +5,7 @@
  * Business name, WhatsApp number, brand colour, deposit % and cancellation policy live in the other Settings tabs.
  */
 export type Announcement = { id: string; text: string; href?: string; variant?: 'info' | 'promo' }
-export type Review = { id: string; guest: string; stay?: string; rating: 1 | 2 | 3 | 4 | 5; quote: string }
+export type Review = { id: string; guest: string; stay?: string; rating: 1 | 2 | 3 | 4 | 5; quote: string; response?: string }
 
 export type SiteContent = {
   /** Short line under the logo in the footer and PWA description. */

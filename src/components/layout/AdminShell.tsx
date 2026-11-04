@@ -2,8 +2,8 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  BarChart3, Brush, Building2, CalendarDays, ClipboardList, LayoutDashboard, LogOut, Menu, MessageCircle,
-  Settings, UserCog, Users, Wallet, type LucideIcon,
+  BarChart3, Brush, Building2, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
+  Settings, Star, UserCog, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
 import { canManage, isOwner, type Me } from '~/lib/auth'
@@ -28,20 +28,24 @@ export function useAdmin(): AdminCtx {
   return v
 }
 
-type NavItem = { to: string; label: string; icon: LucideIcon; show: (me: Me) => boolean; primary?: boolean }
+type NavItem = { to: string; label: string; icon: LucideIcon; show: (me: Me) => boolean; primary?: boolean; group: string }
 const NAV: NavItem[] = [
-  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, show: canManage, primary: true },
-  { to: '/admin/calendar', label: 'Calendar', icon: CalendarDays, show: canManage, primary: true },
-  { to: '/admin/bookings', label: 'Bookings', icon: ClipboardList, show: canManage, primary: true },
-  { to: '/admin/housekeeping', label: 'Housekeeping', icon: Brush, show: () => true, primary: true },
-  { to: '/admin/properties', label: 'Properties', icon: Building2, show: canManage },
-  { to: '/admin/guests', label: 'Guests', icon: Users, show: canManage },
-  { to: '/admin/finance', label: 'Finance', icon: Wallet, show: canManage },
-  { to: '/admin/reports', label: 'Reports', icon: BarChart3, show: canManage },
-  { to: '/admin/messages', label: 'Messages', icon: MessageCircle, show: canManage },
-  { to: '/admin/staff', label: 'Staff', icon: UserCog, show: isOwner },
-  { to: '/admin/settings', label: 'Settings', icon: Settings, show: isOwner },
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, show: canManage, primary: true, group: 'Operations' },
+  { to: '/admin/calendar', label: 'Calendar', icon: CalendarDays, show: canManage, primary: true, group: 'Operations' },
+  { to: '/admin/bookings', label: 'Bookings', icon: ClipboardList, show: canManage, primary: true, group: 'Operations' },
+  { to: '/admin/inquiries', label: 'Inquiries', icon: Inbox, show: canManage, group: 'Operations' },
+  { to: '/admin/housekeeping', label: 'Housekeeping', icon: Brush, show: () => true, primary: true, group: 'Operations' },
+  { to: '/admin/properties', label: 'Properties', icon: Building2, show: canManage, group: 'Operations' },
+  { to: '/admin/guests', label: 'Guests', icon: Users, show: canManage, group: 'Operations' },
+  { to: '/admin/reviews', label: 'Reviews', icon: Star, show: canManage, group: 'Website' },
+  { to: '/admin/announcements', label: 'Announcements', icon: Megaphone, show: canManage, group: 'Website' },
+  { to: '/admin/finance', label: 'Finance', icon: Wallet, show: canManage, group: 'Business' },
+  { to: '/admin/reports', label: 'Reports', icon: BarChart3, show: canManage, group: 'Business' },
+  { to: '/admin/messages', label: 'Messages', icon: MessageCircle, show: canManage, group: 'Business' },
+  { to: '/admin/staff', label: 'Staff', icon: UserCog, show: isOwner, group: 'System' },
+  { to: '/admin/settings', label: 'Settings', icon: Settings, show: isOwner, group: 'System' },
 ]
+const GROUPS = ['Operations', 'Website', 'Business', 'System']
 
 function useActive() {
   const path = useRouterState({ select: (s) => s.location.pathname })
@@ -96,12 +100,16 @@ export function AdminShell({ me }: { me: Me }) {
       <div className="min-h-dvh md:flex">
         <aside className="no-print hidden w-60 shrink-0 flex-col border-r bg-card md:flex">
           <div className="flex h-16 items-center border-b px-4"><Wordmark /></div>
-          <nav className="flex-1 space-y-0.5 overflow-y-auto p-2" aria-label="Main">
-            {items.map((n) => (
-              <Link key={n.to} to={n.to} className={cn('flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium hover:bg-muted', active(n.to) && 'bg-muted text-brand')}>
-                <n.icon className="h-5 w-5" aria-hidden /> {n.label}
-              </Link>
-            ))}
+          <nav className="flex-1 overflow-y-auto p-2" aria-label="Main">
+            {GROUPS.map((g) => { const list = items.filter((n) => n.group === g); return list.length === 0 ? null : (
+              <div key={g} className="mb-3">
+                <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{g}</p>
+                <div className="space-y-0.5">{list.map((n) => (
+                  <Link key={n.to} to={n.to} className={cn('flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium hover:bg-muted', active(n.to) && 'bg-muted text-brand')}>
+                    <n.icon className="h-5 w-5" aria-hidden /> {n.label}
+                  </Link>))}</div>
+              </div>) })}
+            <a href="/" className="mt-2 flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-muted">Back to website</a>
           </nav>
           <div className="border-t p-3 text-sm">
             <p className="truncate font-medium">{me.fullName}</p>

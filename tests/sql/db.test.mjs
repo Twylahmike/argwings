@@ -257,7 +257,7 @@ test('RLS: anon cannot read bookings, guests, payments; can use availability and
     for (const k of ['email', 'id_number', 'notes', 'guest_id', 'created_by']) assert.ok(!(k in info), `${k} must not leak`)
     assert.equal((await one(c, 'select get_booking_by_token($1) j', [randomUUID()])).j, null)
     const settings = await q(c, 'select key from settings')
-    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display'].includes(s.key)))
+    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content'].includes(s.key)))
     assert.ok(settings.length > 0)
   }))
 
@@ -469,4 +469,94 @@ test('misc: rate limiter, audit trail, guest anonymisation keeps financial recor
     assert.equal(g.email, null)
     assert.ok(g.anonymised_at)
     assert.equal((await one(c, 'select count(*)::int n from payments where booking_id=$1', [b.id])).n, 1)
+  }))
+
+
+// ---------------------------------------------------------------------------------------------
+test('inquiries: public RPC validates and throttles; staff only; converted needs a booking', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await as(c, 'anon')
+    const id = (await one(c, `select submit_inquiry('Jane Doe','0712 345 678',null,'Is it free next weekend?',$1) id`, [f.pa])).id
+    assert.ok(id, 'a valid inquiry is stored')
+    assert.equal((await one(c, `select submit_inquiry('Bot','0712345678',null,'spam',null,null,null,null,'http://x') id`)).id, null, 'honeypot is dropped silently')
+    await fails(c, `select submit_inquiry('Jane','12345',null,'hello there')`, [], '23514')
+    await fails(c, `select submit_inquiry('J','0712345678',null,'hello there')`, [], '23514')
+    await c.query(`select submit_inquiry('Jane Doe','0712345678',null,'second')`)
+    await c.query(`select submit_inquiry('Jane Doe','0712345678',null,'third')`)
+    await fails(c, `select submit_inquiry('Jane Doe','0712345678',null,'fourth')`, [], '23514')
+    await fails(c, 'select * from inquiries', [], '42501')
+    await fails(c, 'select * from inquiry_notes', [], '42501')
+
+    await as(c, 'authenticated', f.cleaner)
+    assert.equal((await q(c, 'select * from inquiries')).length, 0, 'cleaners see nothing')
+    await as(c, 'authenticated', f.manager)
+    const rows = await q(c, 'select * from inquiries order by created_at')
+    assert.ok(rows.length >= 3)
+    assert.equal(rows[0].phone, '254712345678', 'phone is normalised')
+    assert.equal(rows[0].status, 'new')
+    await fails(c, `update inquiries set status='converted' where id=$1`, [id], '23514')
+    await admin(c)
+    const b = await booking(c, f, { from: fmt(f.friday), to: day(fmt(f.friday), 2) })
+    await as(c, 'authenticated', f.manager)
+    await c.query(`update inquiries set status='converted', booking_id=$2 where id=$1`, [id, b.id])
+    await c.query(`insert into inquiry_notes(inquiry_id, user_id, body) values ($1,$2,'called back')`, [id, f.manager])
+    assert.equal((await q(c, 'select * from inquiry_notes where inquiry_id=$1', [id])).length, 1)
+    await admin(c)
+    assert.ok((await one(c, `select count(*)::int n from audit_log where entity='inquiry'`)).n >= 1, 'inquiry changes are audited')
+  }))
+
+test('reviews: public submissions wait for approval; only approved are public', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await as(c, 'anon')
+    const id = (await one(c, `select submit_review('Sam Guest','March stay',null,5,'Lovely place, very clean.') id`)).id
+    assert.ok(id)
+    await fails(c, `select submit_review('Sam Guest','x',null,9,'Too many stars given')`, [], '23514')
+    assert.equal((await q(c, 'select * from reviews')).length, 0, 'pending reviews are not public')
+    await as(c, 'authenticated', f.manager)
+    assert.equal((await q(c, 'select * from reviews')).length, 1)
+    await c.query(`update reviews set status='approved', response='Thank you!', responded_at=now(), responded_by=$2 where id=$1`, [id, f.manager])
+    await as(c, 'anon')
+    const pub = await q(c, 'select guest_name, status, response from reviews')
+    assert.equal(pub.length, 1)
+    assert.equal(pub[0].status, 'approved')
+    await fails(c, `insert into reviews(guest_name, rating, body) values ('X', 5, 'direct insert')`, [], '42501')
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, `update reviews set status='hidden'`, [], undefined).catch(() => {})
+    assert.equal((await one(c, `select status from reviews where id=$1`, [id])).status, 'approved', 'cleaners cannot moderate')
+  }))
+
+test('announcements: only active ones inside their window are public; managers cannot delete', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await c.query(`insert into announcements(text, active) values ('Always on', true)`)
+    await c.query(`insert into announcements(text, active) values ('Archived', false)`)
+    await c.query(`insert into announcements(text, starts_at) values ('Starts tomorrow', now() + interval '1 day')`)
+    await c.query(`insert into announcements(text, ends_at) values ('Ended', now() - interval '1 day')`)
+    await c.query(`insert into announcements(text, starts_at, ends_at) values ('Inside window', now() - interval '1 day', now() + interval '1 day')`)
+    await as(c, 'anon')
+    assert.deepEqual((await q(c, 'select text from announcements order by text')).map((r) => r.text), ['Always on', 'Inside window'])
+    await fails(c, `insert into announcements(text) values ('hack')`, [], '42501')
+    await as(c, 'authenticated', f.manager)
+    assert.equal((await q(c, 'select * from announcements')).length, 5, 'staff see all, including archived')
+    await c.query(`insert into announcements(text, created_by) values ('New promo', $1)`, [f.manager])
+    await c.query(`update announcements set active=false where text='Always on'`)
+    await c.query(`delete from announcements where text='Archived'`)
+    assert.equal((await q(c, `select * from announcements where text='Archived'`)).length, 1, 'manager delete is blocked by RLS')
+    await as(c, 'authenticated', f.owner)
+    await c.query(`delete from announcements where text='Archived'`)
+    assert.equal((await q(c, `select * from announcements where text='Archived'`)).length, 0)
+    await fails(c, `insert into announcements(text, starts_at, ends_at) values ('Bad', now(), now() - interval '1 hour')`, [], '23514')
+  }))
+
+test('normalize_ke_phone mirrors the app rules', async () =>
+  tx(async (c) => {
+    const n = async (v) => (await one(c, 'select normalize_ke_phone($1) p', [v])).p
+    assert.equal(await n('0712 345 678'), '254712345678')
+    assert.equal(await n('+254 112 345 678'), '254112345678')
+    assert.equal(await n('254712345678'), '254712345678')
+    assert.equal(await n('12345'), null)
+    assert.equal(await n('+1 202 555 0100'), null)
+    assert.equal(await n('abc'), null)
   }))

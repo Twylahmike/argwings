@@ -16,7 +16,7 @@ export type Brand = {
   /** Marketing copy edited in Admin > Settings > Website. */
   site: SiteContent
   /** Names of the active properties, for the footer. */
-  spaces: { name: string; slug: string }[]
+  spaces: { id: string; name: string; slug: string }[]
 }
 
 export const DEFAULT_BRAND: Brand = {
@@ -33,14 +33,22 @@ export const DEFAULT_BRAND: Brand = {
   spaces: [],
 }
 
+/** The stored marketing content value out of the settings rows. */
+function m_content(rows: { key: string; value: unknown }[] | null): unknown {
+  return (rows ?? []).find((r) => r.key === 'site_content')?.value
+}
+
 /** Public settings (business name, logo, policy...). Falls back to defaults so pages still render if the DB is unreachable. */
 export async function fetchBrand(): Promise<Brand> {
   if (!isSupabaseConfigured) return DEFAULT_BRAND
   try {
-    const [{ data }, props] = await Promise.all([
+    const [{ data }, props, anns, revs] = await Promise.all([
       pub().from('settings').select('key, value'),
-      pub().from('properties').select('name, slug').eq('active', true).order('sort').order('name'),
+      pub().from('properties').select('id, name, slug').eq('active', true).order('sort').order('name'),
+      pub().from('announcements').select('id, text, link, variant').order('created_at', { ascending: false }).limit(3),
+      pub().from('reviews').select('id, guest_name, stay_label, rating, body, response').order('created_at', { ascending: false }).limit(12),
     ])
+    const content = sanitizeSiteContent(m_content(data))
     const m = Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value]))
     // The migration seeds a placeholder name; treat it as "not set yet" so the public site shows the default brand.
     const str = (k: string, d: string) => (typeof m[k] === 'string' && m[k] && m[k] !== 'Your BNB Brand' ? (m[k] as string) : d)
@@ -55,8 +63,13 @@ export async function fetchBrand(): Promise<Brand> {
       manualInstructions: str('mpesa_manual_instructions', DEFAULT_BRAND.manualInstructions),
       mpesaPaybillDisplay: str('mpesa_paybill_display', DEFAULT_BRAND.mpesaPaybillDisplay),
       brandColor: str('brand_color', ''),
-      site: sanitizeSiteContent(m.site_content),
-      spaces: ((props.data ?? []) as { name: string; slug: string }[]).slice(0, 6),
+      site: {
+        ...content,
+        // Announcements and reviews are managed in Admin (Announcements, Reviews); the Website tab text is only a fallback.
+        announcements: anns.data?.length ? anns.data.map((a) => ({ id: a.id as string, text: a.text as string, href: (a.link as string | null) ?? undefined, variant: a.variant as 'info' | 'promo' })) : content.announcements,
+        reviews: revs.data?.length ? revs.data.map((r) => ({ id: r.id as string, guest: r.guest_name as string, stay: (r.stay_label as string | null) ?? undefined, rating: r.rating as 1 | 2 | 3 | 4 | 5, quote: r.body as string, response: (r.response as string | null) ?? undefined })) : content.reviews,
+      },
+      spaces: ((props.data ?? []) as { id: string; name: string; slug: string }[]).slice(0, 6),
     }
   } catch {
     return DEFAULT_BRAND

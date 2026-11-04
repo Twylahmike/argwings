@@ -17,12 +17,15 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SpacesRouteImport } from './routes/spaces'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
 import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
 import { Route as AdminChangePasswordRouteImport } from './routes/admin.change-password'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
 import { Route as AdminHousekeepingRouteImport } from './routes/admin.housekeeping'
+import { Route as AdminInquiriesRouteImport } from './routes/admin.inquiries'
 import { Route as AdminMessagesRouteImport } from './routes/admin.messages'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
+import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminStaffRouteImport } from './routes/admin.staff'
 import { Route as BookingTokenRouteImport } from './routes/booking.$token'
@@ -76,6 +79,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
+  id: '/announcements',
+  path: '/announcements',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCalendarRoute = AdminCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
@@ -96,6 +104,11 @@ const AdminHousekeepingRoute = AdminHousekeepingRouteImport.update({
   path: '/housekeeping',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminInquiriesRoute = AdminInquiriesRouteImport.update({
+  id: '/inquiries',
+  path: '/inquiries',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMessagesRoute = AdminMessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
@@ -104,6 +117,11 @@ const AdminMessagesRoute = AdminMessagesRouteImport.update({
 const AdminReportsRoute = AdminReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminReviewsRoute = AdminReviewsRouteImport.update({
+  id: '/reviews',
+  path: '/reviews',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminSettingsRoute = AdminSettingsRouteImport.update({
@@ -175,12 +193,15 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
+  '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
+  '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/booking/$token': typeof BookingTokenRoute
@@ -202,12 +223,15 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
+  '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
+  '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/booking/$token': typeof BookingTokenRoute
@@ -231,12 +255,15 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
+  '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
+  '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/reports': typeof AdminReportsRoute
+  '/admin/reviews': typeof AdminReviewsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/booking/$token': typeof BookingTokenRoute
@@ -261,12 +288,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/search'
     | '/spaces'
+    | '/admin/announcements'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
     | '/admin/housekeeping'
+    | '/admin/inquiries'
     | '/admin/messages'
     | '/admin/reports'
+    | '/admin/reviews'
     | '/admin/settings'
     | '/admin/staff'
     | '/booking/$token'
@@ -288,12 +318,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/search'
     | '/spaces'
+    | '/admin/announcements'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
     | '/admin/housekeeping'
+    | '/admin/inquiries'
     | '/admin/messages'
     | '/admin/reports'
+    | '/admin/reviews'
     | '/admin/settings'
     | '/admin/staff'
     | '/booking/$token'
@@ -316,12 +349,15 @@ export interface FileRouteTypes {
     | '/login'
     | '/search'
     | '/spaces'
+    | '/admin/announcements'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
     | '/admin/housekeeping'
+    | '/admin/inquiries'
     | '/admin/messages'
     | '/admin/reports'
+    | '/admin/reviews'
     | '/admin/settings'
     | '/admin/staff'
     | '/booking/$token'
@@ -408,6 +444,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/announcements': {
+      id: '/admin/announcements'
+      path: '/announcements'
+      fullPath: '/admin/announcements'
+      preLoaderRoute: typeof AdminAnnouncementsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/calendar': {
       id: '/admin/calendar'
       path: '/calendar'
@@ -436,6 +479,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminHousekeepingRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/inquiries': {
+      id: '/admin/inquiries'
+      path: '/inquiries'
+      fullPath: '/admin/inquiries'
+      preLoaderRoute: typeof AdminInquiriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/messages': {
       id: '/admin/messages'
       path: '/messages'
@@ -448,6 +498,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/admin/reports'
       preLoaderRoute: typeof AdminReportsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/reviews': {
+      id: '/admin/reviews'
+      path: '/reviews'
+      fullPath: '/admin/reviews'
+      preLoaderRoute: typeof AdminReviewsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/settings': {
@@ -538,12 +595,15 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
   AdminCalendarRoute: typeof AdminCalendarRoute
   AdminChangePasswordRoute: typeof AdminChangePasswordRoute
   AdminFinanceRoute: typeof AdminFinanceRoute
   AdminHousekeepingRoute: typeof AdminHousekeepingRoute
+  AdminInquiriesRoute: typeof AdminInquiriesRoute
   AdminMessagesRoute: typeof AdminMessagesRoute
   AdminReportsRoute: typeof AdminReportsRoute
+  AdminReviewsRoute: typeof AdminReviewsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStaffRoute: typeof AdminStaffRoute
   AdminIndexRoute: typeof AdminIndexRoute
@@ -557,12 +617,15 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAnnouncementsRoute: AdminAnnouncementsRoute,
   AdminCalendarRoute: AdminCalendarRoute,
   AdminChangePasswordRoute: AdminChangePasswordRoute,
   AdminFinanceRoute: AdminFinanceRoute,
   AdminHousekeepingRoute: AdminHousekeepingRoute,
+  AdminInquiriesRoute: AdminInquiriesRoute,
   AdminMessagesRoute: AdminMessagesRoute,
   AdminReportsRoute: AdminReportsRoute,
+  AdminReviewsRoute: AdminReviewsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStaffRoute: AdminStaffRoute,
   AdminIndexRoute: AdminIndexRoute,

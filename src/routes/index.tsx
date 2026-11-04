@@ -15,6 +15,7 @@ import { Reviews } from '~/components/site/Reviews'
 import { Gallery } from '~/components/site/Gallery'
 import { FinalCTA } from '~/components/site/FinalCTA'
 import { Faq } from '~/components/site/Faq'
+import { InquiryForm } from '~/components/site/InquiryForm'
 
 export const Route = createFileRoute('/')({
   loader: async () => ({ properties: isSupabaseConfigured ? await fetchProperties().catch(() => []) : [] }),
@@ -39,6 +40,7 @@ function Home() {
       <Reviews />
       <Gallery properties={properties} limit={8} />
       <Faq />
+      <InquiryForm />
       <FinalCTA properties={properties} />
     </PublicLayout>
   )

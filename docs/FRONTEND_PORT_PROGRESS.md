@@ -100,3 +100,7 @@ Collected in `src/lib/site-content.ts` once created (Phase 1).
 - Smoke test: create-booking validates input; mpesa-callback rejects a missing token; expire-holds and system-status reject the anon key.
 - Local `.env` (gitignored) points at this project with the public anon key.
 - NOT done (secret writes are blocked in this session): function secrets SITE_URL, MPESA_CALLBACK_SECRET (16+ random chars, required), BUSINESS_NAME, SUPPORT_WHATSAPP; Vault secrets functions_base_url and service_role_key for the reminder/reconcile cron jobs.
+
+## Logo (owner-supplied, 2026-11-04)
+- public/logo.webp (trimmed from the owner's file) is the default logo in the header, footer and Wordmark; a logo uploaded in Admin > Settings still wins. PWA icons, apple-touch icon and favicon are now generated from it (no longer placeholders). Manifest/theme-color set to black to match.
+- Suggestion: set Admin > Settings > Brand colour to a gold that matches the logo (default is the existing green).

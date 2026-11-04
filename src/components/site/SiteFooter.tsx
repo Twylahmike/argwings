@@ -1,5 +1,6 @@
 import { Link } from '@tanstack/react-router'
 import { Mail, MapPin, MessageCircle } from 'lucide-react'
+import { Wordmark } from '~/components/layout/Wordmark'
 import { InstallAppButton } from './InstallAppButton'
 import { useBrand } from '~/lib/brand'
 import { useWhatsApp } from '~/lib/contact'
@@ -21,7 +22,8 @@ export function SiteFooter() {
       <div className="absolute inset-0 opacity-[0.05]" aria-hidden style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '24px 24px' }} />
       <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-3">
         <div>
-          <p className="font-display text-3xl font-medium">{brand.businessName}</p>
+          <Wordmark className="h-20 rounded-lg" />
+          <p className="sr-only">{brand.businessName}</p>
           {c.tagline && <p className="mt-2 text-sm italic opacity-70">{c.tagline}</p>}
           <div className="mt-4 h-1 w-16 rounded-full bg-brand" aria-hidden />
           {socialLinks.length > 0 && (

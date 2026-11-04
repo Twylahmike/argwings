@@ -19,8 +19,8 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 |---|---|---|---|
 | 2 | Brand identity (admin) | PARTIAL | Public site is black/gold from the logo; admin inherits tokens. Full admin restyle (serif headings, champagne) TODO |
 | 3 | Executive dashboard | PARTIAL | Exists; comparisons (day/week/month/year), 8 KPI set, charts by source/method, date filters TODO |
-| 4 | Listings management | PARTIAL | Properties/units CRUD, images, pricing, overrides exist. Publish/feature/archive, video, bathrooms, min/max stay UI, discounts TODO |
-| 5 | Rooms and occupancy | PARTIAL | Units + housekeeping status exist; unified room status board TODO |
+| 4 | Listings management | **MOSTLY DONE** | Slice 2: publish/unpublish, featured, archive/restore, per-property cancellation policy, bathrooms, bed setup, min/max stay, maintenance flag. Video upload and length-of-stay discounts TODO |
+| 5 | Rooms and occupancy | **DONE** | Slice 2: Admin > Rooms board (7 colour-coded statuses for any day), room condition control; overlap prevention already in the database |
 | 6 | Occupancy calendar | PARTIAL | Exists (timeline); week/day views, drag to reschedule TODO |
 | 7 | Bookings | PARTIAL | Full lifecycle exists (pending/confirmed/checked in/out/cancelled/no-show). "Inquiry", "awaiting payment", "rejected" statuses and approval workflow TODO |
 | 8 | Booking requests and inquiries | **DONE (inquiries)** | Migration 0007, Admin > Inquiries, public contact form. Booking-request approval workflow TODO |
@@ -42,7 +42,7 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 | 24 | Database and security | ONGOING | Every new table ships with RLS, indexes, checks, audit trigger and SQL tests |
 | 25 | Admin UX | PARTIAL | Grouped sidebar + "Back to website" added. Breadcrumbs, global search TODO |
 | 26 | Interaction quality | ONGOING | New pages have search/filters, empty/error/loading states, confirmations |
-| 27 | Testing | ONGOING | 109 app tests, 20 SQL tests, browser checks of public pages |
+| 27 | Testing | ONGOING | 109 app tests, 22 SQL tests, browser checks of public pages |
 
 ## Slice 1 (this change): Inquiries, Reviews, Announcements
 - Migration `0007_inquiries_reviews_announcements.sql` (applied to the live project): tables `inquiries`, `inquiry_notes`,
@@ -54,8 +54,21 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 - Tests: 5 new SQL tests (public RPC validation and throttling, RLS isolation, converted guard, announcement window,
   phone normalisation).
 
+## Slice 2 (this change): Listings management and Rooms board
+- Migration `0008_listings_management.sql` (applied to the live project): `properties.featured/archived_at/cancellation_policy`
+  (archived listings can never be public: CHECK constraint), `units.bathrooms/bed_config/max_nights/maintenance_status/maintenance_note`
+  (max stay cannot be below min stay), `create_booking` and `get_available_units` refuse units under maintenance and stays over the
+  maximum, and `room_board(date)` returns each unit's status (out of service > maintenance > occupied > cleaning > dirty > reserved >
+  available), limited to properties the signed-in user can access.
+- Admin: Properties list has Published / Unpublished / Archived tabs and badges; property editor has a Listing status card
+  (publish, feature, archive with confirmation, restore) and cancellation policy; unit editor has the new fields and room condition;
+  new Rooms page with status filters, day picker and a condition dialog.
+- Public site: featured listings sort first and carry the "Featured stay" label.
+- Tests: 2 new SQL tests (archive constraint, max stay, maintenance, availability search, board statuses and isolation). One real flaw
+  was caught by a test and fixed before release: the board would have listed other properties' rooms with wrong statuses.
+
 ## Suggested next slices (each: migration + RLS + admin + public wiring + tests)
-2. Listings: publish/feature/archive, bathrooms, min/max stay UI, discounts; room status board.
+2. (done) Listings and rooms board.
 3. Booking requests workflow (approve/reject/alternative dates, awaiting-payment status) and notifications centre.
 4. Dashboard KPIs, comparisons and charts; report centre with PDF/Excel.
 5. Media library, gallery and homepage images (Storage + tables).

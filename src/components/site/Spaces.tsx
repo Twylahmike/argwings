@@ -26,7 +26,7 @@ function Showcase({ p, idx }: { p: PropertyWithUnits; idx: number }) {
     return () => clearInterval(t)
   }, [images.length])
   const from = p.units.length ? Math.min(...p.units.map(fromRate)) : null
-  const featured = idx === 0
+  const featured = p.featured
   const amenities = [...new Set([...(p.amenities ?? []), ...p.units.flatMap((u) => u.amenities ?? [])])].slice(0, 8)
   const mapQuery = p.lat != null && p.lng != null ? `${p.lat},${p.lng}` : [p.address, p.area, p.city].filter(Boolean).join(', ')
   const hasMap = !!mapQuery

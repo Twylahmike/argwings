@@ -560,3 +560,68 @@ test('normalize_ke_phone mirrors the app rules', async () =>
     assert.equal(await n('+1 202 555 0100'), null)
     assert.equal(await n('abc'), null)
   }))
+
+// ---------------------------------------------------------------------------------------------
+test('listings: archived listings are hidden, max stay and maintenance are enforced in the database', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    // archived must also be unpublished
+    await fails(c, `update properties set archived_at = now() where id = $1`, [f.pa], '23514')
+    await c.query(`update properties set active = false, archived_at = now() where id = $1`, [f.pb])
+    await as(c, 'anon')
+    assert.equal((await q(c, 'select * from properties where id=$1', [f.pb])).length, 0, 'archived listings are not public')
+    await admin(c)
+    // max stay below min stay is rejected
+    await c.query(`update units set min_nights = 2 where id = $1`, [f.ua])
+    await fails(c, `update units set max_nights = 1 where id = $1`, [f.ua], '23514')
+    await c.query(`update units set max_nights = 3 where id = $1`, [f.ua])
+    await fails(c, `select * from create_booking($1,$2,$3,1,'Jane','254712345678')`, [f.ua, d0, day(d0, 4)], '23514')
+    const ok = await one(c, `select * from create_booking($1,$2,$3,1,'Jane','254712345678')`, [f.ua, d0, day(d0, 3)])
+    assert.equal(ok.nights, 3)
+    // search hides units whose max stay is exceeded, and units under maintenance
+    await as(c, 'anon')
+    assert.equal((await q(c, 'select * from get_available_units($1,$2,1,$3)', [day(d0, 20), day(d0, 24), f.pa])).length, 0, 'too long')
+    assert.equal((await q(c, 'select * from get_available_units($1,$2,1,$3)', [day(d0, 20), day(d0, 22), f.pa])).length, 1)
+    await admin(c)
+    await c.query(`update units set maintenance_status = 'maintenance' where id = $1`, [f.ua])
+    await as(c, 'anon')
+    assert.equal((await q(c, 'select * from get_available_units($1,$2,1,$3)', [day(d0, 20), day(d0, 22), f.pa])).length, 0, 'maintenance')
+    await admin(c)
+    await fails(c, `select * from create_booking($1,$2,$3,1,'Jane','254712345678')`, [f.ua, day(d0, 20), day(d0, 22)], '23514')
+    await fails(c, `update units set maintenance_status = 'broken' where id = $1`, [f.ua], '23514')
+  }))
+
+test('room_board: statuses and priority', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const today = (await one(c, 'select nairobi_today() d')).d
+    const t = fmt(today)
+    const mk = async (name) => (await one(c, `insert into units(property_id,name,base_rate,max_guests) values ($1,$2,3000,2) returning id`, [f.pa, name])).id
+    const uOcc = await mk('Occupied'), uRes = await mk('Reserved'), uDirty = await mk('Dirty'), uClean = await mk('Cleaning'), uMaint = await mk('Maint'), uOut = await mk('Out'), uPrio = await mk('Prio')
+    await booking(c, f, { unit: uOcc, from: day(t, -1), to: day(t, 2), status: 'checked_in' })
+    await booking(c, f, { unit: uRes, from: t, to: day(t, 2), status: 'confirmed' })
+    await c.query(`insert into housekeeping_tasks(property_id, unit_id, status) values ($1,$2,'dirty'), ($1,$3,'in_progress')`, [f.pa, uDirty, uClean])
+    await c.query(`update units set maintenance_status='maintenance', maintenance_note='Leak' where id = $1`, [uMaint])
+    await c.query(`update units set maintenance_status='out_of_service' where id = $1`, [uOut])
+    // maintenance outranks an open cleaning task and an occupying booking
+    await c.query(`insert into housekeeping_tasks(property_id, unit_id, status) values ($1,$2,'dirty')`, [f.pa, uPrio])
+    await c.query(`update units set maintenance_status='maintenance' where id = $1`, [uPrio])
+
+    await as(c, 'authenticated', f.owner)
+    const rows = await q(c, 'select * from room_board($1)', [t])
+    const st = Object.fromEntries(rows.map((r) => [r.unit_name, r.status]))
+    assert.equal(st.Occupied, 'occupied')
+    assert.equal(st.Reserved, 'reserved')
+    assert.equal(st.Dirty, 'dirty')
+    assert.equal(st.Cleaning, 'cleaning')
+    assert.equal(st.Maint, 'maintenance')
+    assert.equal(st.Out, 'out_of_service')
+    assert.equal(st.Prio, 'maintenance')
+    assert.equal(st.A1, 'available')
+    assert.equal(rows.find((r) => r.unit_name === 'Maint').maintenance_note, 'Leak')
+    assert.equal(rows.find((r) => r.unit_name === 'Occupied').guest_name, 'G')
+    // a manager only sees the board for their own property
+    await as(c, 'authenticated', f.manager)
+    assert.ok((await q(c, 'select * from room_board($1)', [t])).every((r) => r.property_id === f.pa))
+  }))

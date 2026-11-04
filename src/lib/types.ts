@@ -12,11 +12,14 @@ export type Property = {
   contact_phone: string | null; whatsapp_number: string | null
   check_in_time: string; check_out_time: string; house_rules: string | null
   amenities: string[]; cover_image: string | null; gallery: string[]; active: boolean; sort: number
+  featured: boolean; archived_at: string | null; cancellation_policy: string | null
 }
 export type Unit = {
   id: string; property_id: string; name: string; code: string | null; unit_type: string; description: string | null
   max_guests: number; bedrooms: number; beds: number; base_rate: number; weekend_rate: number | null
   cleaning_fee: number; min_nights: number; amenities: string[]; images: string[]; active: boolean; sort: number
+  bathrooms: number; bed_config: string | null; max_nights: number | null
+  maintenance_status: 'ok' | 'maintenance' | 'out_of_service'; maintenance_note: string | null
 }
 export type RateOverrideRow = { id: string; unit_id: string; label: string | null; start_date: string; end_date: string; nightly_rate: number; created_at: string }
 export type Guest = {

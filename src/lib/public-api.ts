@@ -6,7 +6,7 @@ export type PropertyWithUnits = Property & { units: Unit[] }
 /** All visible properties with their bookable units (anon-readable by RLS). */
 export async function fetchProperties(): Promise<PropertyWithUnits[]> {
   const [p, u] = await Promise.all([
-    pub().from('properties').select('*').eq('active', true).order('sort').order('name'),
+    pub().from('properties').select('*').eq('active', true).order('featured', { ascending: false }).order('sort').order('name'),
     pub().from('units').select('*').eq('active', true).order('sort').order('base_rate'),
   ])
   if (p.error) throw p.error

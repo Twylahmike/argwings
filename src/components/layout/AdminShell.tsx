@@ -2,7 +2,7 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useState } 
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
 import { useQueryClient } from '@tanstack/react-query'
 import {
-  BarChart3, Brush, Building2, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
+  BarChart3, BedDouble, Brush, Building2, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
   Settings, Star, UserCog, Users, Wallet, type LucideIcon,
 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
@@ -36,6 +36,7 @@ const NAV: NavItem[] = [
   { to: '/admin/inquiries', label: 'Inquiries', icon: Inbox, show: canManage, group: 'Operations' },
   { to: '/admin/housekeeping', label: 'Housekeeping', icon: Brush, show: () => true, primary: true, group: 'Operations' },
   { to: '/admin/properties', label: 'Properties', icon: Building2, show: canManage, group: 'Operations' },
+  { to: '/admin/rooms', label: 'Rooms', icon: BedDouble, show: canManage, group: 'Operations' },
   { to: '/admin/guests', label: 'Guests', icon: Users, show: canManage, group: 'Operations' },
   { to: '/admin/reviews', label: 'Reviews', icon: Star, show: canManage, group: 'Website' },
   { to: '/admin/announcements', label: 'Announcements', icon: Megaphone, show: canManage, group: 'Website' },

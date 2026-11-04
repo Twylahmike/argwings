@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { useBrand } from '~/lib/brand'
 import { SearchBar } from '~/components/booking/SearchBar'
-import { buttonVariants } from '~/components/ui/button'
 import { cn } from '~/lib/utils'
 import { parseHeadline } from '~/lib/site-content'
 import { heroSlides } from '~/lib/gallery'
@@ -48,8 +47,8 @@ export function Hero({ properties }: { properties: PropertyWithUnits[] }) {
         <div className="mt-3 h-[3px] w-40 origin-left scale-x-0 bg-brand-glow" style={{ animation: 'draw-line 1s 1.2s cubic-bezier(.16,1,.3,1) forwards' }} aria-hidden />
         {site.heroSubline && <p className="animate-fade-in mt-6 max-w-2xl text-base text-white/85 md:text-lg" style={{ animationDelay: '1.4s' }}>{site.heroSubline}</p>}
         <div className="animate-fade-up mt-8 flex flex-col gap-3 sm:flex-row" style={{ animationDelay: '1.6s' }}>
-          <Link to="/" hash="properties" className={cn(buttonVariants({ size: 'lg' }), 'rounded-full bg-white px-8 text-ink hover:bg-white/90')}>View our properties</Link>
-          <Link to="/search" className={cn(buttonVariants({ size: 'lg' }), 'rounded-full px-8')}>Book direct</Link>
+          <Link to="/spaces" className="btn-olive rounded-full px-8 py-4 text-sm font-medium tracking-wide">View our spaces</Link>
+          <Link to="/search" className="btn-brand rounded-full px-8 py-4 text-sm font-medium tracking-wide">Book direct</Link>
         </div>
         <div className="animate-fade-up mt-10 w-full max-w-4xl text-left text-foreground" style={{ animationDelay: '1.8s' }}><SearchBar /></div>
       </div>

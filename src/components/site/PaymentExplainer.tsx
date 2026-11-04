@@ -33,7 +33,7 @@ export function PaymentExplainer() {
     { Icon: Landmark, title: 'Pay the balance', front: 'Settle the rest before you arrive', back: ['Pay from your booking page with M-Pesa', ...(mpesaPaybillDisplay ? [`Or Paybill/Till ${mpesaPaybillDisplay}, using your booking reference`] : ['Or pay manually using your booking reference']), 'A receipt is saved to your booking page'] },
   ]
   return (
-    <section id="book-direct" className="scroll-mt-16 bg-brand px-4 py-20 text-brand-foreground sm:px-6 md:py-28" aria-labelledby="pay-h">
+    <section id="book-direct" className="scroll-mt-16 bg-brand px-4 py-24 text-brand-foreground sm:px-6" aria-labelledby="pay-h">
       <div className="mx-auto max-w-6xl">
         <div className="mb-12 text-center">
           <h2 id="pay-h" className="section-title mb-4">Reserve your stay.</h2>

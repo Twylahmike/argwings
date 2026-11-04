@@ -10,7 +10,7 @@ export function AnnouncementBar() {
   const a = site.announcements.find((x) => !dismissed.includes(x.id))
   if (!a) return null
   const href = a.href ? (a.href.startsWith('/') ? a.href : safeUrl(a.href)) : null
-  const tone = a.variant === 'promo' ? 'bg-brand text-brand-foreground' : 'bg-ink text-ink-foreground'
+  const tone = a.variant === 'promo' ? 'bg-brand text-brand-foreground' : 'bg-olive text-white'
   return (
     <div className={`${tone} relative px-10 py-2 text-center text-xs md:text-sm`} role="status">
       {href ? <a href={href} className="font-medium underline-offset-4 hover:underline">{a.text}</a> : <span className="font-medium">{a.text}</span>}

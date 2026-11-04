@@ -21,6 +21,7 @@
   --danger: 0 72% 42%;
   --ink: 200 18% 9%;
   --ink-foreground: 40 15% 94%;
+  --olive: 91 14% 38%;
   --radius: 0.75rem;
   --st-pending: 38 92% 44%;
   --st-confirmed: 152 60% 32%;
@@ -44,6 +45,7 @@
   --danger: 0 80% 62%;
   --ink: 200 20% 5%;
   --ink-foreground: 40 15% 94%;
+  --olive: 91 14% 46%;
   --st-pending: 38 92% 58%;
   --st-confirmed: 152 55% 50%;
   --st-checked_in: 214 85% 66%;
@@ -66,6 +68,7 @@
   --color-ring: hsl(var(--ring));
   --color-danger: hsl(var(--danger));
   --color-brand-glow: color-mix(in oklab, hsl(var(--brand)), white 45%);
+  --color-olive: hsl(var(--olive));
   --color-ink: hsl(var(--ink));
   --color-ink-foreground: hsl(var(--ink-foreground));
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
@@ -136,3 +139,42 @@ h1, h2, h3 { text-wrap: balance; }
   .no-print { display: none !important; }
   body { background: #fff; color: #000; }
 }
+
+
+/* ---------- Public site theme: warm ivory / charcoal / olive, with the owner's brand colour as the accent ---------- */
+.site-theme {
+  --background: 48 58% 94%;
+  --foreground: 211 11% 7%;
+  --card: 48 79% 98%;
+  --muted: 44 31% 91%;
+  --muted-foreground: 211 6% 34%;
+  --border: 40 23% 83%;
+  --ink: 211 11% 7%;
+  --ink-foreground: 48 58% 94%;
+  --olive: 91 14% 38%;
+  --radius: 0.5rem;
+  background: hsl(var(--background));
+  color: hsl(var(--foreground));
+}
+:root[data-theme='dark'] .site-theme {
+  --background: 211 11% 8%;
+  --foreground: 48 58% 94%;
+  --card: 211 10% 12%;
+  --muted: 211 9% 15%;
+  --muted-foreground: 48 12% 68%;
+  --border: 211 8% 22%;
+  --ink: 211 12% 4%;
+  --olive: 91 14% 40%;
+}
+.site-theme h1, .site-theme h2, .site-theme h3 { font-family: var(--font-display); letter-spacing: -0.01em; }
+
+.btn-brand { background: hsl(var(--brand)); color: hsl(var(--brand-foreground)); transition: all 0.3s ease; }
+.btn-brand:hover { background: var(--color-brand-glow); box-shadow: 0 12px 30px -8px hsl(var(--brand) / 0.55); transform: translateY(-2px); }
+.btn-olive { background: hsl(var(--olive)); color: #fff; transition: all 0.3s ease; }
+.btn-olive:hover { filter: brightness(1.1); box-shadow: 0 12px 30px -8px hsl(var(--olive) / 0.5); transform: translateY(-2px); }
+.btn-ivory { background: hsl(48 58% 94%); color: hsl(211 11% 7%); transition: all 0.3s ease; }
+.btn-ivory:hover { box-shadow: 0 0 40px hsl(48 58% 94% / 0.6); transform: translateY(-2px); }
+
+@keyframes ripple { 0% { transform: scale(0); opacity: 0.5; } 100% { transform: scale(4); opacity: 0; } }
+@keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.2); } }
+.animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }

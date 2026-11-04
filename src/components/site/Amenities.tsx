@@ -18,7 +18,7 @@ export function Amenities({ properties }: { properties: PropertyWithUnits[] }) {
   const items = [...seen.values()].slice(0, 10)
   if (!items.length) return null
   return (
-    <section className="bg-brand px-4 py-20 text-brand-foreground sm:px-6 md:py-28" aria-labelledby="amen-h">
+    <section className="bg-olive px-4 py-24 text-white sm:px-6" aria-labelledby="amen-h">
       <div className="mx-auto max-w-7xl text-center">
         <p className="eyebrow mb-3 opacity-70">Amenities</p>
         <h2 id="amen-h" className="section-title mb-14">Everything you need.</h2>

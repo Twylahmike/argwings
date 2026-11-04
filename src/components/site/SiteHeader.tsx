@@ -4,13 +4,12 @@ import { Menu, X } from 'lucide-react'
 import { Wordmark } from '~/components/layout/Wordmark'
 import { ThemeToggle } from '~/components/layout/ThemeToggle'
 import { AnnouncementBar } from './AnnouncementBar'
-import { buttonVariants } from '~/components/ui/button'
 import { cn } from '~/lib/utils'
 
 const links = [
-  { to: '/', hash: 'properties', label: 'Properties' },
+  { to: '/', label: 'Home' },
+  { to: '/spaces', label: 'Spaces' },
   { to: '/gallery', label: 'Gallery' },
-  { to: '/search', label: 'Search' },
 ] as const
 
 /** Fixed header. With `overlay` it is transparent over the hero until the page scrolls. */
@@ -31,12 +30,12 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
         <Link to="/" className={cn('min-w-0 font-display text-2xl', !solid && 'drop-shadow')} onClick={() => setOpen(false)}><Wordmark /></Link>
         <nav className="hidden items-center gap-1 text-sm font-medium md:flex" aria-label="Main">
           {links.map((l) => (
-            <Link key={l.label} to={l.to} {...('hash' in l ? { hash: l.hash } : {})} className="inline-flex h-11 items-center rounded-md px-3 transition-opacity hover:opacity-70">{l.label}</Link>
+            <Link key={l.label} to={l.to} className="inline-flex h-11 items-center rounded-md px-3 transition-opacity hover:opacity-70">{l.label}</Link>
           ))}
         </nav>
         <div className="flex items-center gap-1">
           <ThemeToggle />
-          <Link to="/search" className={cn(buttonVariants({ size: 'sm' }), 'hidden rounded-full px-5 sm:inline-flex')}>Book direct</Link>
+          <Link to="/search" className="btn-brand hidden h-10 items-center rounded-full px-5 text-sm font-medium sm:inline-flex">Book direct</Link>
           <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted/30 md:hidden" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls="mobile-nav" onClick={() => setOpen((o) => !o)}>
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
           </button>
@@ -45,9 +44,9 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
       {open && (
         <nav id="mobile-nav" aria-label="Mobile" className="border-t bg-background px-4 pb-4 pt-2 text-foreground md:hidden">
           {links.map((l) => (
-            <Link key={l.label} to={l.to} {...('hash' in l ? { hash: l.hash } : {})} onClick={() => setOpen(false)} className="flex h-12 items-center border-b text-base">{l.label}</Link>
+            <Link key={l.label} to={l.to} onClick={() => setOpen(false)} className="flex h-12 items-center border-b text-base">{l.label}</Link>
           ))}
-          <Link to="/search" onClick={() => setOpen(false)} className={cn(buttonVariants({ size: 'lg' }), 'mt-4 w-full rounded-full')}>Book direct</Link>
+          <Link to="/search" onClick={() => setOpen(false)} className="btn-brand mt-4 flex h-12 w-full items-center justify-center rounded-full text-base font-medium">Book direct</Link>
         </nav>
       )}
     </header>

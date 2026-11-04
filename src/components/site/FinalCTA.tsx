@@ -3,8 +3,6 @@ import { useBrand } from '~/lib/brand'
 import { useWhatsApp } from '~/lib/contact'
 import { mapsLink, type PropertyWithUnits } from '~/lib/public-api'
 
-import { buttonVariants } from '~/components/ui/button'
-import { cn } from '~/lib/utils'
 
 // Deterministic (no Math.random) so server and client render the same markup.
 const particles = Array.from({ length: 18 }, (_, i) => ({ left: (i * 37) % 100, dur: 10 + ((i * 7) % 12), delay: (i * 5) % 14 }))
@@ -21,9 +19,9 @@ export function FinalCTA({ properties }: { properties: PropertyWithUnits[] }) {
         <h2 id="cta-h" className="font-display text-5xl font-medium md:text-7xl">Ready for your stay?</h2>
         <p className="mx-auto mt-6 max-w-xl opacity-85">{site.location ? `${businessName} in ${site.location}. ` : ''}Check your dates and book in minutes.</p>
         <div className="mt-10 flex flex-col flex-wrap justify-center gap-3 sm:flex-row">
-          <Link to="/search" className={cn(buttonVariants({ size: 'lg' }), 'rounded-full bg-white px-8 text-ink hover:bg-white/90')}>Book direct</Link>
-          {waHref && <a href={waHref} target="_blank" rel="noreferrer" className={cn(buttonVariants({ size: 'lg', variant: 'outline' }), 'rounded-full border-white/40 bg-transparent px-8 text-brand-foreground hover:bg-white/10')}>Ask on WhatsApp</a>}
-          {places.map((p) => <a key={p.id} href={mapsLink(p)} target="_blank" rel="noreferrer" className={cn(buttonVariants({ size: 'lg', variant: 'outline' }), 'rounded-full border-white/40 bg-transparent px-8 text-brand-foreground hover:bg-white/10')}>Directions to {p.name}</a>)}
+          <Link to="/search" className="btn-ivory rounded-full px-8 py-4 text-sm font-medium">Book direct</Link>
+          {waHref && <a href={waHref} target="_blank" rel="noreferrer" className="btn-olive rounded-full px-8 py-4 text-sm font-medium">Ask on WhatsApp</a>}
+          {places.map((p) => <a key={p.id} href={mapsLink(p)} target="_blank" rel="noreferrer" className="btn-olive rounded-full px-8 py-4 text-sm font-medium">Directions to {p.name}</a>)}
         </div>
       </div>
     </section>

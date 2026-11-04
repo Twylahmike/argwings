@@ -4,57 +4,63 @@ import { Wordmark } from '~/components/layout/Wordmark'
 import { InstallAppButton } from './InstallAppButton'
 import { useBrand } from '~/lib/brand'
 import { useWhatsApp } from '~/lib/contact'
+import { normalizePhone, formatPhoneLocal } from '~/lib/phone'
 import { safeUrl } from '~/lib/site-content'
+
+const dot = 'flex h-9 w-9 items-center justify-center rounded-full bg-white/10 text-xs font-bold transition hover:bg-brand hover:text-brand-foreground'
 
 export function SiteFooter() {
   const brand = useBrand()
   const wa = useWhatsApp()
   const waHref = wa('Hello!')
   const c = brand.site
-  const socialLinks = [
-    { label: 'Instagram', href: safeUrl(c.social.instagram), icon: <span className="text-xs font-bold" aria-hidden>IG</span> },
-    { label: 'Facebook', href: safeUrl(c.social.facebook), icon: <span className="text-xs font-bold" aria-hidden>FB</span> },
-    { label: 'TikTok', href: safeUrl(c.social.tiktok), icon: <span className="text-xs font-bold" aria-hidden>TT</span> },
-    { label: 'X', href: safeUrl(c.social.x), icon: <span className="text-xs font-bold" aria-hidden>X</span> },
+  const n = brand.supportWhatsapp ? normalizePhone(brand.supportWhatsapp) : null
+  const shown = n && n.ok ? formatPhoneLocal(n.phone) : ''
+  const socials = [
+    { label: 'Instagram', short: 'IG', href: safeUrl(c.social.instagram) },
+    { label: 'Facebook', short: 'FB', href: safeUrl(c.social.facebook) },
+    { label: 'TikTok', short: 'TT', href: safeUrl(c.social.tiktok) },
+    { label: 'X', short: 'X', href: safeUrl(c.social.x) },
   ].filter((s) => s.href)
   return (
     <footer className="relative overflow-hidden bg-ink text-ink-foreground">
-      <div className="absolute inset-0 opacity-[0.05]" aria-hidden style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-      <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-3">
+      <div className="absolute inset-0 opacity-[0.04]" aria-hidden style={{ backgroundImage: 'radial-gradient(circle at 1px 1px, currentColor 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+      <div className="relative mx-auto grid max-w-7xl gap-10 px-6 py-16 md:grid-cols-4">
         <div>
           <Wordmark className="h-20 rounded-lg" />
           <p className="sr-only">{brand.businessName}</p>
-          {c.tagline && <p className="mt-2 text-sm italic opacity-70">{c.tagline}</p>}
-          <div className="mt-4 h-1 w-16 rounded-full bg-brand" aria-hidden />
-          {socialLinks.length > 0 && (
-            <div className="mt-5 flex gap-3">
-              {socialLinks.map((s) => (
-                <a key={s.label} href={s.href!} target="_blank" rel="noreferrer" aria-label={s.label} className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/10 transition-colors hover:bg-brand hover:text-brand-foreground">{s.icon}</a>
-              ))}
-            </div>
-          )}
+          {c.tagline && <p className="mt-3 text-sm italic opacity-70">{c.tagline}</p>}
+          <div className="mt-4 h-1 w-16 rounded-full bg-brand" style={{ boxShadow: '0 0 20px hsl(var(--brand) / 0.7)' }} aria-hidden />
+          {socials.length > 0 && <div className="mt-5 flex gap-3">{socials.map((s) => <a key={s.label} href={s.href!} target="_blank" rel="noreferrer" aria-label={s.label} className={dot}>{s.short}</a>)}</div>}
         </div>
         <div>
-          <h2 className="font-display text-xl opacity-90">Explore</h2>
-          <ul className="mt-4 space-y-1 text-sm opacity-80">
-            <li><Link to="/" className="inline-flex h-9 items-center hover:underline">Home</Link></li>
-            <li><Link to="/search" className="inline-flex h-9 items-center hover:underline">Search availability</Link></li>
-            <li><Link to="/gallery" className="inline-flex h-9 items-center hover:underline">Gallery</Link></li>
-            <li><Link to="/login" className="inline-flex h-9 items-center hover:underline">Staff login</Link></li>
+          <h2 className="mb-4 font-display text-lg text-brand-glow">Quick links</h2>
+          <ul className="space-y-1 text-sm opacity-80">
+            <li><Link to="/" className="inline-flex h-9 items-center hover:text-brand-glow">Home</Link></li>
+            <li><Link to="/spaces" className="inline-flex h-9 items-center hover:text-brand-glow">Our spaces</Link></li>
+            <li><Link to="/gallery" className="inline-flex h-9 items-center hover:text-brand-glow">Gallery</Link></li>
+            <li><Link to="/login" className="inline-flex h-9 items-center hover:text-brand-glow">Staff login</Link></li>
+          </ul>
+        </div>
+        <div>
+          <h2 className="mb-4 font-display text-lg text-brand-glow">Book with us</h2>
+          <ul className="space-y-1 text-sm opacity-80">
+            <li><Link to="/search" className="inline-flex h-9 items-center hover:text-brand-glow">Check availability</Link></li>
+            <li className="flex h-9 items-center">Direct booking &middot; No fees</li>
+            <li className="flex h-9 items-center">Pay securely with M-Pesa</li>
             <li><InstallAppButton /></li>
           </ul>
         </div>
         <div>
-          <h2 className="font-display text-xl opacity-90">Contact</h2>
-          <ul className="mt-4 space-y-3 text-sm opacity-80">
-            {c.location && <li className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0" aria-hidden /> {c.location}</li>}
-            {waHref && <li><a href={waHref} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 hover:underline"><MessageCircle className="h-4 w-4 shrink-0" aria-hidden /> Chat on WhatsApp</a></li>}
-            {c.contactEmail && <li><a href={`mailto:${c.contactEmail}`} className="inline-flex items-center gap-2 break-all hover:underline"><Mail className="h-4 w-4 shrink-0" aria-hidden /> {c.contactEmail}</a></li>}
-            <li className="opacity-80">Pay securely with M-Pesa</li>
+          <h2 className="mb-4 font-display text-lg text-brand-glow">Contact</h2>
+          <ul className="space-y-3 text-sm opacity-80">
+            {c.location && <li className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-brand-glow" aria-hidden /> {c.location}</li>}
+            {waHref && <li className="flex items-center gap-2"><MessageCircle className="animate-pulse-dot h-4 w-4 shrink-0 text-brand-glow" aria-hidden /><a href={waHref} target="_blank" rel="noreferrer" className="hover:text-brand-glow">{shown ? `${shown} (WhatsApp)` : 'Chat on WhatsApp'}</a></li>}
+            {c.contactEmail && <li className="flex items-center gap-2"><Mail className="h-4 w-4 shrink-0 text-brand-glow" aria-hidden /><a href={`mailto:${c.contactEmail}`} className="break-all hover:text-brand-glow">{c.contactEmail}</a></li>}
           </ul>
         </div>
       </div>
-      <div className="relative border-t border-white/10 py-5 text-center text-xs opacity-60">&copy; {new Date().getFullYear()} {brand.businessName}</div>
+      <div className="relative border-t border-white/10 py-6 text-center text-xs opacity-50">&copy; {new Date().getFullYear()} {brand.businessName}</div>
     </footer>
   )
 }

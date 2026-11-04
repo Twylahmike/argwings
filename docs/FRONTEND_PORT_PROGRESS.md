@@ -118,3 +118,11 @@ Collected in `src/lib/site-content.ts` once created (Phase 1).
 ## Single SQL file (2026-11-04)
 - `docs/sql/ALL_IN_ONE.sql` replaces the three split files. STEP 0 refuses other apps' projects; STEP 1 installs migrations 0001-0006 only if the booking tables are absent (EXECUTE inside a DO block); STEP 3 upserts the two Vault secrets (skips with a notice while the key is still the placeholder); STEP 4 deletes only e2e-test rows; STEP 5 prints a check.
 - Tested on a throwaway Postgres 16: fresh install (15 tables), re-runs (idempotent), other-app guard, placeholder key, test-data cleanup leaves real rows. On bnb-system only the read-only guard and skip branch were run.
+
+## Everlett-style replica pass (owner request, 2026-11-04)
+- Public pages now use the Everlett look: `.site-theme` (ivory / charcoal / olive, owner brand colour as the terracotta accent; dark mode supported), rounded-pill buttons, olive Amenities and HowToBook accents, terracotta Reserve + Final CTA bands, charcoal Gallery + Footer, ripples on the feature band, flip cards, ken-burns hero, ticker.
+- New: `/spaces` page, property showcase with auto-rotating photo carousel ("Live view"), amenity chips, price, map embed (CSP `frame-src https://www.google.com` added) and directions link, 4-column footer, nav Home / Spaces / Gallery.
+- Photos: 2 more added (dining area, terrace) with categories; hero uses up to 8 slides. Still the temporary folder (DO NOT MERGE guard unchanged).
+- Production data (owner-approved by the request): brand_color set to #c66843 so the live site matches; still editable in Admin > Settings > Brand.
+- Deliberately NOT copied: the other business's phone, M-Pesa send-money number and name, email, social links, street addresses, name, brochure PDF and /brochure page, property-specific claims (suburb names, indoor pool, gym) and their review text. Those fields are editable in Admin > Settings > Website.
+- Not replicated because the backend has no table (owner said no DB changes for it): visitor review submission form, direct "inquiries" insert.

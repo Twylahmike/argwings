@@ -38,7 +38,7 @@ export function TrustBar() {
     ...(wa('') ? [{ Icon: MessageCircle, value: <span>WhatsApp</span>, label: 'Questions? Real people reply on WhatsApp' }] : []),
   ]
   return (
-    <div className="border-y bg-muted/50">
+    <div className="border-y bg-background">
       <div className={`mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 ${items.length === 3 ? 'md:grid-cols-3' : 'md:grid-cols-2'}`}>
         {items.map((it, i) => (
           <div key={i} className="text-center">

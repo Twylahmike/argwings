@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
-import { buttonVariants } from '~/components/ui/button'
 import { galleryItems } from '~/lib/gallery'
 import type { PropertyWithUnits } from '~/lib/public-api'
 import { cn } from '~/lib/utils'
@@ -35,7 +34,7 @@ export function Gallery({ properties, limit, standalone = false }: { properties:
           ))}
         </div>
         {limit && all.length > limit && (
-          <div className="mt-12 text-center"><Link to="/gallery" className={cn(buttonVariants({ size: 'lg' }), 'rounded-full px-8')}>View full gallery</Link></div>
+          <div className="mt-12 text-center"><Link to="/gallery" className="btn-brand inline-block rounded-full px-8 py-3.5 text-sm">View full gallery</Link></div>
         )}
       </div>
     </section>

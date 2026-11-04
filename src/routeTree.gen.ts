@@ -15,6 +15,7 @@ import { Route as BookRouteImport } from './routes/book'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SearchRouteImport } from './routes/search'
+import { Route as SpacesRouteImport } from './routes/spaces'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
 import { Route as AdminChangePasswordRouteImport } from './routes/admin.change-password'
@@ -63,6 +64,11 @@ const LoginRoute = LoginRouteImport.update({
 const SearchRoute = SearchRouteImport.update({
   id: '/search',
   path: '/search',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SpacesRoute = SpacesRouteImport.update({
+  id: '/spaces',
+  path: '/spaces',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
@@ -168,6 +174,7 @@ export interface FileRoutesByFullPath {
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
+  '/spaces': typeof SpacesRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
@@ -194,6 +201,7 @@ export interface FileRoutesByTo {
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
+  '/spaces': typeof SpacesRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
@@ -222,6 +230,7 @@ export interface FileRoutesById {
   '/gallery': typeof GalleryRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
+  '/spaces': typeof SpacesRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
@@ -251,6 +260,7 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/login'
     | '/search'
+    | '/spaces'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
@@ -277,6 +287,7 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/login'
     | '/search'
+    | '/spaces'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
@@ -304,6 +315,7 @@ export interface FileRouteTypes {
     | '/gallery'
     | '/login'
     | '/search'
+    | '/spaces'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
@@ -332,6 +344,7 @@ export interface RootRouteChildren {
   GalleryRoute: typeof GalleryRoute
   LoginRoute: typeof LoginRoute
   SearchRoute: typeof SearchRoute
+  SpacesRoute: typeof SpacesRoute
   BookingTokenRoute: typeof BookingTokenRoute
   PropertiesSlugRoute: typeof PropertiesSlugRoute
   ReceiptPaymentIdRoute: typeof ReceiptPaymentIdRoute
@@ -379,6 +392,13 @@ declare module '@tanstack/react-router' {
       path: '/search'
       fullPath: '/search'
       preLoaderRoute: typeof SearchRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/spaces': {
+      id: '/spaces'
+      path: '/spaces'
+      fullPath: '/spaces'
+      preLoaderRoute: typeof SpacesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/admin/': {
@@ -564,6 +584,7 @@ const rootRouteChildren: RootRouteChildren = {
   GalleryRoute: GalleryRoute,
   LoginRoute: LoginRoute,
   SearchRoute: SearchRoute,
+  SpacesRoute: SpacesRoute,
   BookingTokenRoute: BookingTokenRoute,
   PropertiesSlugRoute: PropertiesSlugRoute,
   ReceiptPaymentIdRoute: ReceiptPaymentIdRoute,

@@ -45,6 +45,9 @@ function BookPage() {
   const brand = useBrand()
   const nav = useNavigate()
   const [formError, setFormError] = useState('')
+  const [codeInput, setCodeInput] = useState('')
+  const [applied, setApplied] = useState<{ code: string; amount: number } | null>(null)
+  const [codeMsg, setCodeMsg] = useState('')
   const valid = !!s.unit && /^\d{4}-\d{2}-\d{2}$/.test(s.in) && /^\d{4}-\d{2}-\d{2}$/.test(s.out) && s.out > s.in
 
   const info = useQuery({
@@ -65,6 +68,17 @@ function BookPage() {
     resolver: zodResolver(schema), defaultValues: { guests: s.guests, consent: false },
   })
 
+  async function applyCode() {
+    setCodeMsg('')
+    const code = codeInput.trim().toUpperCase()
+    if (!code) return
+    const { data, error } = await pub().rpc('quote_discount_code', { p_code: code, p_unit: s.unit, p_in: s.in, p_out: s.out })
+    if (error) { setCodeMsg(error.message); return }
+    const r = data as { ok: boolean; message: string; amount: number }
+    if (r.ok) setApplied({ code, amount: r.amount }); else setApplied(null)
+    setCodeMsg(r.message)
+  }
+
   async function onSubmit(raw: Values) {
     setFormError('')
     const v = schema.parse(raw)
@@ -82,7 +96,7 @@ function BookPage() {
     }
     try {
       const res = await callFunction<{ booking: { public_token: string; deposit_required: number } }>('create-booking', {
-        unit_id: s.unit, check_in: s.in, check_out: s.out, guests: v.guests, name: v.name, phone: p.phone, email: v.email || undefined, source: 'website', consent: true,
+        unit_id: s.unit, check_in: s.in, check_out: s.out, guests: v.guests, name: v.name, phone: p.phone, email: v.email || undefined, source: 'website', consent: true, discount_code: applied?.code,
       }, { auth: false })
       // The payment itself is started (and followed live) on the booking page, so a refresh never loses it.
       nav({ to: '/booking/$token', params: { token: res.booking.public_token }, search: { start: p.phone } })
@@ -95,7 +109,9 @@ function BookPage() {
   if (!valid) return <PublicLayout><div className="mx-auto max-w-lg px-4 py-16"><EmptyState title="Choose your dates first" description="Pick a place and dates to start your booking." action={<Button asChild><Link to="/">Find a place</Link></Button>} /></div></PublicLayout>
   const d = info.data
   const q = d?.quote
-  const deposit = q ? calcDeposit(q.total, brand.depositPercent) : 0
+  const discount = applied?.amount ?? 0
+  const total = q ? Math.max(0, q.total - discount) : 0
+  const deposit = q ? calcDeposit(total, brand.depositPercent) : 0
 
   return (
     <PublicLayout>
@@ -115,6 +131,12 @@ function BookPage() {
               <Field label="Guests" htmlFor="b-guests" error={errors.guests?.message}>
                 <Select id="b-guests" {...register('guests')}>{Array.from({ length: d.unit.max_guests }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}</Select>
               </Field>
+              {brand.bookingMode !== 'request' && <Field label="Discount code (optional)" htmlFor="b-code" hint={codeMsg || undefined}>
+                <div className="flex gap-2">
+                  <Input id="b-code" autoComplete="off" className="uppercase" value={codeInput} onChange={(e) => { setCodeInput(e.target.value); setApplied(null); setCodeMsg('') }} />
+                  <Button type="button" variant="outline" onClick={applyCode} disabled={!codeInput.trim()}>Apply</Button>
+                </div>
+              </Field>}
               <div className="rounded-lg border bg-muted/40 p-3 text-sm">
                 <label className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" {...register('consent')} />
                   <span>I agree that {brand.businessName} may use my name, phone number and email to manage this booking and send me confirmations and reminders (WhatsApp/SMS). We keep only what we need and never sell your data.</span></label>
@@ -141,9 +163,10 @@ function BookPage() {
                 <div className="mt-3 grid gap-1 border-t pt-3">
                   <p className="flex justify-between"><span>{q.nights} night{q.nights > 1 ? 's' : ''}</span><span>{formatKES(q.nightly_total)}</span></p>
                   {q.cleaning_fee > 0 && <p className="flex justify-between"><span>Cleaning fee</span><span>{formatKES(q.cleaning_fee)}</span></p>}
-                  <p className="flex justify-between border-t pt-2 text-base font-semibold"><span>Total</span><span>{formatKES(q.total)}</span></p>
+                  {discount > 0 && <p className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Discount ({applied?.code})</span><span>-{formatKES(discount)}</span></p>}
+                  <p className="flex justify-between border-t pt-2 text-base font-semibold"><span>Total</span><span>{formatKES(total)}</span></p>
                   {brand.bookingMode !== 'request' && <p className="flex justify-between font-medium text-brand"><span>Deposit due now ({brand.depositPercent}%)</span><span>{formatKES(deposit)}</span></p>}
-                  {brand.bookingMode !== 'request' && <p className="flex justify-between text-muted-foreground"><span>Balance before check-in</span><span>{formatKES(q.total - deposit)}</span></p>}
+                  {brand.bookingMode !== 'request' && <p className="flex justify-between text-muted-foreground"><span>Balance before check-in</span><span>{formatKES(total - deposit)}</span></p>}
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">{brand.cancellationPolicy}</p>
               </CardContent>

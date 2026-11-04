@@ -13,6 +13,7 @@ export type Property = {
   check_in_time: string; check_out_time: string; house_rules: string | null
   amenities: string[]; cover_image: string | null; gallery: string[]; active: boolean; sort: number
   featured: boolean; archived_at: string | null; cancellation_policy: string | null
+  seo_title: string | null; seo_description: string | null
 }
 export type Unit = {
   id: string; property_id: string; name: string; code: string | null; unit_type: string; description: string | null

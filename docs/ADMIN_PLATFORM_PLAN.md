@@ -32,7 +32,7 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 | 14 | Financial management | PARTIAL | Payments, expenses, P&L exist. Approval status, categories table, refund workflow, card/bank verification UI TODO |
 | 15 | Reports | PARTIAL | Reports + CSV. PDF/Excel exports, 14 report set TODO |
 | 16 | Bar menu and stock | TODO | Optional module behind a settings flag |
-| 17 | Marketing and SEO | TODO | Discount codes, campaigns, per-listing SEO |
+| 17 | Marketing and SEO | **MOSTLY DONE** | Slice 6 (migration 0012): Admin > Promotions (percent/fixed codes, property scope, dates, min nights/total, max uses; applied in the database, race-safe, cancelled bookings return the use), code box on the booking page, per-listing search title/description, robots.txt and sitemap.xml. Campaign emails/WhatsApp blasts TODO |
 | 18 | Support tickets | **DONE** | Slice 5 (migration 0011): Admin > Support, categories, priority, status, assignment, linked booking, internal/staff thread, resolved time stamped by the database |
 | 19 | Roles and permissions | PARTIAL | 3 fixed roles enforced by RLS. Custom roles/permission matrix, suspension (active flag exists), login history TODO |
 | 20 | Site settings and contacts | PARTIAL | Business, brand, WhatsApp, deposit, policy exist. Currency/time zone/tax/maintenance mode/contact numbers TODO |
@@ -42,7 +42,7 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 | 24 | Database and security | ONGOING | Every new table ships with RLS, indexes, checks, audit trigger and SQL tests |
 | 25 | Admin UX | PARTIAL | Grouped sidebar + "Back to website" added. Breadcrumbs, global search TODO |
 | 26 | Interaction quality | ONGOING | New pages have search/filters, empty/error/loading states, confirmations |
-| 27 | Testing | ONGOING | 111 app tests, 28 SQL tests, browser checks of public pages |
+| 27 | Testing | ONGOING | 113 app tests, 30 SQL tests, browser checks of public pages |
 
 ## Slice 1 (this change): Inquiries, Reviews, Announcements
 - Migration `0007_inquiries_reviews_announcements.sql` (applied to the live project): tables `inquiries`, `inquiry_notes`,

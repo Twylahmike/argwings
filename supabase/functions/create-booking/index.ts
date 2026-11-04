@@ -20,6 +20,8 @@ const Body = z.object({
   source: z.enum(['website', 'whatsapp']).default('website'),
   // Kenya Data Protection Act: website bookings must carry explicit consent to the privacy notice.
   consent: z.boolean().optional(),
+  // Optional discount code. Checked and applied in the database; the browser's own total is never trusted.
+  discount_code: z.string().trim().max(24).optional(),
 })
 
 Deno.serve(serve('create-booking', async (req, log) => {
@@ -41,11 +43,13 @@ Deno.serve(serve('create-booking', async (req, log) => {
   ])
   if (ipOk.data === false || phoneOk.data === false) throw new HttpError(429, 'rate_limited', 'Too many attempts. Please wait a few minutes and try again.')
 
-  const { data, error } = await db.rpc('create_booking', {
+  const base = {
     p_unit: b.unit_id, p_in: b.check_in, p_out: b.check_out, p_guests: b.guests,
-    p_guest_name: b.name, p_guest_phone: phone.phone, p_guest_email: b.email || null,
-    p_source: b.source, p_mode: 'hold',
-  })
+    p_guest_name: b.name, p_guest_phone: phone.phone, p_guest_email: b.email || null, p_source: b.source,
+  }
+  const { data, error } = b.discount_code
+    ? await db.rpc('create_booking_with_code', { ...base, p_code: b.discount_code })
+    : await db.rpc('create_booking', { ...base, p_mode: 'hold' })
   if (error) {
     if (error.code === '23P01') throw new HttpError(409, 'dates_taken', 'Those dates were just taken. Please choose other dates.')
     if (error.code === '23514') throw new HttpError(400, 'invalid_booking', error.message)

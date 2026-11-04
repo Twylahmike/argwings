@@ -841,3 +841,67 @@ test('support tickets: staff only, property scoped, resolved_at follows status, 
     await as(c, 'authenticated', f.owner)
     assert.ok((await q(c, 'select id from support_tickets')).some((x) => x.id === t.id))
   }))
+
+test('discount codes: rules, last-use race, cancellation gives the use back, guests cannot read codes', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    const mk = (vals) => one(c, `insert into discount_codes(code, kind, value, property_id, min_nights, max_uses, valid_from, valid_to, active)
+      values ($1,$2,$3,$4,$5,$6,$7,$8,$9) returning *`, [vals.code, vals.kind ?? 'percent', vals.value ?? 10, vals.property_id ?? null, vals.min_nights ?? 1, vals.max_uses ?? null, vals.valid_from ?? null, vals.valid_to ?? null, vals.active ?? true])
+    const ten = await mk({ code: 'TEN10', value: 10 })
+    await mk({ code: 'FLAT500', kind: 'fixed', value: 500 })
+    await mk({ code: 'ONLYB', property_id: f.pb })
+    await mk({ code: 'LONG3', min_nights: 3 })
+    await mk({ code: 'OLD', valid_to: '2020-01-01' })
+    await mk({ code: 'OFF', active: false })
+    await mk({ code: 'ONCE', max_uses: 1 })
+    await fails(c, `insert into discount_codes(code, kind, value) values ('bad code','percent',10)`, [], '23514')
+    await fails(c, `insert into discount_codes(code, kind, value) values ('OVER','percent',150)`, [], '23514')
+    await fails(c, `insert into discount_codes(code, kind, value) values ('TEN10','percent',5)`, [], '23505')
+
+    await as(c, 'anon')
+    // 2 nights in Prop A: quote_stay nightly_total comes from the pricing engine
+    const base = (await one(c, 'select nightly_total from quote_stay($1,$2,$3)', [f.ua, d0, day(d0, 2)])).nightly_total
+    const r = async (code, nights = 2) => (await one(c, 'select quote_discount_code($1,$2,$3,$4) r', [code, f.ua, d0, day(d0, nights)])).r
+    assert.deepEqual([(await r('ten10')).ok, (await r('ten10')).amount], [true, Math.floor(base * 10 / 100)], 'case-insensitive percent')
+    assert.equal((await r('FLAT500')).amount, 500)
+    for (const bad of ['NOPE', 'ONLYB', 'LONG3', 'OLD', 'OFF']) assert.equal((await r(bad)).ok, false, bad)
+    assert.equal((await r('LONG3', 3)).ok, true)
+    await fails(c, 'select * from discount_codes', [], '42501')
+    await fails(c, 'select create_booking_with_code($1,$2,$3,$4,1,$5,$6)', ['TEN10', f.ua, d0, day(d0, 2), 'G', '254712345678'], '42501')
+
+    await admin(c)
+    // booking created with the code: totals reflect the discount; the use is recorded
+    const b = await one(c, `select * from create_booking_with_code('ONCE', $1,$2,$3,1,'Guest One','254712000111')`, [f.ua, d0, day(d0, 2)])
+    const qs = await one(c, 'select * from quote_stay($1,$2,$3)', [f.ua, d0, day(d0, 2)])
+    assert.equal(b.total_amount, qs.total - b.discount)
+    assert.ok(b.discount > 0)
+    assert.equal((await one(c, `select discount_uses(id) n from discount_codes where code='ONCE'`)).n, 1)
+    // the single use is gone for the next stay...
+    await fails(c, `select create_booking_with_code('ONCE', $1,$2,$3,1,'Guest Two','254712000222')`, [f.ua, day(d0, 7), day(d0, 9)], '23514')
+    // ...until the first booking is cancelled
+    await c.query(`update bookings set status='cancelled' where id=$1`, [b.id])
+    const again = await one(c, `select * from create_booking_with_code('ONCE', $1,$2,$3,1,'Guest Two','254712000222')`, [f.ua, day(d0, 7), day(d0, 9)])
+    assert.ok(again.discount > 0)
+    // a failed booking (unknown unit) leaves no redemption behind
+    await fails(c, `select create_booking_with_code('TEN10', $1,$2,$3,1,'X Y','254712000333')`, [randomUUID(), d0, day(d0, 2)])
+    assert.equal((await one(c, `select count(*)::int n from discount_redemptions where code_id=$1`, [ten.id])).n, 0)
+
+    // staff scoping: manager A manages only codes for their own property; global codes are owner-only
+    await as(c, 'authenticated', f.manager)
+    await c.query(`insert into discount_codes(code, kind, value, property_id) values ('MGRA','percent',5,$1)`, [f.pa])
+    await fails(c, `insert into discount_codes(code, kind, value, property_id) values ('MGRB','percent',5,$1)`, [f.pb], '42501')
+    await fails(c, `insert into discount_codes(code, kind, value) values ('GLOBAL','percent',5)`, [], '42501')
+    assert.ok(!(await q2(c)).includes('ONLYB'), 'manager A cannot see property B codes')
+    await as(c, 'authenticated', f.cleaner)
+    assert.equal((await q(c, 'select * from discount_codes')).length, 0)
+  }))
+const q2 = async (c) => (await q(c, 'select code from discount_codes')).map((x) => x.code)
+
+test('property SEO fields are length limited', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await c.query(`update properties set seo_title=$2, seo_description=$3 where id=$1`, [f.pa, 'A'.repeat(70), 'B'.repeat(200)])
+    await fails(c, `update properties set seo_title=$2 where id=$1`, [f.pa, 'A'.repeat(71)], '23514')
+    await fails(c, `update properties set seo_description=$2 where id=$1`, [f.pa, 'B'.repeat(201)], '23514')
+  }))

@@ -30,7 +30,7 @@ export const Route = createFileRoute('/properties/$slug')({
     const p = loaderData?.property
     if (!p) return { meta: [{ title: 'Property not found' }] }
     const from = p.units.length ? Math.min(...p.units.map(fromRate)) : null
-    const desc = (p.tagline || p.description || `Stay at ${p.name}, ${p.area || p.city}.`).slice(0, 160)
+    const desc = (p.seo_description || p.tagline || p.description || `Stay at ${p.name}, ${p.area || p.city}.`).slice(0, 160)
     const ld = {
       '@context': 'https://schema.org', '@type': 'LodgingBusiness', name: p.name, description: p.description ?? p.tagline ?? undefined,
       image: [p.cover_image, ...p.gallery].filter(Boolean), telephone: p.contact_phone ?? undefined,
@@ -41,9 +41,9 @@ export const Route = createFileRoute('/properties/$slug')({
     }
     return {
       meta: [
-        { title: `${p.name} · ${p.area || p.city}` },
+        { title: p.seo_title || `${p.name} · ${p.area || p.city}` },
         { name: 'description', content: desc },
-        { property: 'og:title', content: p.name },
+        { property: 'og:title', content: p.seo_title || p.name },
         { property: 'og:description', content: desc },
         { property: 'og:type', content: 'website' },
         ...(p.cover_image ? [{ property: 'og:image', content: p.cover_image }] : []),

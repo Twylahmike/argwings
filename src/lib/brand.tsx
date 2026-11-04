@@ -15,7 +15,7 @@ export type Brand = {
 }
 
 export const DEFAULT_BRAND: Brand = {
-  businessName: 'Your BNB Brand',
+  businessName: 'RG Wings Stays',
   logoUrl: '',
   supportWhatsapp: '',
   cancellationPolicy: 'Free cancellation up to 48 hours before check-in. The deposit is non-refundable after that.',

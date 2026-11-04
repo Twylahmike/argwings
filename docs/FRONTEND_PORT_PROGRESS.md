@@ -5,7 +5,7 @@ Alias: argwings uses `~/`. No DB changes, no edits to `supabase/migrations`, `su
 
 ## Phases
 - [x] Phase 0 - Recon and port map (this file)
-- [ ] Phase 1 - Foundation (theme tokens, fonts, site-content.ts, placeholder-images.ts, placeholder photos, check-no-placeholders)
+- [x] Phase 1 - Foundation (theme tokens, fonts, site-content.ts, placeholder-images.ts, placeholder photos, check-no-placeholders)
 - [ ] Phase 2 - Shell (Header, Footer, AnnouncementBar, FloatingWA in PublicLayout)
 - [ ] Phase 3 - Home sections
 - [ ] Phase 4 - /gallery, PWA
@@ -55,6 +55,16 @@ SearchBar, PropertyCard (booking), ui/{badge,button,card,dialog,form,misc}. Prop
 
 ## Open placeholders (TODO(owner))
 Collected in `src/lib/site-content.ts` once created (Phase 1).
+
+## Phase 1 notes
+- Placeholder photos kept (9, WebP, 1.2 MB total, generic names): living-room, bedroom, master-bedroom, kitchen, balcony, balcony-view, gym, pool, laundry.
+  Rejected after inspection: tv-area (shows a person's face), rooftop-evening (screenshot-style white band), rooftop-day / bathroom / kitchen(low-res) / bedroom(low-res) / blue-sofa (low-res phone captures), Living (partial streaming-app logo on TV).
+  Never copied: brochure-overview, WhatsApp Image files, PDF, icons, favicon, public/.
+- Theme: added `--ink` (dark band), `--radius` scale, `font-display`, motion utilities, `.reveal`, flip cards, reduced-motion overrides. Palette still driven by `--brand` (owner colour keeps working); light + dark via `data-theme`.
+- Radius tokens now apply to admin too (slightly rounder). Intended ("picks up the new look through tokens").
+- `html.js` class set in the root inline script so `.reveal` content stays visible without JS.
+- `npm run deploy` now runs `check:placeholders` first (fails while the folder exists).
+- Default business name fallback in brand.tsx is now "RG Wings Stays".
 
 ## Surprises
 (none yet)

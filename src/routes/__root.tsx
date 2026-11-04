@@ -32,7 +32,7 @@ function RootComponent() {
         {/* Owner-chosen brand colour (Settings). Falls back to the defaults in styles/theme.css. */}
         {brand.brandColor && <style dangerouslySetInnerHTML={{ __html: brandCss(brand.brandColor) }} />}
         {/* Apply the saved theme before first paint to avoid a light flash in dark mode. */}
-        <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}" }} />
+        <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}document.documentElement.classList.add('js')" }} />
       </head>
       <body>
         <QueryClientProvider client={queryClient}>

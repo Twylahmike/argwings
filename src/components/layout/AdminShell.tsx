@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3, BedDouble, Brush, Building2, CalendarCheck, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
   Settings, Star, UserCog, Users, Wallet, type LucideIcon,
-  Ban, DoorOpen, LifeBuoy, Tag, Wrench,
+  Ban, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
 import { canManage, isOwner, type Me } from '~/lib/auth'
@@ -45,6 +45,9 @@ const NAV: NavItem[] = [
   { to: '/admin/properties', label: 'Properties', icon: Building2, show: canManage, group: 'Operations' },
   { to: '/admin/rooms', label: 'Rooms', icon: BedDouble, show: canManage, group: 'Operations' },
   { to: '/admin/guests', label: 'Guests', icon: Users, show: canManage, group: 'Operations' },
+  { to: '/admin/media', label: 'Media library', icon: ImagePlus, show: canManage, group: 'Website' },
+  { to: '/admin/gallery', label: 'Gallery', icon: Images, show: canManage, group: 'Website' },
+  { to: '/admin/homepage', label: 'Homepage images', icon: PanelTop, show: canManage, group: 'Website' },
   { to: '/admin/reviews', label: 'Reviews', icon: Star, show: canManage, group: 'Website' },
   { to: '/admin/announcements', label: 'Announcements', icon: Megaphone, show: canManage, group: 'Website' },
   { to: '/admin/promotions', label: 'Promotions', icon: Tag, show: canManage, group: 'Business' },

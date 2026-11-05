@@ -23,9 +23,12 @@ import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
 import { Route as AdminChangePasswordRouteImport } from './routes/admin.change-password'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
 import { Route as AdminFrontdeskRouteImport } from './routes/admin.frontdesk'
+import { Route as AdminGalleryRouteImport } from './routes/admin.gallery'
+import { Route as AdminHomepageRouteImport } from './routes/admin.homepage'
 import { Route as AdminHousekeepingRouteImport } from './routes/admin.housekeeping'
 import { Route as AdminInquiriesRouteImport } from './routes/admin.inquiries'
 import { Route as AdminMaintenanceRouteImport } from './routes/admin.maintenance'
+import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminMessagesRouteImport } from './routes/admin.messages'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminPromotionsRouteImport } from './routes/admin.promotions'
@@ -119,6 +122,16 @@ const AdminFrontdeskRoute = AdminFrontdeskRouteImport.update({
   path: '/frontdesk',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminGalleryRoute = AdminGalleryRouteImport.update({
+  id: '/gallery',
+  path: '/gallery',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminHomepageRoute = AdminHomepageRouteImport.update({
+  id: '/homepage',
+  path: '/homepage',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminHousekeepingRoute = AdminHousekeepingRouteImport.update({
   id: '/housekeeping',
   path: '/housekeeping',
@@ -132,6 +145,11 @@ const AdminInquiriesRoute = AdminInquiriesRouteImport.update({
 const AdminMaintenanceRoute = AdminMaintenanceRouteImport.update({
   id: '/maintenance',
   path: '/maintenance',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMediaRoute = AdminMediaRouteImport.update({
+  id: '/media',
+  path: '/media',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminMessagesRoute = AdminMessagesRouteImport.update({
@@ -259,9 +277,12 @@ export interface FileRoutesByFullPath {
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
+  '/admin/gallery': typeof AdminGalleryRoute
+  '/admin/homepage': typeof AdminHomepageRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/maintenance': typeof AdminMaintenanceRoute
+  '/admin/media': typeof AdminMediaRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/promotions': typeof AdminPromotionsRoute
@@ -299,9 +320,12 @@ export interface FileRoutesByTo {
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
+  '/admin/gallery': typeof AdminGalleryRoute
+  '/admin/homepage': typeof AdminHomepageRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/maintenance': typeof AdminMaintenanceRoute
+  '/admin/media': typeof AdminMediaRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/promotions': typeof AdminPromotionsRoute
@@ -341,9 +365,12 @@ export interface FileRoutesById {
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
+  '/admin/gallery': typeof AdminGalleryRoute
+  '/admin/homepage': typeof AdminHomepageRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/maintenance': typeof AdminMaintenanceRoute
+  '/admin/media': typeof AdminMediaRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/promotions': typeof AdminPromotionsRoute
@@ -384,9 +411,12 @@ export interface FileRouteTypes {
     | '/admin/change-password'
     | '/admin/finance'
     | '/admin/frontdesk'
+    | '/admin/gallery'
+    | '/admin/homepage'
     | '/admin/housekeeping'
     | '/admin/inquiries'
     | '/admin/maintenance'
+    | '/admin/media'
     | '/admin/messages'
     | '/admin/notifications'
     | '/admin/promotions'
@@ -424,9 +454,12 @@ export interface FileRouteTypes {
     | '/admin/change-password'
     | '/admin/finance'
     | '/admin/frontdesk'
+    | '/admin/gallery'
+    | '/admin/homepage'
     | '/admin/housekeeping'
     | '/admin/inquiries'
     | '/admin/maintenance'
+    | '/admin/media'
     | '/admin/messages'
     | '/admin/notifications'
     | '/admin/promotions'
@@ -465,9 +498,12 @@ export interface FileRouteTypes {
     | '/admin/change-password'
     | '/admin/finance'
     | '/admin/frontdesk'
+    | '/admin/gallery'
+    | '/admin/homepage'
     | '/admin/housekeeping'
     | '/admin/inquiries'
     | '/admin/maintenance'
+    | '/admin/media'
     | '/admin/messages'
     | '/admin/notifications'
     | '/admin/promotions'
@@ -607,6 +643,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminFrontdeskRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/gallery': {
+      id: '/admin/gallery'
+      path: '/gallery'
+      fullPath: '/admin/gallery'
+      preLoaderRoute: typeof AdminGalleryRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/homepage': {
+      id: '/admin/homepage'
+      path: '/homepage'
+      fullPath: '/admin/homepage'
+      preLoaderRoute: typeof AdminHomepageRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/housekeeping': {
       id: '/admin/housekeeping'
       path: '/housekeeping'
@@ -626,6 +676,13 @@ declare module '@tanstack/react-router' {
       path: '/maintenance'
       fullPath: '/admin/maintenance'
       preLoaderRoute: typeof AdminMaintenanceRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/media': {
+      id: '/admin/media'
+      path: '/media'
+      fullPath: '/admin/media'
+      preLoaderRoute: typeof AdminMediaRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/messages': {
@@ -792,9 +849,12 @@ interface AdminRouteChildren {
   AdminChangePasswordRoute: typeof AdminChangePasswordRoute
   AdminFinanceRoute: typeof AdminFinanceRoute
   AdminFrontdeskRoute: typeof AdminFrontdeskRoute
+  AdminGalleryRoute: typeof AdminGalleryRoute
+  AdminHomepageRoute: typeof AdminHomepageRoute
   AdminHousekeepingRoute: typeof AdminHousekeepingRoute
   AdminInquiriesRoute: typeof AdminInquiriesRoute
   AdminMaintenanceRoute: typeof AdminMaintenanceRoute
+  AdminMediaRoute: typeof AdminMediaRoute
   AdminMessagesRoute: typeof AdminMessagesRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminPromotionsRoute: typeof AdminPromotionsRoute
@@ -823,9 +883,12 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminChangePasswordRoute: AdminChangePasswordRoute,
   AdminFinanceRoute: AdminFinanceRoute,
   AdminFrontdeskRoute: AdminFrontdeskRoute,
+  AdminGalleryRoute: AdminGalleryRoute,
+  AdminHomepageRoute: AdminHomepageRoute,
   AdminHousekeepingRoute: AdminHousekeepingRoute,
   AdminInquiriesRoute: AdminInquiriesRoute,
   AdminMaintenanceRoute: AdminMaintenanceRoute,
+  AdminMediaRoute: AdminMediaRoute,
   AdminMessagesRoute: AdminMessagesRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminPromotionsRoute: AdminPromotionsRoute,

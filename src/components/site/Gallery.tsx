@@ -1,12 +1,14 @@
 import { useState } from 'react'
 import { Link } from '@tanstack/react-router'
 import { galleryItems } from '~/lib/gallery'
+import { useBrand } from '~/lib/brand'
 import type { PropertyWithUnits } from '~/lib/public-api'
 import { cn } from '~/lib/utils'
 
 /** Masonry photo wall. `limit` makes it the home-page teaser; without it, it is the full /gallery. */
 export function Gallery({ properties, limit, standalone = false }: { properties: PropertyWithUnits[]; limit?: number; standalone?: boolean }) {
-  const all = galleryItems(properties)
+  const brand = useBrand()
+  const all: { src: string; alt: string; caption: string; group: string; kind?: 'image' | 'video' }[] = brand.gallery.length ? brand.gallery : galleryItems(properties)
   const groups = [...new Set(all.map((i) => i.group))]
   const [group, setGroup] = useState('all')
   const shown = (group === 'all' ? all : all.filter((i) => i.group === group)).slice(0, limit)
@@ -28,7 +30,7 @@ export function Gallery({ properties, limit, standalone = false }: { properties:
         <div className="columns-2 gap-4 md:columns-3 lg:columns-4">
           {shown.map((it, i) => (
             <figure key={`${it.src}-${i}`} className="group relative mb-4 break-inside-avoid overflow-hidden rounded-xl">
-              <img src={it.src} alt={it.alt} loading="lazy" className="w-full object-cover transition-transform duration-700 group-hover:scale-105" />
+              {it.kind === 'video' ? <video src={it.src} controls muted playsInline preload="metadata" className="w-full object-cover" aria-label={it.alt} /> : <img src={it.src} alt={it.alt} loading="lazy" className="w-full object-cover transition-transform duration-700 group-hover:scale-105" />}
               <figcaption className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-ink/80 to-transparent p-4 font-display text-lg opacity-0 transition-opacity duration-500 group-hover:opacity-100 group-focus-within:opacity-100 max-md:opacity-100">{it.caption}</figcaption>
             </figure>
           ))}

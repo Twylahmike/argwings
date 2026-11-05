@@ -10,7 +10,7 @@ import type { PropertyWithUnits } from '~/lib/public-api'
 export function Hero({ properties }: { properties: PropertyWithUnits[] }) {
   const brand = useBrand()
   const site = brand.site
-  const slides = heroSlides(properties)
+  const slides = brand.heroBanners.length ? brand.heroBanners.map((b) => ({ src: b.src, alt: b.title })) : heroSlides(properties)
   const [i, setI] = useState(0)
   useEffect(() => {
     if (slides.length < 2 || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return

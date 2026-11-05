@@ -3,6 +3,9 @@ import { pub } from './public-client'
 import { isSupabaseConfigured } from './config'
 import { DEFAULT_SITE_CONTENT, sanitizeSiteContent, type SiteContent } from './site-content'
 
+export type ManagedPhoto = { src: string; alt: string; caption: string; group: string; kind: 'image' | 'video' }
+export type PublicBanner = { id: string; src: string; title: string; subtitle: string; href: string; label: string }
+
 export type Brand = {
   businessName: string
   logoUrl: string
@@ -19,6 +22,10 @@ export type Brand = {
   site: SiteContent
   /** Names of the active properties, for the footer. */
   spaces: { id: string; name: string; slug: string }[]
+  /** Photos managed in Admin > Gallery. Empty = fall back to the property photos. */
+  gallery: ManagedPhoto[]
+  heroBanners: PublicBanner[]
+  promoBanners: PublicBanner[]
 }
 
 export const DEFAULT_BRAND: Brand = {
@@ -34,6 +41,24 @@ export const DEFAULT_BRAND: Brand = {
   bookingMode: 'instant',
   site: DEFAULT_SITE_CONTENT,
   spaces: [],
+  gallery: [],
+  heroBanners: [],
+  promoBanners: [],
+}
+
+type CatRow = { id: string; name: string; sort: number }
+type ItemRow = { category_id: string; url: string; kind: 'image' | 'video'; alt_text: string | null; caption: string | null }
+/** Published gallery items in category order (RLS already hides unpublished ones). */
+function managedGallery(cats: CatRow[] | null, items: ItemRow[] | null): ManagedPhoto[] {
+  const names = new Map((cats ?? []).map((c) => [c.id, c.name]))
+  return (cats ?? []).flatMap((c) => (items ?? []).filter((i) => i.category_id === c.id).map((i) => ({
+    src: i.url, kind: i.kind, alt: i.alt_text || i.caption || names.get(c.id) || 'Photo', caption: i.caption || names.get(c.id) || '', group: names.get(c.id) ?? '',
+  })))
+}
+type BannerRow = { id: string; placement: 'hero' | 'promo'; title: string | null; subtitle: string | null; image_url: string; link_url: string | null; link_label: string | null }
+function splitBanners(rows: BannerRow[] | null): { heroBanners: PublicBanner[]; promoBanners: PublicBanner[] } {
+  const conv = (b: BannerRow): PublicBanner => ({ id: b.id, src: b.image_url, title: b.title ?? '', subtitle: b.subtitle ?? '', href: b.link_url ?? '', label: b.link_label ?? '' })
+  return { heroBanners: (rows ?? []).filter((b) => b.placement === 'hero').map(conv), promoBanners: (rows ?? []).filter((b) => b.placement === 'promo').map(conv) }
 }
 
 /** The stored marketing content value out of the settings rows. */
@@ -45,11 +70,14 @@ function m_content(rows: { key: string; value: unknown }[] | null): unknown {
 export async function fetchBrand(): Promise<Brand> {
   if (!isSupabaseConfigured) return DEFAULT_BRAND
   try {
-    const [{ data }, props, anns, revs] = await Promise.all([
+    const [{ data }, props, anns, revs, gcats, gitems, banners] = await Promise.all([
       pub().from('settings').select('key, value'),
       pub().from('properties').select('id, name, slug').eq('active', true).order('sort').order('name'),
       pub().from('announcements').select('id, text, link, variant').order('created_at', { ascending: false }).limit(3),
       pub().from('reviews').select('id, guest_name, stay_label, rating, body, response').order('created_at', { ascending: false }).limit(12),
+      pub().from('gallery_categories').select('id, name, sort').order('sort').order('name'),
+      pub().from('gallery_items').select('category_id, url, kind, alt_text, caption, sort').order('sort').order('created_at'),
+      pub().from('homepage_banners').select('id, placement, title, subtitle, image_url, link_url, link_label, sort').order('sort').order('created_at'),
     ])
     const content = sanitizeSiteContent(m_content(data))
     const m = Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value]))
@@ -73,6 +101,8 @@ export async function fetchBrand(): Promise<Brand> {
         announcements: anns.data?.length ? anns.data.map((a) => ({ id: a.id as string, text: a.text as string, href: (a.link as string | null) ?? undefined, variant: a.variant as 'info' | 'promo' })) : content.announcements,
         reviews: revs.data?.length ? revs.data.map((r) => ({ id: r.id as string, guest: r.guest_name as string, stay: (r.stay_label as string | null) ?? undefined, rating: r.rating as 1 | 2 | 3 | 4 | 5, quote: r.body as string, response: (r.response as string | null) ?? undefined })) : content.reviews,
       },
+      gallery: managedGallery(gcats.data, gitems.data),
+      ...splitBanners(banners.data),
       spaces: ((props.data ?? []) as { id: string; name: string; slug: string }[]).slice(0, 6),
     }
   } catch {

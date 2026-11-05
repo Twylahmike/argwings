@@ -1090,3 +1090,41 @@ test('maintenance requests: reporting, assignment, completion notes, room goes o
     await as(c, 'authenticated', f.manager)
     await fails(c, `insert into maintenance_requests(property_id, title, takes_unit_offline) values ($1,'No unit',true)`, [f.pa], '23514')
   }))
+
+test('media, gallery and homepage banners: public sees only published/scheduled, in-use files cannot be deleted', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await as(c, 'authenticated', f.manager)
+    const url = 'https://cdn.example.test/a.webp'
+    const asset = await one(c, `insert into media_assets(url, storage_path, title, category) values ($1,'gallery/a.webp','Lobby','lobby') returning *`, [url])
+    await fails(c, `insert into media_assets(url, storage_path) values ('http://insecure','x')`, [], '23514')
+    const cat = await one(c, `insert into gallery_categories(name) values ('Lounge') returning *`)
+    await fails(c, `insert into gallery_categories(name) values ('lounge')`, [], '23505')
+    const hidden = await one(c, `insert into gallery_categories(name, published) values ('Hidden', false) returning *`)
+    await c.query(`insert into gallery_items(category_id, url, caption) values ($1,$2,'Sofa')`, [cat.id, url])
+    await c.query(`insert into gallery_items(category_id, url, published) values ($1,$2,false)`, [cat.id, 'https://cdn.example.test/draft.webp'])
+    await c.query(`insert into gallery_items(category_id, url) values ($1,$2)`, [hidden.id, 'https://cdn.example.test/inhidden.webp'])
+    await c.query(`insert into homepage_banners(placement, image_url, published) values ('hero','https://cdn.example.test/h1.webp', true)`)
+    await c.query(`insert into homepage_banners(placement, image_url, published, starts_at) values ('hero','https://cdn.example.test/future.webp', true, now() + interval '1 day')`)
+    await c.query(`insert into homepage_banners(placement, image_url, published, ends_at, starts_at) values ('promo','https://cdn.example.test/old.webp', true, now() - interval '1 hour', now() - interval '2 days')`)
+    await c.query(`insert into homepage_banners(placement, image_url) values ('promo','https://cdn.example.test/unpublished.webp')`)
+    await fails(c, `insert into homepage_banners(placement, image_url, link_url) values ('hero','https://x.test/i.webp','javascript:alert(1)')`, [], '23514')
+
+    await as(c, 'anon')
+    assert.deepEqual((await q(c, 'select url from gallery_items')).map((r) => r.url), [url], 'only published items in published categories')
+    assert.deepEqual((await q(c, 'select image_url from homepage_banners')).map((r) => r.image_url), ['https://cdn.example.test/h1.webp'], 'only live banners')
+    assert.equal((await q(c, 'select * from gallery_categories')).length, 1)
+    await fails(c, 'select * from media_assets', [], '42501')
+    await fails(c, `insert into gallery_items(category_id, url) values ('${cat.id}','https://x.test/y.webp')`, [], '42501')
+
+    await as(c, 'authenticated', f.cleaner)
+    assert.equal((await q(c, 'select * from media_assets')).length, 0)
+    await fails(c, 'select delete_media_asset($1)', [asset.id], '42501')
+
+    await as(c, 'authenticated', f.manager)
+    assert.equal((await one(c, 'select media_in_use($1) u', [url])).u, true)
+    const e = await fails(c, 'select delete_media_asset($1)', [asset.id], '23514'); assert.match(e.message, /still used/)
+    await c.query(`delete from gallery_items where url=$1`, [url])
+    assert.equal((await one(c, 'select delete_media_asset($1) p', [asset.id])).p, 'gallery/a.webp')
+    assert.equal((await q(c, 'select * from media_assets')).length, 0)
+  }))

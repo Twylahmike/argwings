@@ -15,6 +15,7 @@ import { Reviews } from '~/components/site/Reviews'
 import { Gallery } from '~/components/site/Gallery'
 import { FinalCTA } from '~/components/site/FinalCTA'
 import { Faq } from '~/components/site/Faq'
+import { PromoStrip } from '~/components/site/PromoStrip'
 import { InquiryForm } from '~/components/site/InquiryForm'
 
 export const Route = createFileRoute('/')({
@@ -31,6 +32,7 @@ function Home() {
   return (
     <PublicLayout overlay>
       <Hero properties={properties} />
+      <PromoStrip />
       <TrustBar />
       <Spaces properties={properties} />
       <Facilities />

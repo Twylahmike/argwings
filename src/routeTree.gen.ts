@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BookRouteImport } from './routes/book'
 import { Route as GalleryRouteImport } from './routes/gallery'
+import { Route as InstallRouteImport } from './routes/install'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SpacesRouteImport } from './routes/spaces'
@@ -79,6 +80,11 @@ const BookRoute = BookRouteImport.update({
 const GalleryRoute = GalleryRouteImport.update({
   id: '/gallery',
   path: '/gallery',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const InstallRoute = InstallRouteImport.update({
+  id: '/install',
+  path: '/install',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -322,6 +328,7 @@ export interface FileRoutesByFullPath {
   '/admin': typeof AdminRouteWithChildren
   '/book': typeof BookRoute
   '/gallery': typeof GalleryRoute
+  '/install': typeof InstallRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
@@ -374,6 +381,7 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/book': typeof BookRoute
   '/gallery': typeof GalleryRoute
+  '/install': typeof InstallRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
@@ -428,6 +436,7 @@ export interface FileRoutesById {
   '/admin': typeof AdminRouteWithChildren
   '/book': typeof BookRoute
   '/gallery': typeof GalleryRoute
+  '/install': typeof InstallRoute
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
@@ -483,6 +492,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/book'
     | '/gallery'
+    | '/install'
     | '/login'
     | '/search'
     | '/spaces'
@@ -535,6 +545,7 @@ export interface FileRouteTypes {
     | '/'
     | '/book'
     | '/gallery'
+    | '/install'
     | '/login'
     | '/search'
     | '/spaces'
@@ -588,6 +599,7 @@ export interface FileRouteTypes {
     | '/admin'
     | '/book'
     | '/gallery'
+    | '/install'
     | '/login'
     | '/search'
     | '/spaces'
@@ -642,6 +654,7 @@ export interface RootRouteChildren {
   AdminRoute: typeof AdminRouteWithChildren
   BookRoute: typeof BookRoute
   GalleryRoute: typeof GalleryRoute
+  InstallRoute: typeof InstallRoute
   LoginRoute: typeof LoginRoute
   SearchRoute: typeof SearchRoute
   SpacesRoute: typeof SpacesRoute
@@ -680,6 +693,13 @@ declare module '@tanstack/react-router' {
       path: '/gallery'
       fullPath: '/gallery'
       preLoaderRoute: typeof GalleryRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/install': {
+      id: '/install'
+      path: '/install'
+      fullPath: '/install'
+      preLoaderRoute: typeof InstallRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -1105,6 +1125,7 @@ const rootRouteChildren: RootRouteChildren = {
   AdminRoute: AdminRouteWithChildren,
   BookRoute: BookRoute,
   GalleryRoute: GalleryRoute,
+  InstallRoute: InstallRoute,
   LoginRoute: LoginRoute,
   SearchRoute: SearchRoute,
   SpacesRoute: SpacesRoute,

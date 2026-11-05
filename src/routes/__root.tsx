@@ -12,6 +12,9 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: 'utf-8' },
       { name: 'viewport', content: 'width=device-width, initial-scale=1' },
       { name: 'theme-color', content: '#a9761f' },
+      { name: 'mobile-web-app-capable', content: 'yes' },
+      { name: 'apple-mobile-web-app-capable', content: 'yes' },
+      { name: 'apple-mobile-web-app-title', content: 'RG Wings' },
       { title: 'Book your stay' },
       { name: 'description', content: 'Book direct and pay by M-Pesa.' },
     ],
@@ -37,6 +40,8 @@ function RootComponent() {
         {brand.brandColor && <style dangerouslySetInnerHTML={{ __html: brandCss(brand.brandColor) }} />}
         {/* Apply the saved theme before first paint to avoid a light flash in dark mode. */}
         <script dangerouslySetInnerHTML={{ __html: "try{if(localStorage.getItem('theme')==='dark')document.documentElement.dataset.theme='dark'}catch(e){}document.documentElement.classList.add('js')" }} />
+        {/* Offline support and installability: production only, so the dev server is never cached. */}
+        <script dangerouslySetInnerHTML={{ __html: "if('serviceWorker' in navigator&&window.isSecureContext){addEventListener('load',function(){navigator.serviceWorker.register('/sw.js').catch(function(){})})}" }} />
       </head>
       <body>
         <QueryClientProvider client={queryClient}>

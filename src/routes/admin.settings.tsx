@@ -24,7 +24,7 @@ export const Route = createFileRoute('/admin/settings')({
 })
 
 type Vals = Record<string, string>
-const KEYS = ['business_name', 'brand_color', 'logo_url', 'support_whatsapp', 'owner_notify_phone', 'mpesa_paybill_display', 'mpesa_manual_instructions', 'deposit_percent', 'hold_minutes', 'booking_mode', 'request_hold_hours', 'business_email', 'business_address', 'currency', 'timezone', 'tax_percent', 'maintenance_mode',
+const KEYS = ['business_name', 'brand_color', 'logo_url', 'support_whatsapp', 'owner_notify_phone', 'owner_notify_email', 'mpesa_paybill_display', 'mpesa_manual_instructions', 'deposit_percent', 'hold_minutes', 'booking_mode', 'request_hold_hours', 'business_email', 'business_address', 'currency', 'timezone', 'tax_percent', 'maintenance_mode',
   'default_check_in_time', 'default_check_out_time', 'cancellation_policy', 'reminder_days_before', 'balance_reminder_days_before'] as const
 
 function SettingsPage() {
@@ -126,7 +126,7 @@ function Business() {
           if (!Number.isFinite(n) || n < 0 || n > 50) errs[k] = 'Enter a percentage from 0 to 50.'
           val = n
         } else if (k === 'maintenance_mode') val = raw === 'true'
-        else if (k === 'business_email' && raw && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(raw)) errs[k] = 'Enter a valid email address.'
+        else if ((k === 'business_email' || k === 'owner_notify_email') && raw && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(raw)) errs[k] = 'Enter a valid email address.'
         else if (k === 'currency') val = (raw || 'KES').toUpperCase().slice(0, 3)
         else if (k === 'timezone') val = raw || 'Africa/Nairobi'
         else if (k === 'business_name' && !raw) errs[k] = 'Enter your business name.'
@@ -173,6 +173,7 @@ function Business() {
       <Card><CardHeader><CardTitle>Contact</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
         {f('support_whatsapp', 'Support WhatsApp', { inputMode: 'tel', hint: 'Shown to guests. Also the fallback for "Book on WhatsApp".' })}
         {f('owner_notify_phone', 'Owner alert number', { inputMode: 'tel', hint: 'Gets WhatsApp alerts when a payment needs review.' })}
+        {f('owner_notify_email', 'Owner alert email', { type: 'email', hint: 'Gets the same alerts by email.' })}
       </CardContent></Card>
       <Card><CardHeader><CardTitle>Business details</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
         {f('business_email', 'Business email', { type: 'email', hint: 'Shown on the website footer when no email is set in Website text.' })}
@@ -206,8 +207,14 @@ function Business() {
 
 function System() {
   const qc = useQueryClient()
-  const status = useQuery({ queryKey: ['system-status'], queryFn: () => callFunction<{ mpesa_env: string; mpesa_callback_secret_set: boolean; whatsapp_env_enabled: boolean; whatsapp_configured: boolean; whatsapp_templates: boolean; site_url: string }>('system-status', {}) , retry: 0 })
+  const status = useQuery({ queryKey: ['system-status'], queryFn: () => callFunction<{ mpesa_env: string; mpesa_callback_secret_set: boolean; whatsapp_env_enabled: boolean; whatsapp_configured: boolean; whatsapp_templates: boolean; email_configured?: boolean; site_url: string }>('system-status', {}) , retry: 0 })
   const wa = useQuery({ queryKey: ['wa-setting'], queryFn: async () => (await sb().from('settings').select('value').eq('key', 'whatsapp_enabled').maybeSingle()).data?.value === true })
+  const em = useQuery({ queryKey: ['email-setting'], queryFn: async () => (await sb().from('settings').select('value').eq('key', 'email_enabled').maybeSingle()).data?.value === true })
+  const toggleEmail = useMutation({
+    mutationFn: async (on: boolean) => { const { error } = await sb().from('settings').upsert({ key: 'email_enabled', value: on, updated_at: new Date().toISOString() }); if (error) throw error },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['email-setting'] }); toast.success('Saved') },
+    onError: (e) => toast.error(errMessage(e)),
+  })
   const toggle = useMutation({
     mutationFn: async (on: boolean) => { const { error } = await sb().from('settings').upsert({ key: 'whatsapp_enabled', value: on, updated_at: new Date().toISOString() }); if (error) throw error },
     onSuccess: () => { qc.invalidateQueries({ queryKey: ['wa-setting'] }); toast.success('Saved') },
@@ -231,6 +238,11 @@ function System() {
         <label className="flex h-11 items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={!!wa.data} disabled={wa.isLoading || toggle.isPending} onChange={(e) => toggle.mutate(e.target.checked)} /> Send automatic WhatsApp messages</label>
         {s && <p className="text-muted-foreground">Server credentials: {s.whatsapp_configured ? <b className="text-emerald-700">configured</b> : <b className="text-amber-700">not configured on the server (see the WhatsApp section of DEPLOY.md)</b>}{s.whatsapp_templates ? ' · using approved templates' : ' · using session messages'}.</p>}
         <p className="text-muted-foreground">When sending is off or fails, nothing breaks: open the booking or the Messages page and tap "Send via WhatsApp" to send the same text yourself.</p>
+      </CardContent></Card>
+      <Card><CardHeader><CardTitle>Email messages</CardTitle></CardHeader><CardContent className="grid gap-3 text-sm">
+        <label className="flex h-11 items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={!!em.data} disabled={em.isLoading || toggleEmail.isPending} onChange={(e) => toggleEmail.mutate(e.target.checked)} /> Email guests the same messages (when they gave an email address)</label>
+        {s && <p className="text-muted-foreground">Server credentials: {s.email_configured ? <b className="text-emerald-700">configured</b> : <b className="text-amber-700">not configured on the server (set EMAIL_ENABLED, RESEND_API_KEY and EMAIL_FROM)</b>}.</p>}
+        <p className="text-muted-foreground">Guests who opted out still get confirmations and receipts only, on every channel.</p>
       </CardContent></Card>
     </div>
   )

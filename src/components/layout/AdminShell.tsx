@@ -14,6 +14,7 @@ import { Dialog, SheetContent } from '~/components/ui/dialog'
 import { cn } from '~/lib/utils'
 import { Wordmark } from './Wordmark'
 import { ThemeToggle } from './ThemeToggle'
+import { InstallAppButton } from '../site/InstallAppButton'
 import { NotificationBell } from './NotificationBell'
 import { GlobalSearch } from './GlobalSearch'
 import { Breadcrumbs } from './Breadcrumbs'
@@ -163,6 +164,7 @@ export function AdminShell({ me }: { me: Me }) {
                 </Select>
               )}
               {canManage(me) && <NotificationBell />}
+              <InstallAppButton compact />
               <ThemeToggle />
               <button onClick={signOut} className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted md:hidden" aria-label="Sign out"><LogOut className="h-5 w-5" /></button>
             </div>

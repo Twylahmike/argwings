@@ -16,6 +16,7 @@ import { Gallery } from '~/components/site/Gallery'
 import { FinalCTA } from '~/components/site/FinalCTA'
 import { Faq } from '~/components/site/Faq'
 import { PromoStrip } from '~/components/site/PromoStrip'
+import { BarMenu } from '~/components/site/BarMenu'
 import { InquiryForm } from '~/components/site/InquiryForm'
 
 export const Route = createFileRoute('/')({
@@ -37,6 +38,7 @@ function Home() {
       <Spaces properties={properties} />
       <Facilities />
       <Amenities />
+      <BarMenu />
       <HowToBook />
       <PaymentExplainer />
       <Reviews />

@@ -17,7 +17,9 @@ import { Route as LoginRouteImport } from './routes/login'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SpacesRouteImport } from './routes/spaces'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
+import { Route as AdminAccessRouteImport } from './routes/admin.access'
 import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
+import { Route as AdminBarRouteImport } from './routes/admin.bar'
 import { Route as AdminBlockedRouteImport } from './routes/admin.blocked'
 import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
 import { Route as AdminChangePasswordRouteImport } from './routes/admin.change-password'
@@ -95,9 +97,19 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
   path: '/',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminAccessRoute = AdminAccessRouteImport.update({
+  id: '/access',
+  path: '/access',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
   id: '/announcements',
   path: '/announcements',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminBarRoute = AdminBarRouteImport.update({
+  id: '/bar',
+  path: '/bar',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminBlockedRoute = AdminBlockedRouteImport.update({
@@ -289,7 +301,9 @@ export interface FileRoutesByFullPath {
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
+  '/admin/access': typeof AdminAccessRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/bar': typeof AdminBarRoute
   '/admin/blocked': typeof AdminBlockedRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
@@ -335,7 +349,9 @@ export interface FileRoutesByTo {
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
+  '/admin/access': typeof AdminAccessRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/bar': typeof AdminBarRoute
   '/admin/blocked': typeof AdminBlockedRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
@@ -383,7 +399,9 @@ export interface FileRoutesById {
   '/login': typeof LoginRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
+  '/admin/access': typeof AdminAccessRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/bar': typeof AdminBarRoute
   '/admin/blocked': typeof AdminBlockedRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
@@ -432,7 +450,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/search'
     | '/spaces'
+    | '/admin/access'
     | '/admin/announcements'
+    | '/admin/bar'
     | '/admin/blocked'
     | '/admin/calendar'
     | '/admin/change-password'
@@ -478,7 +498,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/search'
     | '/spaces'
+    | '/admin/access'
     | '/admin/announcements'
+    | '/admin/bar'
     | '/admin/blocked'
     | '/admin/calendar'
     | '/admin/change-password'
@@ -525,7 +547,9 @@ export interface FileRouteTypes {
     | '/login'
     | '/search'
     | '/spaces'
+    | '/admin/access'
     | '/admin/announcements'
+    | '/admin/bar'
     | '/admin/blocked'
     | '/admin/calendar'
     | '/admin/change-password'
@@ -637,11 +661,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminIndexRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/access': {
+      id: '/admin/access'
+      path: '/access'
+      fullPath: '/admin/access'
+      preLoaderRoute: typeof AdminAccessRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/announcements': {
       id: '/admin/announcements'
       path: '/announcements'
       fullPath: '/admin/announcements'
       preLoaderRoute: typeof AdminAnnouncementsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/bar': {
+      id: '/admin/bar'
+      path: '/bar'
+      fullPath: '/admin/bar'
+      preLoaderRoute: typeof AdminBarRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/blocked': {
@@ -900,7 +938,9 @@ declare module '@tanstack/react-router' {
 }
 
 interface AdminRouteChildren {
+  AdminAccessRoute: typeof AdminAccessRoute
   AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
+  AdminBarRoute: typeof AdminBarRoute
   AdminBlockedRoute: typeof AdminBlockedRoute
   AdminCalendarRoute: typeof AdminCalendarRoute
   AdminChangePasswordRoute: typeof AdminChangePasswordRoute
@@ -937,7 +977,9 @@ interface AdminRouteChildren {
 }
 
 const AdminRouteChildren: AdminRouteChildren = {
+  AdminAccessRoute: AdminAccessRoute,
   AdminAnnouncementsRoute: AdminAnnouncementsRoute,
+  AdminBarRoute: AdminBarRoute,
   AdminBlockedRoute: AdminBlockedRoute,
   AdminCalendarRoute: AdminCalendarRoute,
   AdminChangePasswordRoute: AdminChangePasswordRoute,

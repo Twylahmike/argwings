@@ -22,6 +22,8 @@ const KINDS: { kind: string; label: string }[] = [
   { kind: 'inquiry', label: 'New inquiries' }, { kind: 'review', label: 'New reviews' }, { kind: 'payment', label: 'Payments received' },
   { kind: 'payment_review', label: 'Payments needing review' }, { kind: 'cancellation', label: 'Cancellations' },
   { kind: 'checkin_soon', label: 'Arrivals tomorrow' }, { kind: 'checkout_today', label: 'Departures today' }, { kind: 'balance_due', label: 'Unpaid balances' },
+  { kind: 'housekeeping', label: 'Rooms to clean' }, { kind: 'maintenance', label: 'Maintenance requests' }, { kind: 'ticket', label: 'Support tickets' },
+  { kind: 'low_stock', label: 'Low bar stock' }, { kind: 'message_failed', label: 'Messages not delivered' }, { kind: 'payment_verify', label: 'Payments to verify' },
 ]
 
 function NotificationsPage() {

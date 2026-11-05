@@ -42,6 +42,26 @@ function SettingsPage() {
   )
 }
 
+/** Optional business modules. Off by default; the public menu only appears while it is switched on. */
+function ModulesCard() {
+  const qc = useQueryClient()
+  const q = useQuery({ queryKey: ['modules-full'], queryFn: async () => {
+    const { data } = await sb().from('settings').select('key, value').in('key', ['module_bar_menu', 'module_bar_stock'])
+    return Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value === true])) as Record<string, boolean>
+  } })
+  const save = useMutation({
+    mutationFn: async (v: { key: string; on: boolean }) => { const { error } = await sb().from('settings').upsert({ key: v.key, value: v.on, updated_at: new Date().toISOString() }); if (error) throw error },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['modules-full'] }); qc.invalidateQueries({ queryKey: ['modules'] }); toast.success('Saved') },
+    onError: (e) => toast.error(errMessage(e)),
+  })
+  return (
+    <Card><CardHeader><CardTitle>Optional modules</CardTitle></CardHeader><CardContent className="grid gap-2 text-sm">
+      <label className="flex items-start gap-2"><input className="mt-1" type="checkbox" checked={q.data?.module_bar_menu === true} onChange={(e) => save.mutate({ key: 'module_bar_menu', on: e.target.checked })} /> Bar menu: show a drinks and snacks menu on the website. Only switch on if you really serve them.</label>
+      <label className="flex items-start gap-2"><input className="mt-1" type="checkbox" checked={q.data?.module_bar_stock === true} onChange={(e) => save.mutate({ key: 'module_bar_stock', on: e.target.checked })} /> Bar stock: track purchases, sales, wastage and low-stock alerts (staff only, never public).</label>
+    </CardContent></Card>
+  )
+}
+
 const METHOD_CHOICES: [string, string][] = [['mpesa_manual', 'M-Pesa (manual entry)'], ['cash', 'Cash'], ['bank', 'Bank transfer'], ['card', 'Card'], ['other', 'Other']]
 /** Which payment methods staff can pick when recording a payment. M-Pesa STK push is controlled by the payment provider settings. */
 function PaymentMethodsCard() {
@@ -163,6 +183,7 @@ function Business() {
         <label className="flex items-start gap-2 self-end pb-2 text-sm"><input className="mt-1" type="checkbox" checked={v.maintenance_mode === 'true'} onChange={(e) => setV((x) => ({ ...x, maintenance_mode: e.target.checked ? 'true' : 'false' }))} /> Website maintenance mode: public pages show a “back soon” notice. Guests with a booking link and staff can still sign in.</label>
       </CardContent></Card>
       <PaymentMethodsCard />
+      <ModulesCard />
       <Card><CardHeader><CardTitle>Booking rules</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
         {f('deposit_percent', 'Deposit (%)', { inputMode: 'numeric', hint: 'Rounded up to the next KES 10.' })}
         {f('hold_minutes', 'Hold time (minutes)', { inputMode: 'numeric', hint: 'How long dates are held while a guest pays.' })}

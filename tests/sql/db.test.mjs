@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs'
 import { join, dirname } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { randomUUID } from 'node:crypto'
+import { Buffer } from 'node:buffer'
 import pg from 'pg'
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..', '..')
@@ -257,7 +258,7 @@ test('RLS: anon cannot read bookings, guests, payments; can use availability and
     for (const k of ['email', 'id_number', 'notes', 'guest_id', 'created_by']) assert.ok(!(k in info), `${k} must not leak`)
     assert.equal((await one(c, 'select get_booking_by_token($1) j', [randomUUID()])).j, null)
     const settings = await q(c, 'select key from settings')
-    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content', 'booking_mode', 'business_email', 'business_address', 'currency', 'maintenance_mode'].includes(s.key)))
+    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content', 'booking_mode', 'business_email', 'business_address', 'currency', 'maintenance_mode', 'module_bar_menu'].includes(s.key)))
     assert.ok(settings.length > 0)
   }))
 
@@ -1246,4 +1247,122 @@ test('contact numbers: public sees only published non-private numbers; templates
     const card = await one(c, `insert into payments(booking_id,kind,method,status,amount,confirmed_at,recorded_by) values ($1,'deposit','card','succeeded',1000,now(),$2) returning verified`, [b.id, f.manager])
     assert.equal(card.verified, false)
     assert.ok((await one(c, `select count(*)::int n from settings where key='maintenance_mode'`)).n === 1)
+  }))
+
+test('bar: module flag gates the public menu, stock never goes negative, sales can be charged to a stay, low-stock alert fires once', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    await as(c, 'authenticated', f.owner)
+    const cat = await one(c, `insert into bar_categories(name) values ('Beers') returning *`)
+    const beer = await one(c, `insert into bar_products(category_id, name, price, track_stock, low_stock_level) values ($1,'Tusker',350,true,3) returning *`, [cat.id])
+    const soda = await one(c, `insert into bar_products(category_id, name, price, available) values ($1,'Hidden soda',100,false) returning *`, [cat.id])
+    await fails(c, `insert into bar_products(name, price) values ('Bad',-1)`, [], '23514')
+    await fails(c, `insert into bar_products(category_id, name, price) values ($1,'tusker',1)`, [cat.id], '23505')
+
+    // public sees nothing while the module is off, then only available items once it is on
+    await as(c, 'anon')
+    assert.equal((await q(c, 'select * from bar_products')).length, 0)
+    await admin(c); await c.query(`update settings set value='true' where key='module_bar_menu'`)
+    await as(c, 'anon')
+    assert.deepEqual((await q(c, 'select name from bar_products')).map((r) => r.name), ['Tusker'])
+    assert.equal((await q(c, 'select * from bar_categories')).length, 1)
+    await fails(c, 'select * from bar_stock_movements', [], '42501')
+
+    // stock needs its own switch
+    await as(c, 'authenticated', f.manager)
+    await fails(c, `select record_stock_movement($1,'purchase',10)`, [beer.id], '23514')
+    await admin(c); await c.query(`update settings set value='true' where key='module_bar_stock'`); await as(c, 'authenticated', f.manager)
+    assert.equal((await one(c, `select record_stock_movement($1,'purchase',10,200) s`, [beer.id])).s, 10)
+    await fails(c, `select record_stock_movement($1,'wastage',11)`, [beer.id], '23514')            // more than in stock
+    await fails(c, `select record_stock_movement($1,'adjustment',-1)`, [beer.id], '23514')          // adjustment needs a reason
+    assert.equal((await one(c, `select record_stock_movement($1,'wastage',2,null,'Broken bottles') s`, [beer.id])).s, 8)
+    await fails(c, `insert into bar_stock_movements(product_id, kind, qty) values ($1,'purchase',5)`, [beer.id], '42501')
+    await fails(c, `update bar_products set stock_qty = 999 where id=$1`, [beer.id], '42501')                // stock changes only through the ledger
+
+    // a sale charged to a checked-in guest
+    await admin(c); const b = await booking(c, f, { from: d0, to: day(d0, 2), status: 'confirmed' }); await as(c, 'authenticated', f.manager)
+    assert.equal((await one(c, 'select sell_bar_item($1,2,$2) t', [beer.id, b.id])).t, 700)
+    assert.equal((await one(c, 'select total_amount from bookings where id=$1', [b.id])).total_amount, 10000 + 700)
+    assert.equal((await one(c, 'select stock_qty from bar_products where id=$1', [beer.id])).stock_qty, 6)
+    await fails(c, 'select sell_bar_item($1,99,null)', [beer.id], '23514')
+    await fails(c, 'select sell_bar_item($1,1,null)', [soda.id], '23514')                                  // unavailable
+    // crossing the alert level notifies once
+    await c.query('select sell_bar_item($1,3,null)', [beer.id])             // 6 -> 3 (<= level 3): alert
+    await c.query('select sell_bar_item($1,1,null)', [beer.id])             // 3 -> 2: no second alert
+    await admin(c)
+    assert.equal((await one(c, `select count(*)::int n from notifications where kind='low_stock'`)).n, 1)
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, 'select sell_bar_item($1,1,null)', [beer.id], '42501')
+  }))
+
+test('smart access: PIN shown once and never stored, no pretending, eligibility, revoke, expiry, logs', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = day((await one(c, 'select nairobi_today()::text d')).d, 1)
+    await as(c, 'authenticated', f.owner)
+    const dev = await one(c, `insert into smart_lock_devices(property_id, unit_id, label, provider) values ($1,$2,'A1 keypad','manual') returning *`, [f.pa, f.ua])
+    assert.equal(dev.status, 'unconfigured')
+    await fails(c, `update smart_lock_devices set status='online' where id=$1`, [dev.id], '42501')        // only an adapter reports state
+    await fails(c, `insert into smart_lock_devices(property_id, unit_id, label, provider) values ($1,$2,'x','akuvox')`, [f.pa, f.ua], '23514')
+    await as(c, 'authenticated', f.manager)
+    await fails(c, `insert into smart_lock_devices(property_id, unit_id, label) values ($1,$2,'Mine')`, [f.pa, f.ua], '42501')
+
+    await admin(c)
+    const unpaid = await booking(c, f, { from: d0, to: day(d0, 2), status: 'confirmed', deposit: 5000 })
+    await as(c, 'authenticated', f.manager)
+    await fails(c, 'select * from issue_access_credential($1,$2)', [unpaid.id, dev.id], '23514')            // deposit not in
+    await admin(c); await c.query(`insert into payments(booking_id,kind,method,status,amount,confirmed_at) values ($1,'deposit','cash','succeeded',5000,now())`, [unpaid.id])
+    const other = await booking(c, f, { unit: f.ub, prop: f.pb, from: d0, to: day(d0, 2), status: 'confirmed' })
+    await as(c, 'authenticated', f.manager)
+    await fails(c, 'select * from issue_access_credential($1,$2)', [other.id, dev.id], '42501')               // another property's booking
+
+    const r = await one(c, 'select * from issue_access_credential($1,$2)', [unpaid.id, dev.id])
+    assert.match(r.pin, /^\d{6}$/)
+    assert.equal(r.status, 'manual'); assert.match(r.message, /not connected/)
+    await fails(c, 'select * from issue_access_credential($1,$2)', [unpaid.id, dev.id], '23514')             // already active
+    // the PIN cannot be read back by anyone with a login
+    await fails(c, 'select pin_digest from access_credentials', [], '42501')
+    const row = await one(c, 'select id, pin_hint, status from access_credentials where id=$1', [r.credential_id])
+    assert.equal(row.pin_hint, r.pin.slice(-2))
+    await admin(c)
+    const raw = await one(c, 'select pin_digest, salt from access_credentials where id=$1', [r.credential_id])
+    assert.ok(!Buffer.from(raw.pin_digest).includes(Buffer.from(r.pin)), 'digest does not contain the PIN')
+    assert.equal((await one(c, `select sha256($1::bytea || convert_to($2,'utf8')) = $3::bytea ok`, [raw.salt, r.pin, raw.pin_digest])).ok, true, 'digest verifies against the PIN')
+
+    // nobody but the adapter can mark a code as programmed
+    await as(c, 'authenticated', f.owner)
+    await fails(c, 'select confirm_credential_provisioned($1,true)', [r.credential_id], '42501')
+    await fails(c, `update access_credentials set status='provisioned' where id=$1`, [r.credential_id], '42501')
+
+    // revoke needs a reason; expiry sweeps old codes; everything is logged
+    await as(c, 'authenticated', f.manager)
+    await fails(c, 'select revoke_access_credential($1,$2)', [r.credential_id, 'x'], '23514')
+    await c.query('select revoke_access_credential($1,$2)', [r.credential_id, 'Guest cancelled'])
+    assert.equal((await one(c, 'select status from access_credentials where id=$1', [r.credential_id])).status, 'revoked')
+    const r3 = await one(c, 'select * from issue_access_credential($1,$2)', [unpaid.id, dev.id])
+    await admin(c); await c.query(`update access_credentials set valid_until = now() - interval '1 minute', valid_from = now() - interval '2 days' where id=$1`, [r3.credential_id])
+    assert.equal((await one(c, 'select expire_access_credentials() n')).n, 1)
+    assert.equal((await one(c, 'select status from access_credentials where id=$1', [r3.credential_id])).status, 'expired')
+    await as(c, 'authenticated', f.manager)
+    const acts = (await q(c, 'select action from access_logs order by id')).map((x) => x.action)
+    for (const a of ['device_added', 'credential_issued', 'credential_revoked', 'credential_expired']) assert.ok(acts.includes(a), a)
+    await fails(c, `delete from access_logs`, [], '42501')
+    await as(c, 'authenticated', f.cleaner)
+    assert.equal((await q(c, 'select * from access_logs')).length, 0)
+  }))
+
+test('more notification kinds: maintenance, housekeeping, tickets, failed messages, payments to verify', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await admin(c)
+    const b = await booking(c, f, { from: fmt(f.friday), to: day(fmt(f.friday), 2), status: 'confirmed' })
+    await c.query(`insert into maintenance_requests(property_id, title) values ($1,'Broken lock')`, [f.pa])
+    await c.query(`insert into housekeeping_tasks(property_id, unit_id) values ($1,$2)`, [f.pa, f.ua])
+    await c.query(`insert into support_tickets(subject, property_id) values ('Noisy neighbours',$1)`, [f.pa])
+    await c.query(`insert into message_log(booking_id, property_id, template, to_phone, status, error) values ($1,$2,'custom','254712000000','failed','Provider timeout')`, [b.id, f.pa])
+    await c.query(`insert into payments(booking_id,kind,method,status,amount,confirmed_at,recorded_by) values ($1,'deposit','mpesa_manual','succeeded',1000,now(),$2)`, [b.id, f.manager])
+    await as(c, 'authenticated', f.manager)
+    const kinds = (await q(c, 'select kind from my_notifications(100)')).map((n) => n.kind)
+    for (const k of ['maintenance', 'housekeeping', 'ticket', 'message_failed']) assert.ok(kinds.includes(k), k)
   }))

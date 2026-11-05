@@ -6,6 +6,7 @@ import { DEFAULT_SITE_CONTENT, sanitizeSiteContent, type SiteContent } from './s
 export type ManagedPhoto = { src: string; alt: string; caption: string; group: string; kind: 'image' | 'video' }
 export type PublicBanner = { id: string; src: string; title: string; subtitle: string; href: string; label: string }
 
+export type BarMenuSection = { name: string; items: { id: string; name: string; description: string; price: number; image: string }[] }
 export type PublicContact = { id: string; label: string; kind: string; phone: string; note: string }
 
 export type Brand = {
@@ -29,6 +30,8 @@ export type Brand = {
   heroBanners: PublicBanner[]
   promoBanners: PublicBanner[]
   contacts: PublicContact[]
+  /** The public drinks menu. Empty unless the owner switched the bar menu module on. */
+  barMenu: BarMenuSection[]
   businessEmail: string
   businessAddress: string
   currency: string
@@ -53,6 +56,7 @@ export const DEFAULT_BRAND: Brand = {
   heroBanners: [],
   promoBanners: [],
   contacts: [],
+  barMenu: [],
   businessEmail: '',
   businessAddress: '',
   currency: 'KES',
@@ -67,6 +71,14 @@ function managedGallery(cats: CatRow[] | null, items: ItemRow[] | null): Managed
   return (cats ?? []).flatMap((c) => (items ?? []).filter((i) => i.category_id === c.id).map((i) => ({
     src: i.url, kind: i.kind, alt: i.alt_text || i.caption || names.get(c.id) || 'Photo', caption: i.caption || names.get(c.id) || '', group: names.get(c.id) ?? '',
   })))
+}
+type BCat = { id: string; name: string }
+type BProd = { id: string; category_id: string | null; name: string; description: string | null; price: number; image_url: string | null }
+function buildBarMenu(cats: BCat[] | null, prods: BProd[] | null): BarMenuSection[] {
+  const conv = (p: BProd) => ({ id: p.id, name: p.name, description: p.description ?? '', price: p.price, image: p.image_url ?? '' })
+  const sections = (cats ?? []).map((c) => ({ name: c.name, items: (prods ?? []).filter((p) => p.category_id === c.id).map(conv) })).filter((s) => s.items.length)
+  const loose = (prods ?? []).filter((p) => !p.category_id || !(cats ?? []).some((c) => c.id === p.category_id)).map(conv)
+  return loose.length ? [...sections, { name: 'More', items: loose }] : sections
 }
 type BannerRow = { id: string; placement: 'hero' | 'promo'; title: string | null; subtitle: string | null; image_url: string; link_url: string | null; link_label: string | null }
 function splitBanners(rows: BannerRow[] | null): { heroBanners: PublicBanner[]; promoBanners: PublicBanner[] } {
@@ -83,7 +95,7 @@ function m_content(rows: { key: string; value: unknown }[] | null): unknown {
 export async function fetchBrand(): Promise<Brand> {
   if (!isSupabaseConfigured) return DEFAULT_BRAND
   try {
-    const [{ data }, props, anns, revs, gcats, gitems, banners, contacts] = await Promise.all([
+    const [{ data }, props, anns, revs, gcats, gitems, banners, contacts, bcats, bprods] = await Promise.all([
       pub().from('settings').select('key, value'),
       pub().from('properties').select('id, name, slug').eq('active', true).order('sort').order('name'),
       pub().from('announcements').select('id, text, link, variant').order('created_at', { ascending: false }).limit(3),
@@ -92,6 +104,8 @@ export async function fetchBrand(): Promise<Brand> {
       pub().from('gallery_items').select('category_id, url, kind, alt_text, caption, sort').order('sort').order('created_at'),
       pub().from('homepage_banners').select('id, placement, title, subtitle, image_url, link_url, link_label, sort').order('sort').order('created_at'),
       pub().from('contact_numbers').select('id, label, kind, phone, note').order('sort').order('label'),
+      pub().from('bar_categories').select('id, name').order('sort').order('name'),
+      pub().from('bar_products').select('id, category_id, name, description, price, image_url').order('sort').order('name'),
     ])
     const content = sanitizeSiteContent(m_content(data))
     const m = Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value]))
@@ -116,6 +130,7 @@ export async function fetchBrand(): Promise<Brand> {
         reviews: revs.data?.length ? revs.data.map((r) => ({ id: r.id as string, guest: r.guest_name as string, stay: (r.stay_label as string | null) ?? undefined, rating: r.rating as 1 | 2 | 3 | 4 | 5, quote: r.body as string, response: (r.response as string | null) ?? undefined })) : content.reviews,
       },
       contacts: ((contacts.data ?? []) as { id: string; label: string; kind: string; phone: string; note: string | null }[]).map((c) => ({ ...c, note: c.note ?? '' })),
+      barMenu: buildBarMenu(bcats.data, bprods.data),
       businessEmail: str('business_email', ''),
       businessAddress: str('business_address', ''),
       currency: str('currency', 'KES'),

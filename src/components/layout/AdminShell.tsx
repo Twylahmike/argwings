@@ -1,10 +1,10 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
-import { useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3, BedDouble, Brush, Building2, CalendarCheck, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
   Settings, Star, UserCog, Users, Wallet, type LucideIcon,
-  Ban, Crown, Phone, Send, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
+  Ban, Crown, KeyRound, Wine, Phone, Send, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
 import { canManage, isOwner, type Me } from '~/lib/auth'
@@ -30,7 +30,7 @@ export function useAdmin(): AdminCtx {
   return v
 }
 
-type NavItem = { to: string; label: string; icon: LucideIcon; show: (me: Me) => boolean; primary?: boolean; group: string }
+type NavItem = { to: string; label: string; icon: LucideIcon; show: (me: Me) => boolean; primary?: boolean; group: string; module?: 'module_bar_menu' | 'module_bar_stock' }
 const NAV: NavItem[] = [
   { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, show: canManage, primary: true, group: 'Operations' },
   { to: '/admin/calendar', label: 'Calendar', icon: CalendarDays, show: canManage, primary: true, group: 'Operations' },
@@ -48,19 +48,21 @@ const NAV: NavItem[] = [
   { to: '/admin/media', label: 'Media library', icon: ImagePlus, show: canManage, group: 'Website' },
   { to: '/admin/gallery', label: 'Gallery', icon: Images, show: canManage, group: 'Website' },
   { to: '/admin/homepage', label: 'Homepage images', icon: PanelTop, show: canManage, group: 'Website' },
+  { to: '/admin/bar', label: 'Bar menu & stock', icon: Wine, show: canManage, group: 'Hospitality services', module: 'module_bar_menu' },
   { to: '/admin/reviews', label: 'Reviews', icon: Star, show: canManage, group: 'Website' },
   { to: '/admin/announcements', label: 'Announcements', icon: Megaphone, show: canManage, group: 'Website' },
   { to: '/admin/owner', label: "Owner's overview", icon: Crown, show: isOwner, group: 'Business' },
   { to: '/admin/promotions', label: 'Promotions', icon: Tag, show: canManage, group: 'Business' },
   { to: '/admin/finance', label: 'Finance', icon: Wallet, show: canManage, group: 'Business' },
   { to: '/admin/reports', label: 'Reports', icon: BarChart3, show: canManage, group: 'Business' },
-  { to: '/admin/communications', label: 'Guest communications', icon: Send, show: canManage, group: 'Business' },
+  { to: '/admin/communications', label: 'Guest communications', icon: Send, show: canManage, group: 'Guest experience' },
+  { to: '/admin/access', label: 'Smart access', icon: KeyRound, show: canManage, group: 'Guest experience' },
   { to: '/admin/contacts', label: 'Contact numbers', icon: Phone, show: canManage, group: 'System' },
-  { to: '/admin/messages', label: 'Messages', icon: MessageCircle, show: canManage, group: 'Business' },
+  { to: '/admin/messages', label: 'Messages', icon: MessageCircle, show: canManage, group: 'Guest experience' },
   { to: '/admin/staff', label: 'Staff', icon: UserCog, show: isOwner, group: 'System' },
   { to: '/admin/settings', label: 'Settings', icon: Settings, show: isOwner, group: 'System' },
 ]
-const GROUPS = ['Operations', 'Website', 'Business', 'System']
+const GROUPS = ['Operations', 'Hospitality services', 'Website', 'Business', 'Guest experience', 'System']
 
 function useActive() {
   const path = useRouterState({ select: (s) => s.location.pathname })
@@ -106,7 +108,12 @@ export function AdminShell({ me }: { me: Me }) {
     navigate({ to: '/login' })
   }
 
-  const items = NAV.filter((n) => n.show(me))
+  const mods = useQuery({ queryKey: ['modules'], queryFn: async () => {
+    const { data } = await sb().from('settings').select('key, value').in('key', ['module_bar_menu', 'module_bar_stock'])
+    return Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value === true]))
+  }, staleTime: 60_000 })
+  const modOn = (k?: string) => !k || mods.data?.module_bar_menu === true || mods.data?.module_bar_stock === true
+  const items = NAV.filter((n) => n.show(me) && modOn(n.module))
   const primary = items.filter((n) => n.primary)
   const showFilter = canManage(me) && me.properties.length > 1
 

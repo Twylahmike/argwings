@@ -142,7 +142,8 @@ create table customer_rewards (
   issued_at timestamptz not null default now(),
   expires_at timestamptz,
   booking_id uuid references bookings on delete set null,
-  note text
+  note text,
+  emailed_at timestamptz                                 -- when the "your offer is ready" email was accepted by the email provider
 );
 create index on customer_rewards (user_id, status);
 create index on customer_rewards (offer_id);
@@ -837,6 +838,41 @@ begin
 end $$;
 grant execute on function admin_issue_reward(uuid, uuid, text) to authenticated;
 
+-- Emails: the edge function asks which rewards still need their email, and which members to tell about an offer. Service role only.
+create or replace function pending_reward_emails(p_user uuid default null)
+returns table(reward_id uuid, user_id uuid, email text, full_name text, marketing_opt_in boolean, audience text, name text, description text, terms text,
+              kind text, value int, max_discount int, min_total int, code text, expires_at timestamptz)
+language sql stable security definer set search_path = public as $$
+  select r.id, cp.user_id, cp.email, cp.full_name, cp.marketing_opt_in, o.audience, o.name, o.description, o.terms, o.kind, o.value, o.max_discount, o.min_total, r.code, r.expires_at
+  from customer_rewards r join promotional_offers o on o.id = r.offer_id join customer_profiles cp on cp.user_id = r.user_id
+  where r.emailed_at is null and r.status = 'available' and o.audience in ('welcome','birthday') and cp.status = 'active'
+    and r.issued_at > now() - interval '3 days' and (r.expires_at is null or r.expires_at > now())
+    and (p_user is null or cp.user_id = p_user)
+    and (o.audience = 'welcome' or cp.marketing_opt_in)
+$$;
+revoke execute on function pending_reward_emails(uuid) from public, anon, authenticated;
+grant execute on function pending_reward_emails(uuid) to service_role;
+
+create or replace function mark_reward_emailed(p_reward uuid) returns void
+language sql security definer set search_path = public as $$
+  update customer_rewards set emailed_at = now() where id = p_reward and emailed_at is null
+$$;
+revoke execute on function mark_reward_emailed(uuid) from public, anon, authenticated;
+grant execute on function mark_reward_emailed(uuid) to service_role;
+
+create or replace function promo_recipients(p_offer uuid)
+returns table(user_id uuid, email text, full_name text)
+language sql stable security definer set search_path = public as $$
+  select cp.user_id, cp.email, cp.full_name from customer_profiles cp
+  where cp.status = 'active' and cp.marketing_opt_in
+    and exists (select 1 from promotional_offers o where o.id = p_offer and o.active and o.audience = 'member'
+                and (o.valid_to is null or o.valid_to >= nairobi_today())
+                and (o.min_tier_key is null or (select rank from membership_tiers where key = cp.tier_key) >= (select rank from membership_tiers where key = o.min_tier_key)))
+  order by cp.created_at limit 1000
+$$;
+revoke execute on function promo_recipients(uuid) from public, anon, authenticated;
+grant execute on function promo_recipients(uuid) to service_role;
+
 -- ---------------------------------------------------------------------------
 -- Seed: the welcome offer (5% off the first booking) and an optional birthday offer, switched off until the owner wants it
 -- ---------------------------------------------------------------------------
@@ -855,6 +891,8 @@ do $cron$
 begin
   if exists (select 1 from pg_extension where extname = 'pg_cron') then
     perform cron.schedule('bnb-birthday-rewards', '10 3 * * *', 'select public.issue_birthday_rewards()');
+    -- Then email whatever rewards are waiting (birthday rewards, and any welcome email that did not go out at sign-up).
+    perform cron.schedule('bnb-member-emails', '20 3 * * *', $c$select public.invoke_edge_function('member-emails')$c$);
   end if;
 exception when others then null;
 end $cron$;

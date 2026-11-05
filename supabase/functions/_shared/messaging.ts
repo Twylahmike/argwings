@@ -101,13 +101,15 @@ async function emailEnabledInSettings(db: SupabaseClient): Promise<boolean> {
 /** Log and (if enabled) send an email. The log row reuses message_log with channel 'email' and the address in to_phone. */
 export async function deliverEmail(
   db: SupabaseClient, log: Logger,
-  m: { bookingId: string | null; guestId: string | null; propertyId: string | null; to: string; template: TemplateName; subject: string; text: string },
+  m: { bookingId: string | null; guestId: string | null; propertyId: string | null; to: string; template: TemplateName; subject: string; text: string; cta?: { label: string; url: string } },
 ): Promise<{ status: 'sent' | 'skipped' | 'failed'; logId: string | null }> {
   const { data: row } = await db.from('message_log').insert({
     booking_id: m.bookingId, guest_id: m.guestId, property_id: m.propertyId, channel: 'email', template: m.template, to_phone: m.to, body: `${m.subject}\n\n${m.text}`, status: 'queued',
   }).select('id').single()
   const logId = (row?.id as string | undefined) ?? null
-  let result = await sendEmail(m.to, m.subject, m.text)
+  const { data: bs } = await db.from('settings').select('value').eq('key', 'business_name').maybeSingle()
+  const business = typeof bs?.value === 'string' && bs.value && bs.value !== 'Your BNB Brand' ? bs.value : (Deno.env.get('BUSINESS_NAME') ?? 'RG Wings Stays')
+  let result = await sendEmail(m.to, m.subject, m.text, Deno.env, { business, cta: m.cta })
   if (result.status !== 'skipped' && !(await emailEnabledInSettings(db))) result = { status: 'skipped', reason: 'Email is switched off in Settings' }
   if (logId) {
     await db.from('message_log').update({

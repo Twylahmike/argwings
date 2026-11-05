@@ -68,11 +68,15 @@ export async function fetchCustomer(): Promise<CustomerState> {
   if (!user) return { state: 'anonymous' }
   const { data: ensured, error } = await c.rpc('ensure_customer_profile')
   if (error) return { state: 'anonymous' }
-  const e = ensured as { status: string; new?: boolean }
+  const e = ensured as { status: string; new?: boolean; welcome_emailed?: boolean }
   if (e.status === 'unverified') return { state: 'unverified', email: user.email ?? '' }
   if (e.status === 'staff') return { state: 'staff' }
   const { data: me } = await c.rpc('my_customer')
   if (!me) return { state: 'anonymous' }
+  // First visit after verifying: send the welcome emails. Fire and forget; the server checks it is only done once.
+  if (e.welcome_emailed === false) {
+    void import('./functions').then((f) => f.callFunction('member-emails', { action: 'welcome' })).catch(() => undefined)
+  }
   return { state: 'ready', customer: me as Customer, newlyJoined: e.new === true }
 }
 

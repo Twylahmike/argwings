@@ -1982,3 +1982,31 @@ test('membership: birthday rewards issue once a year and welcome offer can be sw
     const id2 = await customer(c, 'Late')
     assert.equal((await activate(c, id2)).welcome_rewards, 0)
   }))
+
+test('membership emails: pending welcome offer listed once; marketing opt-out respected for birthday; promo audience filtered', async () =>
+  tx(async (c) => {
+    const id = await customer(c, 'Mailer'); await activate(c, id)
+    let rows = await q(c, 'select * from pending_reward_emails($1)', [id])
+    assert.equal(rows.length, 1); assert.equal(rows[0].audience, 'welcome'); assert.match(rows[0].code, /^RGW-[A-F0-9]{8}$/)
+    await c.query('select mark_reward_emailed($1)', [rows[0].reward_id])
+    assert.equal((await q(c, 'select * from pending_reward_emails($1)', [id])).length, 0)
+    // birthday rewards are marketing: skipped when the member opted out
+    const today = (await one(c, 'select nairobi_today() d')).d
+    await c.query(`update customer_profiles set birthday = ($1::date - interval '30 years')::date, marketing_opt_in = false where user_id = $2`, [today, id])
+    await c.query(`update promotional_offers set active = true where audience = 'birthday'`)
+    await c.query('select issue_birthday_rewards()')
+    assert.equal((await q(c, 'select * from pending_reward_emails($1)', [id])).length, 0)
+    await c.query('update customer_profiles set marketing_opt_in = true where user_id = $1', [id])
+    assert.equal((await q(c, 'select * from pending_reward_emails($1)', [id])).length, 1)
+    // promotion audience: only opted-in, active members at or above the offer's tier
+    const o = (await one(c, `insert into promotional_offers(name, audience, kind, value, min_tier_key) values ('Gold only','member','percent',10,'gold') returning id`)).id
+    assert.equal((await q(c, 'select * from promo_recipients($1)', [o])).length, 0)
+    await c.query(`update customer_profiles set tier_key = 'gold' where user_id = $1`, [id])
+    assert.equal((await q(c, 'select * from promo_recipients($1)', [o])).length, 1)
+    await c.query(`update customer_profiles set marketing_opt_in = false where user_id = $1`, [id])
+    assert.equal((await q(c, 'select * from promo_recipients($1)', [o])).length, 0)
+    // customers cannot call these
+    await as(c, 'authenticated', id)
+    await fails(c, 'select * from pending_reward_emails()', [], '42501')
+    await fails(c, 'select * from promo_recipients($1)', [o], '42501')
+  }))

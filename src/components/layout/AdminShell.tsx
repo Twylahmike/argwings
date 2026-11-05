@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3, BedDouble, Brush, Building2, CalendarCheck, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
   Settings, Star, UserCog, Users, Wallet, type LucideIcon,
-  Ban, Crown, FileText, PanelLeft, History, ShieldCheck, KeyRound, Wine, Phone, Send, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
+  Ban, Crown, FileText, PanelLeft, History, ShieldCheck, KeyRound, Wine, Phone, Send, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench, Gift, Receipt, Sparkles,
 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
 import { canManage, isOwner, type Me } from '~/lib/auth'
@@ -56,8 +56,15 @@ const NAV: NavItem[] = [
   { to: '/admin/pages', label: 'Policy pages', icon: FileText, show: canManage, group: 'Website', perm: 'cms.manage' },
   { to: '/admin/reviews', label: 'Reviews', icon: Star, show: canManage, group: 'Website', perm: 'cms.manage' },
   { to: '/admin/announcements', label: 'Announcements', icon: Megaphone, show: canManage, group: 'Website', perm: 'cms.manage' },
+  { to: '/admin/customers', label: 'Customer accounts', icon: Users, show: canManage, group: 'Customers & membership', perm: 'customers.view' },
+  { to: '/admin/membership', label: 'Membership overview', icon: Crown, show: canManage, group: 'Customers & membership', perm: 'customers.view' },
+  { to: '/admin/membership-tiers', label: 'Membership tiers', icon: Star, show: canManage, group: 'Customers & membership', perm: 'customers.view' },
+  { to: '/admin/offers', label: 'Special offers', icon: Gift, show: canManage, group: 'Customers & membership', perm: 'customers.view' },
+  { to: '/admin/promotions', label: 'Discount codes', icon: Tag, show: canManage, group: 'Customers & membership', perm: 'marketing.manage' },
+  { to: '/admin/redemptions', label: 'Reward redemptions', icon: Receipt, show: canManage, group: 'Customers & membership', perm: 'customers.view' },
+  { to: '/admin/loyalty', label: 'Loyalty transactions', icon: Sparkles, show: canManage, group: 'Customers & membership', perm: 'customers.view' },
+  { to: '/admin/customer-activity', label: 'Customer activity', icon: History, show: canManage, group: 'Customers & membership', perm: 'customers.view' },
   { to: '/admin/owner', label: "Owner's overview", icon: Crown, show: canManage, group: 'Business', perm: 'owner.overview' },
-  { to: '/admin/promotions', label: 'Promotions', icon: Tag, show: canManage, group: 'Business', perm: 'marketing.manage' },
   { to: '/admin/finance', label: 'Finance', icon: Wallet, show: canManage, group: 'Business', perm: 'finance.view' },
   { to: '/admin/reports', label: 'Reports', icon: BarChart3, show: canManage, group: 'Business', perm: 'reports.view' },
   { to: '/admin/communications', label: 'Guest communications', icon: Send, show: canManage, group: 'Guest experience', perm: 'comms.manage' },
@@ -69,7 +76,7 @@ const NAV: NavItem[] = [
   { to: '/admin/activity', label: 'Activity log', icon: History, show: canManage, group: 'System', perm: 'audit.view' },
   { to: '/admin/settings', label: 'Settings', icon: Settings, show: isOwner, group: 'System' },
 ]
-const GROUPS = ['Operations', 'Hospitality services', 'Website', 'Business', 'Guest experience', 'System']
+const GROUPS = ['Operations', 'Hospitality services', 'Customers & membership', 'Website', 'Business', 'Guest experience', 'System']
 
 function useActive() {
   const path = useRouterState({ select: (s) => s.location.pathname })

@@ -18,12 +18,14 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as SpacesRouteImport } from './routes/spaces'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
+import { Route as AdminBlockedRouteImport } from './routes/admin.blocked'
 import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
 import { Route as AdminChangePasswordRouteImport } from './routes/admin.change-password'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
 import { Route as AdminFrontdeskRouteImport } from './routes/admin.frontdesk'
 import { Route as AdminHousekeepingRouteImport } from './routes/admin.housekeeping'
 import { Route as AdminInquiriesRouteImport } from './routes/admin.inquiries'
+import { Route as AdminMaintenanceRouteImport } from './routes/admin.maintenance'
 import { Route as AdminMessagesRouteImport } from './routes/admin.messages'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminPromotionsRouteImport } from './routes/admin.promotions'
@@ -92,6 +94,11 @@ const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
   path: '/announcements',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminBlockedRoute = AdminBlockedRouteImport.update({
+  id: '/blocked',
+  path: '/blocked',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminCalendarRoute = AdminCalendarRouteImport.update({
   id: '/calendar',
   path: '/calendar',
@@ -120,6 +127,11 @@ const AdminHousekeepingRoute = AdminHousekeepingRouteImport.update({
 const AdminInquiriesRoute = AdminInquiriesRouteImport.update({
   id: '/inquiries',
   path: '/inquiries',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMaintenanceRoute = AdminMaintenanceRouteImport.update({
+  id: '/maintenance',
+  path: '/maintenance',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminMessagesRoute = AdminMessagesRouteImport.update({
@@ -242,12 +254,14 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/blocked': typeof AdminBlockedRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
+  '/admin/maintenance': typeof AdminMaintenanceRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/promotions': typeof AdminPromotionsRoute
@@ -280,12 +294,14 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/blocked': typeof AdminBlockedRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
+  '/admin/maintenance': typeof AdminMaintenanceRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/promotions': typeof AdminPromotionsRoute
@@ -320,12 +336,14 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
+  '/admin/blocked': typeof AdminBlockedRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
+  '/admin/maintenance': typeof AdminMaintenanceRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/promotions': typeof AdminPromotionsRoute
@@ -361,12 +379,14 @@ export interface FileRouteTypes {
     | '/search'
     | '/spaces'
     | '/admin/announcements'
+    | '/admin/blocked'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
     | '/admin/frontdesk'
     | '/admin/housekeeping'
     | '/admin/inquiries'
+    | '/admin/maintenance'
     | '/admin/messages'
     | '/admin/notifications'
     | '/admin/promotions'
@@ -399,12 +419,14 @@ export interface FileRouteTypes {
     | '/search'
     | '/spaces'
     | '/admin/announcements'
+    | '/admin/blocked'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
     | '/admin/frontdesk'
     | '/admin/housekeeping'
     | '/admin/inquiries'
+    | '/admin/maintenance'
     | '/admin/messages'
     | '/admin/notifications'
     | '/admin/promotions'
@@ -438,12 +460,14 @@ export interface FileRouteTypes {
     | '/search'
     | '/spaces'
     | '/admin/announcements'
+    | '/admin/blocked'
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
     | '/admin/frontdesk'
     | '/admin/housekeeping'
     | '/admin/inquiries'
+    | '/admin/maintenance'
     | '/admin/messages'
     | '/admin/notifications'
     | '/admin/promotions'
@@ -548,6 +572,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminAnnouncementsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/blocked': {
+      id: '/admin/blocked'
+      path: '/blocked'
+      fullPath: '/admin/blocked'
+      preLoaderRoute: typeof AdminBlockedRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/calendar': {
       id: '/admin/calendar'
       path: '/calendar'
@@ -588,6 +619,13 @@ declare module '@tanstack/react-router' {
       path: '/inquiries'
       fullPath: '/admin/inquiries'
       preLoaderRoute: typeof AdminInquiriesRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/maintenance': {
+      id: '/admin/maintenance'
+      path: '/maintenance'
+      fullPath: '/admin/maintenance'
+      preLoaderRoute: typeof AdminMaintenanceRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/messages': {
@@ -749,12 +787,14 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
+  AdminBlockedRoute: typeof AdminBlockedRoute
   AdminCalendarRoute: typeof AdminCalendarRoute
   AdminChangePasswordRoute: typeof AdminChangePasswordRoute
   AdminFinanceRoute: typeof AdminFinanceRoute
   AdminFrontdeskRoute: typeof AdminFrontdeskRoute
   AdminHousekeepingRoute: typeof AdminHousekeepingRoute
   AdminInquiriesRoute: typeof AdminInquiriesRoute
+  AdminMaintenanceRoute: typeof AdminMaintenanceRoute
   AdminMessagesRoute: typeof AdminMessagesRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminPromotionsRoute: typeof AdminPromotionsRoute
@@ -778,12 +818,14 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAnnouncementsRoute: AdminAnnouncementsRoute,
+  AdminBlockedRoute: AdminBlockedRoute,
   AdminCalendarRoute: AdminCalendarRoute,
   AdminChangePasswordRoute: AdminChangePasswordRoute,
   AdminFinanceRoute: AdminFinanceRoute,
   AdminFrontdeskRoute: AdminFrontdeskRoute,
   AdminHousekeepingRoute: AdminHousekeepingRoute,
   AdminInquiriesRoute: AdminInquiriesRoute,
+  AdminMaintenanceRoute: AdminMaintenanceRoute,
   AdminMessagesRoute: AdminMessagesRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminPromotionsRoute: AdminPromotionsRoute,

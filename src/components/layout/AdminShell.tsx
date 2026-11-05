@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3, BedDouble, Brush, Building2, CalendarCheck, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
   Settings, Star, UserCog, Users, Wallet, type LucideIcon,
-  DoorOpen, LifeBuoy, Tag,
+  Ban, DoorOpen, LifeBuoy, Tag, Wrench,
 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
 import { canManage, isOwner, type Me } from '~/lib/auth'
@@ -37,9 +37,11 @@ const NAV: NavItem[] = [
   { to: '/admin/bookings', label: 'Bookings', icon: ClipboardList, show: canManage, primary: true, group: 'Operations' },
   { to: '/admin/requests', label: 'Requests', icon: CalendarCheck, show: canManage, group: 'Operations' },
   { to: '/admin/frontdesk', label: 'Check-in & out', icon: DoorOpen, show: canManage, group: 'Operations' },
+  { to: '/admin/blocked', label: 'Blocked dates', icon: Ban, show: canManage, group: 'Operations' },
   { to: '/admin/inquiries', label: 'Inquiries', icon: Inbox, show: canManage, group: 'Operations' },
   { to: '/admin/support', label: 'Support', icon: LifeBuoy, show: canManage, group: 'Operations' },
   { to: '/admin/housekeeping', label: 'Housekeeping', icon: Brush, show: () => true, primary: true, group: 'Operations' },
+  { to: '/admin/maintenance', label: 'Maintenance', icon: Wrench, show: () => true, group: 'Operations' },
   { to: '/admin/properties', label: 'Properties', icon: Building2, show: canManage, group: 'Operations' },
   { to: '/admin/rooms', label: 'Rooms', icon: BedDouble, show: canManage, group: 'Operations' },
   { to: '/admin/guests', label: 'Guests', icon: Users, show: canManage, group: 'Operations' },

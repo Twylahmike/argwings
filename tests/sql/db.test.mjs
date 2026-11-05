@@ -1029,3 +1029,64 @@ test('check-in / check-out: deposit, readiness, early approval, room change, cha
     await fails(c, 'select check_out_booking($1)', [b2.id], '42501')
     assert.equal((await q(c, 'select * from checkin_records')).length, 0)
   }))
+
+test('blocked ranges: scopes, conflicts with real bookings, release, scoping', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    const ua2 = (await one(c, `insert into units(property_id,name,base_rate,max_guests) values ($1,'A2',5000,2) returning id`, [f.pa])).id
+    await as(c, 'authenticated', f.manager)
+    // whole property
+    const whole = await one(c, `select * from block_dates($1,null,$2,$3,'renovation','Painting')`, [f.pa, d0, day(d0, 3)])
+    assert.equal(whole.scope, 'property')
+    assert.equal((await one(c, `select count(*)::int n from bookings where block_range_id=$1 and status='blocked'`, [whole.id])).n, 2)
+    // blocked dates leave public availability
+    await as(c, 'anon')
+    assert.equal((await q(c, 'select * from get_available_units($1,$2,1,$3)', [d0, day(d0, 2), f.pa])).length, 0)
+    await as(c, 'authenticated', f.manager)
+    // an overlapping block is refused, naming what is in the way
+    const e = await fails(c, `select block_dates($1,$2,$3,$4,'other')`, [f.pa, [f.ua], day(d0, 1), day(d0, 2)], '23514'); assert.match(e.message, /overlap/)
+    await c.query('select release_blocked_range($1)', [whole.id])
+    await c.query('select release_blocked_range($1)', [whole.id])           // idempotent
+    assert.equal((await one(c, `select released_at is not null r from blocked_ranges where id=$1`, [whole.id])).r, true)
+    assert.equal((await one(c, `select count(*)::int n from bookings where block_range_id=$1 and status='blocked'`, [whole.id])).n, 0)
+
+    // a real booking cannot be covered
+    await admin(c); const b = await booking(c, f, { from: day(d0, 10), to: day(d0, 12), status: 'confirmed' }); await as(c, 'authenticated', f.manager)
+    const e2 = await fails(c, `select block_dates($1,$2,$3,$4,'maintenance')`, [f.pa, [f.ua], day(d0, 9), day(d0, 11)], '23514'); assert.match(e2.message, new RegExp(b.reference))
+    const one1 = await one(c, `select * from block_dates($1,$2,$3,$4,'private_use')`, [f.pa, [ua2], day(d0, 9), day(d0, 11)])
+    assert.equal(one1.scope, 'unit')
+    // validation and scoping
+    await fails(c, `select block_dates($1,null,$2,$3,'maintenance')`, [f.pa, d0, d0], '23514')
+    await fails(c, `select block_dates($1,null,$2,$3,'bogus')`, [f.pa, d0, day(d0, 1)], '23514')
+    await fails(c, `select block_dates($1,$2,$3,$4,'other')`, [f.pa, [f.ub], d0, day(d0, 1)], '23514')       // room of another property
+    await fails(c, `select block_dates($1,null,$2,$3,'other')`, [f.pb, d0, day(d0, 1)], '42501')
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, `select block_dates($1,null,$2,$3,'other')`, [f.pa, d0, day(d0, 1)], '42501')
+  }))
+
+test('maintenance requests: reporting, assignment, completion notes, room goes offline and comes back', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await as(c, 'authenticated', f.cleaner)
+    // housekeeping can report an issue but not take a room offline or self-assign
+    const rep = await one(c, `insert into maintenance_requests(property_id, unit_id, title, reported_by) values ($1,$2,'Leaking tap',$3) returning *`, [f.pa, f.ua, f.cleaner])
+    assert.equal(rep.status, 'open')
+    await fails(c, `insert into maintenance_requests(property_id, unit_id, title, reported_by, takes_unit_offline) values ($1,$2,'Hack',$3,true)`, [f.pa, f.ua, f.cleaner], '42501')
+    await fails(c, `insert into maintenance_requests(property_id, title, reported_by) values ($1,'Other site',$2)`, [f.pb, f.cleaner], '42501')
+    assert.equal((await q(c, 'select * from maintenance_requests')).length, 1)
+
+    await as(c, 'authenticated', f.manager)
+    await c.query(`update maintenance_requests set assigned_to=$2, status='assigned', takes_unit_offline=true, priority='high' where id=$1`, [rep.id, f.cleaner])
+    assert.equal((await one(c, 'select maintenance_status from units where id=$1', [f.ua])).maintenance_status, 'maintenance', 'room taken offline')
+    await as(c, 'authenticated', f.cleaner)
+    await c.query(`update maintenance_requests set status='in_progress' where id=$1`, [rep.id])
+    await fails(c, `update maintenance_requests set status='completed' where id=$1`, [rep.id], '23514')          // needs completion notes
+    await c.query(`update maintenance_requests set status='completed', completion_notes='Washer replaced' where id=$1`, [rep.id])
+    const done = await one(c, 'select completed_at from maintenance_requests where id=$1', [rep.id])
+    assert.ok(done.completed_at)
+    await admin(c)
+    assert.equal((await one(c, 'select maintenance_status from units where id=$1', [f.ua])).maintenance_status, 'ok', 'room back in service')
+    await as(c, 'authenticated', f.manager)
+    await fails(c, `insert into maintenance_requests(property_id, title, takes_unit_offline) values ($1,'No unit',true)`, [f.pa], '23514')
+  }))

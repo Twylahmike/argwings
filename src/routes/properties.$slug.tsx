@@ -66,6 +66,7 @@ function PropertyPage() {
   return (
     <PublicLayout>
       <div className="mx-auto max-w-6xl px-4 py-6">
+        {p.video_url && <video src={p.video_url} controls playsInline preload="metadata" className="mb-4 aspect-video w-full rounded-xl bg-black object-cover" aria-label={`Walkthrough video of ${p.name}`} />}
         {photos.length > 0 && (
           <div className="grid gap-2 md:grid-cols-4 md:grid-rows-2">
             <button onClick={() => setLightbox(photos[0])} className="overflow-hidden rounded-xl md:col-span-2 md:row-span-2" aria-label="Open photo">

@@ -19,6 +19,7 @@ import { Dialog, DialogContent } from '~/components/ui/dialog'
 import { Field, Input, Select, Textarea } from '~/components/ui/form'
 import { EmptyState, ErrorState, PageHeader, Skeleton, Stat, Tabs, TableWrap, td, th } from '~/components/ui/misc'
 import { Money } from '~/components/booking/BookingBits'
+import { ReconcileView } from '~/components/finance/ReconcileView'
 import { useAdmin } from '~/components/layout/AdminShell'
 
 export const Route = createFileRoute('/admin/finance')({
@@ -32,7 +33,7 @@ type IncomeRow = { id: string; verified: boolean; kind: string; method: PaymentM
 function FinancePage() {
   const { scopeIds } = useAdmin()
   const [month, setMonth] = useState(monthStart(todayNairobi()))
-  const [tab, setTab] = useState<'pnl' | 'income' | 'expenses'>('pnl')
+  const [tab, setTab] = useState<'pnl' | 'income' | 'expenses' | 'reconcile'>('pnl')
   const next = addMonths(month, 1)
 
   return (
@@ -43,9 +44,10 @@ function FinancePage() {
           <Input aria-label="Month" type="month" className="w-44" value={month.slice(0, 7)} onChange={(e) => e.target.value && setMonth(e.target.value + '-01')} />
           <Button variant="outline" size="icon" aria-label="Next month" onClick={() => setMonth(next)}><ChevronRight className="h-5 w-5" /></Button>
         </div>} />
-      <div className="mb-5"><Tabs label="Finance sections" value={tab} onChange={setTab} tabs={[{ value: 'pnl', label: 'Monthly profit' }, { value: 'income', label: 'Income' }, { value: 'expenses', label: 'Expenses' }]} /></div>
+      <div className="mb-5"><Tabs label="Finance sections" value={tab} onChange={setTab} tabs={[{ value: 'pnl', label: 'Monthly profit' }, { value: 'income', label: 'Income' }, { value: 'expenses', label: 'Expenses' }, { value: 'reconcile', label: 'Reconcile' }]} /></div>
       {tab === 'pnl' && <ProfitView month={month} scopeIds={scopeIds} />}
       {tab === 'income' && <IncomeView month={month} next={next} scopeIds={scopeIds} />}
+      {tab === 'reconcile' && <ReconcileView />}
       {tab === 'expenses' && <ExpensesView month={month} next={next} scopeIds={scopeIds} />}
     </div>
   )

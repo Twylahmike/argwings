@@ -4171,6 +4171,14 @@ insert into site_pages(slug, title, body, published, show_in_footer, sort) value
  E'# Review before publishing\nThis is a starting outline, not legal advice. Replace it with a notice that matches how you really handle personal data (Kenya Data Protection Act, 2019), then tick Published.\n\n# What we collect\nName, phone number, email and booking details, so we can manage your stay.\n\n# How we use it\nTo confirm bookings, take payments and send confirmations and reminders.\n\n# Your rights\nYou can ask to see, correct or delete your personal data by contacting us.', false, true, 20);
 
 $mig26$;
+    -- ---- 0027_listing_video.sql ----
+    execute $mig27$
+-- 0027_listing_video.sql
+-- An optional walkthrough video per listing (chosen from the media library; the file lives in the public image bucket).
+
+alter table properties add column video_url text check (video_url is null or video_url ~ '^https://');
+
+$mig27$;
 end
 $install$;
 

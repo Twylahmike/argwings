@@ -21,6 +21,7 @@ import { Dialog, DialogContent } from '~/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { EmptyState, ErrorState, Skeleton, Tabs } from '~/components/ui/misc'
 import { ImageManager } from '~/components/layout/ImageManager'
+import { MediaPicker } from '~/components/media/MediaPicker'
 
 export const Route = createFileRoute('/admin/properties/$id')({
   beforeLoad: ({ context, params }) => {
@@ -48,6 +49,7 @@ const propSchema = z.object({
   house_rules: z.string().optional(),
   amenities: z.string().optional(),
   cancellation_policy: z.string().max(2000).optional(),
+  video_url: z.string().optional(),
   seo_title: z.string().max(70, 'Keep the search title under 70 characters').optional(),
   seo_description: z.string().max(200, 'Keep the search description under 200 characters').optional(),
   active: z.boolean(),
@@ -90,6 +92,7 @@ function PropertyPage() {
 function DetailsForm({ property }: { property?: Property }) {
   const nav = useNavigate()
   const qc = useQueryClient()
+  const [pickVideo, setPickVideo] = useState(false)
   const { register, handleSubmit, watch, setValue, setError, formState: { errors, isSubmitting, dirtyFields } } = useForm<PropValues>({
     resolver: zodResolver(propSchema),
     defaultValues: {
@@ -99,7 +102,7 @@ function DetailsForm({ property }: { property?: Property }) {
       contact_phone: property?.contact_phone ?? '', whatsapp_number: property?.whatsapp_number ?? '',
       check_in_time: formatTime(property?.check_in_time) || '14:00', check_out_time: formatTime(property?.check_out_time) || '10:00',
       house_rules: property?.house_rules ?? '', amenities: (property?.amenities ?? []).join(', '), active: property?.active ?? true,
-      cancellation_policy: property?.cancellation_policy ?? '', seo_title: property?.seo_title ?? '', seo_description: property?.seo_description ?? '', featured: property?.featured ?? false,
+      cancellation_policy: property?.cancellation_policy ?? '', video_url: property?.video_url ?? '', seo_title: property?.seo_title ?? '', seo_description: property?.seo_description ?? '', featured: property?.featured ?? false,
     },
   })
   const name = watch('name')
@@ -121,7 +124,7 @@ function DetailsForm({ property }: { property?: Property }) {
       check_in_time: v.check_in_time, check_out_time: v.check_out_time, house_rules: v.house_rules || null,
       amenities: (v.amenities ?? '').split(',').map((s) => s.trim()).filter(Boolean),
       // An archived listing can never be published: restore it first.
-      active: property?.archived_at ? false : v.active, featured: v.featured, cancellation_policy: v.cancellation_policy?.trim() || null, seo_title: v.seo_title?.trim() || null, seo_description: v.seo_description?.trim() || null,
+      active: property?.archived_at ? false : v.active, featured: v.featured, cancellation_policy: v.cancellation_policy?.trim() || null, video_url: v.video_url?.trim() || null, seo_title: v.seo_title?.trim() || null, seo_description: v.seo_description?.trim() || null,
     }
     const res = property
       ? await sb().from('properties').update(row).eq('id', property.id).select('id').single()
@@ -163,6 +166,10 @@ function DetailsForm({ property }: { property?: Property }) {
       </div>
       <Field label="House rules" htmlFor="p-rules" hint="One rule per line."><Textarea id="p-rules" rows={5} {...register('house_rules')} /></Field>
       <Field label="Amenities" htmlFor="p-amen" hint="Separate with commas, e.g. Fast WiFi, Hot shower, Parking"><Input id="p-amen" {...register('amenities')} /></Field>
+      <Field label="Walkthrough video" htmlFor="p-video" hint="Optional. Upload an MP4 or WebM in the Media library, then paste its link here (or pick it).">
+        <div className="flex gap-2"><Input id="p-video" placeholder="https://…" {...register('video_url')} /><Button type="button" variant="outline" onClick={() => setPickVideo(true)}>Pick</Button></div>
+      </Field>
+      {pickVideo && <MediaPicker kind="video" onClose={() => setPickVideo(false)} onPick={(m) => { setValue('video_url', m.url, { shouldDirty: true }); setPickVideo(false) }} />}
       <Field label="Search title" htmlFor="p-seo-t" hint="Shown in Google results and when the link is shared. Leave empty to use the property name." error={errors.seo_title?.message}><Input id="p-seo-t" maxLength={70} {...register('seo_title')} /></Field>
       <Field label="Search description" htmlFor="p-seo-d" hint="One or two sentences, up to 200 characters. Leave empty to use the tagline." error={errors.seo_description?.message}><Textarea id="p-seo-d" rows={2} maxLength={200} {...register('seo_description')} /></Field>
       <Field label="Cancellation policy for this property" htmlFor="p-cancel" hint="Leave empty to use the general policy from Settings."><Textarea id="p-cancel" rows={3} {...register('cancellation_policy')} /></Field>

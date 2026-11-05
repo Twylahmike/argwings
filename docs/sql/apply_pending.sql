@@ -1,5 +1,5 @@
 -- apply_pending.sql: paste into the Supabase SQL Editor of project "bnb-system" (ref bxpgpzrtoxjmynyjnfkg) and press Run.
--- Applies migrations 0009 to 0026. Safe to re-run: each part is skipped if it is already there.
+-- Applies migrations 0009 to 0027. Safe to re-run: each part is skipped if it is already there.
 -- Stops without changes if this is the wrong project or migration 0008 is missing.
 do $apply$
 begin
@@ -2722,6 +2722,18 @@ $m0026$;
     raise notice 'Applied 0026';
   else
     raise notice '0026 already applied, skipped';
+  end if;
+  if not exists (select 1 from information_schema.columns where table_schema='public' and table_name='properties' and column_name='video_url') then
+    execute $m0027$
+-- 0027_listing_video.sql
+-- An optional walkthrough video per listing (chosen from the media library; the file lives in the public image bucket).
+
+alter table properties add column video_url text check (video_url is null or video_url ~ '^https://');
+
+$m0027$;
+    raise notice 'Applied 0027';
+  else
+    raise notice '0027 already applied, skipped';
   end if;
 end
 $apply$;

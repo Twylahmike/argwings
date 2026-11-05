@@ -42,14 +42,14 @@ function GuestPage() {
     queryKey: ['guest-bookings', id, scopeIds],
     queryFn: async () => (await fetchBookings({ propertyIds: scopeIds })).filter((b) => b.guest_id === id),
   })
-  const [form, setForm] = useState<{ full_name: string; email: string; id_number: string; notes: string; vip: boolean; flagged: boolean; flag_reason: string; comms_opt_out: boolean } | null>(null)
+  const [form, setForm] = useState<{ full_name: string; email: string; id_number: string; notes: string; vip: boolean; flagged: boolean; flag_reason: string; comms_opt_out: boolean; country: string } | null>(null)
   const g = guest.data
-  const f = form ?? (g ? { full_name: g.full_name, email: g.email ?? '', id_number: g.id_number ?? '', notes: g.notes ?? '', vip: g.vip, flagged: g.flagged, flag_reason: g.flag_reason ?? '', comms_opt_out: g.comms_opt_out } : null)
+  const f = form ?? (g ? { full_name: g.full_name, email: g.email ?? '', id_number: g.id_number ?? '', notes: g.notes ?? '', vip: g.vip, flagged: g.flagged, flag_reason: g.flag_reason ?? '', comms_opt_out: g.comms_opt_out, country: g.country ?? '' } : null)
 
   const save = useMutation({
     mutationFn: async () => {
       if (f!.flagged && f!.flag_reason.trim().length < 3) throw new Error('Add a short reason for the flag.')
-      const { error } = await sb().from('guests').update({ full_name: f!.full_name.trim(), email: f!.email.trim() || null, id_number: f!.id_number.trim() || null, notes: f!.notes.trim() || null, vip: f!.vip, flagged: f!.flagged, flag_reason: f!.flagged ? f!.flag_reason.trim() : null, comms_opt_out: f!.comms_opt_out }).eq('id', id)
+      const { error } = await sb().from('guests').update({ full_name: f!.full_name.trim(), email: f!.email.trim() || null, id_number: f!.id_number.trim() || null, notes: f!.notes.trim() || null, vip: f!.vip, flagged: f!.flagged, flag_reason: f!.flagged ? f!.flag_reason.trim() : null, comms_opt_out: f!.comms_opt_out, country: f!.country.trim() || null }).eq('id', id)
       if (error) throw error
     },
     onSuccess: () => { toast.success('Saved'); setForm(null); qc.invalidateQueries({ queryKey: ['guest', id] }); qc.invalidateQueries({ queryKey: ['guests'] }) },
@@ -84,6 +84,7 @@ function GuestPage() {
           <CardContent className="grid gap-3">
             <Field label="Name" htmlFor="g-name"><Input id="g-name" value={f!.full_name} onChange={(e) => setForm({ ...f!, full_name: e.target.value })} /></Field>
             <Field label="Email" htmlFor="g-email"><Input id="g-email" type="email" value={f!.email} onChange={(e) => setForm({ ...f!, email: e.target.value })} /></Field>
+            <Field label="Country" htmlFor="g-country"><Input id="g-country" maxLength={60} placeholder="e.g. Kenya" value={f!.country} onChange={(e) => setForm({ ...f!, country: e.target.value })} /></Field>
             <Field label="ID / passport number" htmlFor="g-id" hint="Optional. Only owners and managers can see this."><Input id="g-id" value={f!.id_number} onChange={(e) => setForm({ ...f!, id_number: e.target.value })} /></Field>
             <Field label="Staff notes" htmlFor="g-notes" hint="Never shown to the guest."><Textarea id="g-notes" rows={4} value={f!.notes} onChange={(e) => setForm({ ...f!, notes: e.target.value })} /></Field>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">

@@ -13,7 +13,7 @@ export type Property = {
   check_in_time: string; check_out_time: string; house_rules: string | null
   amenities: string[]; cover_image: string | null; gallery: string[]; active: boolean; sort: number
   featured: boolean; archived_at: string | null; cancellation_policy: string | null
-  seo_title: string | null; seo_description: string | null
+  seo_title: string | null; seo_description: string | null; video_url: string | null
 }
 export type Unit = {
   id: string; property_id: string; name: string; code: string | null; unit_type: string; description: string | null
@@ -26,7 +26,7 @@ export type RateOverrideRow = { id: string; unit_id: string; label: string | nul
 export type Guest = {
   id: string; full_name: string; phone: string; email: string | null; id_number: string | null
   notes: string | null; anonymised_at: string | null; created_at: string
-  vip: boolean; flagged: boolean; flag_reason: string | null; comms_opt_out: boolean
+  vip: boolean; flagged: boolean; flag_reason: string | null; comms_opt_out: boolean; country: string | null
 }
 export type Booking = {
   id: string; reference: string; public_token: string; property_id: string; unit_id: string; guest_id: string | null

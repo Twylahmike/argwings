@@ -10,10 +10,11 @@ import { formatKES } from '~/lib/money'
 import { toCsv, downloadCsv } from '~/lib/csv'
 import { averageDailyRate, cancellationRate, occupancyByMonth, revenueBy, statusCounts, topGuests, type RBooking, type RPayment } from '~/lib/reports'
 import { SOURCE_LABEL, STATUS_LABEL, type BookingSource, type BookingStatus } from '~/lib/types'
+import { ReportCentre } from '~/components/reports/ReportCentre'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Input } from '~/components/ui/form'
-import { ErrorState, PageHeader, Skeleton, Stat, TableWrap, td } from '~/components/ui/misc'
+import { ErrorState, PageHeader, Skeleton, Stat, Tabs, TableWrap, td } from '~/components/ui/misc'
 import { useAdmin } from '~/components/layout/AdminShell'
 
 export const Route = createFileRoute('/admin/reports')({
@@ -22,6 +23,16 @@ export const Route = createFileRoute('/admin/reports')({
 })
 
 function ReportsPage() {
+  const [tab, setTab] = useState<'centre' | 'overview'>('centre')
+  return (
+    <div>
+      <div className="mb-4 print:hidden"><Tabs label="Reports" value={tab} onChange={setTab} tabs={[{ value: 'centre', label: 'Reporting centre' }, { value: 'overview', label: 'Charts overview' }]} /></div>
+      {tab === 'centre' ? <><div className="print:hidden"><PageHeader title="Reports" description="Fourteen reports for any dates. Export to Excel, CSV or PDF with your branding." /></div><ReportCentre /></> : <Overview />}
+    </div>
+  )
+}
+
+function Overview() {
   const { me, scopeIds } = useAdmin()
   const today = todayNairobi()
   const [from, setFrom] = useState(addMonths(monthStart(today), -2))

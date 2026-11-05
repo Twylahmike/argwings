@@ -31,6 +31,7 @@ import { Route as AdminMaintenanceRouteImport } from './routes/admin.maintenance
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminMessagesRouteImport } from './routes/admin.messages'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminOwnerRouteImport } from './routes/admin.owner'
 import { Route as AdminPromotionsRouteImport } from './routes/admin.promotions'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminRequestsRouteImport } from './routes/admin.requests'
@@ -162,6 +163,11 @@ const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   path: '/notifications',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminOwnerRoute = AdminOwnerRouteImport.update({
+  id: '/owner',
+  path: '/owner',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPromotionsRoute = AdminPromotionsRouteImport.update({
   id: '/promotions',
   path: '/promotions',
@@ -285,6 +291,7 @@ export interface FileRoutesByFullPath {
   '/admin/media': typeof AdminMediaRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/owner': typeof AdminOwnerRoute
   '/admin/promotions': typeof AdminPromotionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
@@ -328,6 +335,7 @@ export interface FileRoutesByTo {
   '/admin/media': typeof AdminMediaRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/owner': typeof AdminOwnerRoute
   '/admin/promotions': typeof AdminPromotionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
@@ -373,6 +381,7 @@ export interface FileRoutesById {
   '/admin/media': typeof AdminMediaRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/owner': typeof AdminOwnerRoute
   '/admin/promotions': typeof AdminPromotionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
@@ -419,6 +428,7 @@ export interface FileRouteTypes {
     | '/admin/media'
     | '/admin/messages'
     | '/admin/notifications'
+    | '/admin/owner'
     | '/admin/promotions'
     | '/admin/reports'
     | '/admin/requests'
@@ -462,6 +472,7 @@ export interface FileRouteTypes {
     | '/admin/media'
     | '/admin/messages'
     | '/admin/notifications'
+    | '/admin/owner'
     | '/admin/promotions'
     | '/admin/reports'
     | '/admin/requests'
@@ -506,6 +517,7 @@ export interface FileRouteTypes {
     | '/admin/media'
     | '/admin/messages'
     | '/admin/notifications'
+    | '/admin/owner'
     | '/admin/promotions'
     | '/admin/reports'
     | '/admin/requests'
@@ -699,6 +711,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminNotificationsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/owner': {
+      id: '/admin/owner'
+      path: '/owner'
+      fullPath: '/admin/owner'
+      preLoaderRoute: typeof AdminOwnerRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/promotions': {
       id: '/admin/promotions'
       path: '/promotions'
@@ -857,6 +876,7 @@ interface AdminRouteChildren {
   AdminMediaRoute: typeof AdminMediaRoute
   AdminMessagesRoute: typeof AdminMessagesRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
+  AdminOwnerRoute: typeof AdminOwnerRoute
   AdminPromotionsRoute: typeof AdminPromotionsRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminRequestsRoute: typeof AdminRequestsRoute
@@ -891,6 +911,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMediaRoute: AdminMediaRoute,
   AdminMessagesRoute: AdminMessagesRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
+  AdminOwnerRoute: AdminOwnerRoute,
   AdminPromotionsRoute: AdminPromotionsRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminRequestsRoute: AdminRequestsRoute,

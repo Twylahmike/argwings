@@ -301,7 +301,7 @@ test('RLS: cleaner sees no bookings/payments/guests/expenses; manager is limited
     await as(c, 'authenticated', f.owner)
     assert.equal((await q(c, 'select * from bookings where id = any($1)', [[ba.id, bb.id]])).length, 2)
     assert.ok((await q(c, 'select * from audit_log')).length > 0)
-    assert.equal((await c.query('delete from expenses where property_id=$1', [f.pa])).rowCount, 1)
+    assert.equal((await c.query('delete from expenses where property_id=$1', [f.pa])).rowCount, 0, 'expenses are voided, never deleted')
   }))
 
 test('RLS: deactivated staff are locked out', async () =>
@@ -1127,4 +1127,86 @@ test('media, gallery and homepage banners: public sees only published/scheduled,
     await c.query(`delete from gallery_items where url=$1`, [url])
     assert.equal((await one(c, 'select delete_media_asset($1) p', [asset.id])).p, 'gallery/a.webp')
     assert.equal((await q(c, 'select * from media_assets')).length, 0)
+  }))
+
+test('finance controls: unverified money is not revenue, expense approval, categories, owner overview', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    const today = (await one(c, 'select nairobi_today()::text d')).d
+    const thisMonth = today.slice(0, 7) + '-01'
+    const b = await booking(c, f, { from: d0, to: day(d0, 2), status: 'confirmed' })
+    await as(c, 'authenticated', f.owner)
+    const snap = async () => (await one(c, 'select owner_overview($1,$2) o', [today.slice(0, 7) + '-01', today])).o
+
+    const before = await snap()
+    // manager records manual M-Pesa + a refund: both unverified. Cash is verified automatically.
+    await as(c, 'authenticated', f.manager)
+    const mp = await one(c, `insert into payments(booking_id,kind,method,status,amount,confirmed_at,recorded_by) values ($1,'deposit','mpesa_manual','succeeded',3000,now(),$2) returning *`, [b.id, f.manager])
+    const cash = await one(c, `insert into payments(booking_id,kind,method,status,amount,confirmed_at,recorded_by) values ($1,'balance','cash','succeeded',2000,now(),$2) returning *`, [b.id, f.manager])
+    const rf = await one(c, `insert into payments(booking_id,kind,method,status,amount,confirmed_at,recorded_by) values ($1,'refund','cash','succeeded',500,now(),$2) returning *`, [b.id, f.manager])
+    assert.deepEqual([mp.verified, cash.verified, rf.verified], [false, true, false])
+    await fails(c, 'select verify_payment($1)', [mp.id], '42501')
+    assert.equal((await c.query(`update payments set verified=true where id=$1`, [mp.id])).rowCount, 0, 'managers cannot edit payments at all')
+    // the booking still shows what the guest handed over (cash flow), but revenue reports only count verified money
+    assert.equal((await one(c, 'select amount_paid from bookings where id=$1', [b.id])).amount_paid, 4500)
+    const pnlM = (await q(c, 'select * from monthly_pnl($1)', [thisMonth])).find((r) => r.property_id === f.pa)
+    assert.equal(pnlM.income, 2000, 'monthly P&L counts verified income only')
+    const dash = (await one(c, 'select dashboard_overview($1::date,$1::date,$2) o', [today, f.pa])).o
+    assert.equal(Number(dash.current.revenue), 2000, 'dashboard counts verified income only')
+
+    await as(c, 'authenticated', f.owner)
+    let o = await snap()
+    assert.equal(o.finance.collected - before.finance.collected, 2000)
+    assert.equal(o.finance.unverified - before.finance.unverified, 3000 - 500)
+    await c.query('select verify_payment($1)', [mp.id]); await c.query('select verify_payment($1)', [rf.id])
+    o = await snap()
+    assert.equal(o.finance.collected - before.finance.collected, 2000 + 3000 - 500)
+    assert.equal(o.finance.unverified - before.finance.unverified, 0)
+
+    // expenses: manager entries wait for the owner; only approved ones reduce profit
+    await as(c, 'authenticated', f.manager)
+    const ex = await one(c, `insert into expenses(property_id, category, amount, expense_date) values ($1,'utilities',1200,$2) returning *`, [f.pa, today])
+    assert.equal(ex.status, 'pending')
+    await fails(c, `update expenses set status='approved' where id=$1`, [ex.id], '42501')
+    await fails(c, 'select review_expense($1,true)', [ex.id], '42501')
+    await as(c, 'authenticated', f.owner)
+    const mid = await snap()
+    assert.equal(mid.finance.expenses - o.finance.expenses, 0); assert.equal(mid.finance.expenses_pending - o.finance.expenses_pending, 1200)
+    await fails(c, 'select review_expense($1,false,null)', [ex.id], '23514')
+    await c.query('select review_expense($1,true,null)', [ex.id])
+    const after = await snap()
+    assert.equal(after.finance.expenses - mid.finance.expenses, 1200)
+    assert.equal(after.finance.net_operating_income - mid.finance.net_operating_income, -1200)
+    // an approved expense that a manager edits goes back to pending
+    await as(c, 'authenticated', f.manager)
+    assert.equal((await one(c, `update expenses set amount=1500 where id=$1 returning status`, [ex.id])).status, 'pending')
+
+    // categories
+    await fails(c, `insert into expense_categories(name) values ('Utilities')`, [], '42501')
+    await as(c, 'authenticated', f.owner)
+    await fails(c, `insert into expense_categories(name) values ('Utilities')`, [], '23514')
+    await c.query(`insert into expense_categories(name) values ('security')`)
+    await fails(c, `insert into expense_categories(name) values ('security')`, [], '23505')
+
+    // shape + access
+    for (const k of ['finance', 'monthly', 'by_property', 'units', 'performance', 'bookings', 'operations', 'staff_activity']) assert.ok(k in after, k)
+    assert.equal(after.monthly.length, 12)
+    await as(c, 'authenticated', f.manager)
+    await fails(c, 'select owner_overview($1,$2)', [today, today], '42501')
+    await fails(c, 'select owner_overview($1,$2)', [today, '2020-01-01'], '42501')
+    await as(c, 'authenticated', f.owner)
+    await fails(c, 'select owner_overview($1,$2)', [today, '2020-01-01'], '23514')
+  }))
+
+test('financial records cannot be hard-deleted by anyone with a login', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const b = await booking(c, f, { from: fmt(f.friday), to: day(fmt(f.friday), 2), status: 'confirmed' })
+    await c.query(`insert into payments(booking_id,kind,method,status,amount,confirmed_at) values ($1,'deposit','cash','succeeded',100,now())`, [b.id])
+    const ex = await one(c, `insert into expenses(property_id, category, amount) values ($1,'other',100) returning id`, [f.pa])
+    await as(c, 'authenticated', f.owner)
+    assert.equal((await c.query(`delete from payments where booking_id=$1`, [b.id])).rowCount, 0)
+    assert.equal((await c.query(`delete from expenses where id=$1`, [ex.id])).rowCount, 0)
+    assert.equal((await c.query(`update expenses set voided=true where id=$1`, [ex.id])).rowCount, 1, 'voiding still works')
   }))

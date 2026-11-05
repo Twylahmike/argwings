@@ -47,6 +47,7 @@ export type HousekeepingTask = {
 export type Expense = {
   id: string; property_id: string; category: string; amount: number; expense_date: string; description: string | null
   paid_via: PaymentMethod | null; receipt_url: string | null; voided: boolean; created_at: string
+  status: 'approved' | 'pending' | 'rejected'; review_note: string | null
 }
 export type MessageLog = {
   id: string; booking_id: string | null; guest_id: string | null; property_id: string | null; channel: string

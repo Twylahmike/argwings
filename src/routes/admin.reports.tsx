@@ -72,7 +72,7 @@ function Overview() {
     const months = [...new Set((r?.occ ?? []).map((o) => o.month))]
     return months.map((m) => ({ month: formatMonth(m).slice(0, 8), ...Object.fromEntries((r?.occ ?? []).filter((o) => o.month === m).map((o) => [name(o.propertyId), o.pct])) }))
   }, [r])
-  const palette = ['#0f766e', '#1d4ed8', '#b45309', '#7c3aed', '#be123c']
+  const palette = ['#8c5f16', '#2b2926', '#c9a24a', '#6b7280', '#a3412a']
 
   function exportAll() {
     if (!r) return

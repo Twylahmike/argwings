@@ -49,7 +49,7 @@ function Login() {
     <div className="grid min-h-dvh place-items-center px-4">
       <div className="w-full max-w-sm rounded-2xl border bg-card p-6 shadow-sm">
         <Wordmark className="mb-6" />
-        <h1 className="text-xl font-semibold">Staff sign in</h1>
+        <h1 className="font-display text-3xl font-semibold">Staff sign in</h1>
         <p className="mt-1 text-sm text-muted-foreground">Owners, managers and cleaners sign in here.</p>
         <form onSubmit={handleSubmit(onSubmit)} className="mt-5 grid gap-4" noValidate>
           <Field label="Email" htmlFor="email" error={errors.email?.message}>

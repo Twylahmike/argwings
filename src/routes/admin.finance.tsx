@@ -88,7 +88,7 @@ function ProfitView({ month, scopeIds }: { month: string; scopeIds: string[] }) 
             <>
               <div className="h-64 w-full" role="img" aria-label="Bar chart of income, expenses and net profit per property">
                 <ResponsiveContainer><BarChart data={chart} margin={{ left: 8, right: 8 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" tick={{ fontSize: 12 }} /><YAxis tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} width={40} tick={{ fontSize: 12 }} /><Tooltip formatter={(v) => formatKES(Number(v))} /><Legend />
-                  <Bar dataKey="Income" fill="#0f766e" radius={[3, 3, 0, 0]} /><Bar dataKey="Expenses" fill="#b45309" radius={[3, 3, 0, 0]} /><Bar dataKey="Net" fill="#1d4ed8" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer>
+                  <Bar dataKey="Income" fill="#8c5f16" radius={[3, 3, 0, 0]} /><Bar dataKey="Expenses" fill="#6b7280" radius={[3, 3, 0, 0]} /><Bar dataKey="Net" fill="#2b2926" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer>
               </div>
               <div className="mt-4"><TableWrap>
                 <thead><tr>{['Property', 'Income', 'Refunds', 'Expenses', 'Net'].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>

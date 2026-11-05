@@ -131,7 +131,7 @@ function Business() {
         else if (k === 'timezone') val = raw || 'Africa/Nairobi'
         else if (k === 'business_name' && !raw) errs[k] = 'Enter your business name.'
         else if (k === 'booking_mode') val = raw === 'request' ? 'request' : 'instant'
-        else if (k === 'brand_color' && raw && !HEX_RE.test(raw)) errs[k] = 'Use a colour like #0f766e.'
+        else if (k === 'brand_color' && raw && !HEX_RE.test(raw)) errs[k] = 'Use a colour like #a9761f.'
         rows.push({ key: k, value: val, updated_at: new Date().toISOString() })
       }
       setErrors(errs)
@@ -164,8 +164,8 @@ function Business() {
         </div>
         <Field label="Brand colour" htmlFor="s-brand_color" error={errors.brand_color} hint="Buttons, links and highlights across the site and admin. The text colour adjusts automatically.">
           <div className="flex items-center gap-3">
-            <input aria-label="Pick a colour" type="color" className="h-11 w-14 cursor-pointer rounded-md border bg-card p-1" value={HEX_RE.test(v.brand_color ?? '') ? v.brand_color : '#0f766e'} onChange={set('brand_color')} />
-            <Input id="s-brand_color" className="w-32 font-mono" value={v.brand_color ?? ''} onChange={set('brand_color')} placeholder="#0f766e" aria-invalid={!!errors.brand_color} />
+            <input aria-label="Pick a colour" type="color" className="h-11 w-14 cursor-pointer rounded-md border bg-card p-1" value={HEX_RE.test(v.brand_color ?? '') ? v.brand_color : '#a9761f'} onChange={set('brand_color')} />
+            <Input id="s-brand_color" className="w-32 font-mono" value={v.brand_color ?? ''} onChange={set('brand_color')} placeholder="#a9761f" aria-invalid={!!errors.brand_color} />
             {HEX_RE.test(v.brand_color ?? '') && <span className="inline-flex h-11 items-center rounded-md px-4 text-sm font-medium" style={{ background: v.brand_color, color: readableOn(v.brand_color) }}>Preview</span>}
           </div>
         </Field>

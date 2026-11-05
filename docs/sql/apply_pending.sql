@@ -2441,7 +2441,7 @@ $m0021$;
   else
     raise notice '0021 already applied, skipped';
   end if;
-  if to_regprocedure('public.trg_notify_more()') is null then
+  if position('elsif tg_table_name = ''message_log'' then' in pg_get_functiondef('public.trg_notify_more()'::regprocedure)) = 0 then
     execute $m0022$
 -- 0022_fix_notify_more.sql
 -- Fixes trg_notify_more (0019). It was one if/elsif chain whose last branch read NEW.verified; PL/pgSQL resolves that field

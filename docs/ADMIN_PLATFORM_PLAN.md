@@ -95,3 +95,17 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 
 Nothing from 0009 onward is applied to the live project yet: run `docs/sql/apply_pending.sql` (regenerate with
 `node scripts/build-sql-bundles.mjs`).
+
+## Later slices
+| Migration | What |
+|---|---|
+| 0021 | Global search (bookings, guests, rooms, inquiries, tickets), breadcrumbs, collapsible sidebar |
+| 0022 | Fix: notify trigger rejected message_log rows (applied live) |
+| 0023 | Change a booking's dates/room with live price preview, history, week calendar view; guest country |
+| 0024 | Length-of-stay discounts applied inside the quote; admin rules; public offers |
+| 0025 | Housekeeping: new tasks, deadlines/overdue, task photos |
+| 0026 | Editable policy pages (terms, privacy ship as unpublished drafts) with public route and footer links |
+| 0027 | Listing walkthrough video; also statement reconciliation (CSV) on the Finance page |
+
+Still open: calendar drag-and-drop rescheduling (rescheduling works from the booking page), per-user permission overrides,
+website section ordering, SMS/email providers, real smart-lock provider adapter, M-Pesa callback secret.

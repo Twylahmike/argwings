@@ -7,11 +7,12 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 const MARKERS = {
   '0009': 't:booking_requests', '0010': 'f:dashboard_overview(date,date,uuid)', '0011': 't:support_tickets', '0012': 't:discount_codes',
   '0013': 'c:guests.vip', '0014': 't:booking_charges', '0015': 't:blocked_ranges', '0016': 't:media_assets', '0017': 't:expense_categories',
-  '0018': 't:contact_numbers', '0019': 't:bar_products', '0020': 't:permissions_catalog', '0021': 'f:global_search(text)', '0022': 'f:trg_notify_more()', '0023': 't:booking_changes', '0024': 't:stay_discounts', '0025': 't:housekeeping_task_photos', '0026': 't:site_pages', '0027': 'c:properties.video_url',
+  '0018': 't:contact_numbers', '0019': 't:bar_products', '0020': 't:permissions_catalog', '0021': 'f:global_search(text)', '0022': "s:position('elsif tg_table_name = ''message_log'' then' in pg_get_functiondef('public.trg_notify_more()'::regprocedure)) = 0", '0023': 't:booking_changes', '0024': 't:stay_discounts', '0025': 't:housekeeping_task_photos', '0026': 't:site_pages', '0027': 'c:properties.video_url',
 }
 const dir = 'supabase/migrations'
 const files = readdirSync(dir).filter((f) => /^\d{4}_.*\.sql$/.test(f) && f.slice(0, 4) >= '0009').sort()
 const cond = (m) => {
+  if (m.startsWith('s:')) return m.slice(2)
   const [k, v] = m.split(':')
   if (k === 't') return `to_regclass('public.${v}') is null`
   if (k === 'f') return `to_regprocedure('public.${v}') is null`
@@ -43,7 +44,7 @@ pending += 'end\n$apply$;\n'
 writeFileSync('docs/sql/apply_pending.sql', pending)
 // The same thing in four smaller pastes (a phone's SQL editor copes better). Run them in order; each is guarded and re-runnable.
 const header = pending.slice(0, pending.indexOf('  if ' + cond(MARKERS[files[0].slice(0, 4)])))
-const parts = [['0009', '0011'], ['0012', '0014'], ['0015', '0018'], ['0019', '0021']]
+const parts = [['0009', '0011'], ['0012', '0014'], ['0015', '0018'], ['0019', '0021'], ['0022', '0027']]
 const blocks = new Map()
 for (const f of files) {
   const n = f.slice(0, 4)

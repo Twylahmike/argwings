@@ -10,13 +10,24 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as AccountRouteImport } from './routes/account'
 import { Route as AdminRouteImport } from './routes/admin'
 import { Route as BookRouteImport } from './routes/book'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as GalleryRouteImport } from './routes/gallery'
 import { Route as InstallRouteImport } from './routes/install'
+import { Route as JoinRouteImport } from './routes/join'
 import { Route as LoginRouteImport } from './routes/login'
+import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as SearchRouteImport } from './routes/search'
 import { Route as SpacesRouteImport } from './routes/spaces'
+import { Route as AccountIndexRouteImport } from './routes/account.index'
+import { Route as AccountBookingsRouteImport } from './routes/account.bookings'
+import { Route as AccountHelpRouteImport } from './routes/account.help'
+import { Route as AccountOffersRouteImport } from './routes/account.offers'
+import { Route as AccountProfileRouteImport } from './routes/account.profile'
+import { Route as AccountRewardsRouteImport } from './routes/account.rewards'
+import { Route as AccountSettingsRouteImport } from './routes/account.settings'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAccessRouteImport } from './routes/admin.access'
 import { Route as AdminActivityRouteImport } from './routes/admin.activity'
@@ -27,19 +38,26 @@ import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
 import { Route as AdminChangePasswordRouteImport } from './routes/admin.change-password'
 import { Route as AdminCommunicationsRouteImport } from './routes/admin.communications'
 import { Route as AdminContactsRouteImport } from './routes/admin.contacts'
+import { Route as AdminCustomerActivityRouteImport } from './routes/admin.customer-activity'
+import { Route as AdminCustomersRouteImport } from './routes/admin.customers'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
 import { Route as AdminFrontdeskRouteImport } from './routes/admin.frontdesk'
 import { Route as AdminGalleryRouteImport } from './routes/admin.gallery'
 import { Route as AdminHomepageRouteImport } from './routes/admin.homepage'
 import { Route as AdminHousekeepingRouteImport } from './routes/admin.housekeeping'
 import { Route as AdminInquiriesRouteImport } from './routes/admin.inquiries'
+import { Route as AdminLoyaltyRouteImport } from './routes/admin.loyalty'
 import { Route as AdminMaintenanceRouteImport } from './routes/admin.maintenance'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
+import { Route as AdminMembershipRouteImport } from './routes/admin.membership'
+import { Route as AdminMembershipTiersRouteImport } from './routes/admin.membership-tiers'
 import { Route as AdminMessagesRouteImport } from './routes/admin.messages'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
+import { Route as AdminOffersRouteImport } from './routes/admin.offers'
 import { Route as AdminOwnerRouteImport } from './routes/admin.owner'
 import { Route as AdminPagesRouteImport } from './routes/admin.pages'
 import { Route as AdminPromotionsRouteImport } from './routes/admin.promotions'
+import { Route as AdminRedemptionsRouteImport } from './routes/admin.redemptions'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminRequestsRouteImport } from './routes/admin.requests'
 import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
@@ -48,6 +66,7 @@ import { Route as AdminRoomsRouteImport } from './routes/admin.rooms'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminStaffRouteImport } from './routes/admin.staff'
 import { Route as AdminSupportRouteImport } from './routes/admin.support'
+import { Route as AuthCallbackRouteImport } from './routes/auth.callback'
 import { Route as BookingTokenRouteImport } from './routes/booking.$token'
 import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as PropertiesSlugRouteImport } from './routes/properties.$slug'
@@ -67,6 +86,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const AccountRoute = AccountRouteImport.update({
+  id: '/account',
+  path: '/account',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AdminRoute = AdminRouteImport.update({
   id: '/admin',
   path: '/admin',
@@ -75,6 +99,11 @@ const AdminRoute = AdminRouteImport.update({
 const BookRoute = BookRouteImport.update({
   id: '/book',
   path: '/book',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const GalleryRoute = GalleryRouteImport.update({
@@ -87,9 +116,19 @@ const InstallRoute = InstallRouteImport.update({
   path: '/install',
   getParentRoute: () => rootRouteImport,
 } as any)
+const JoinRoute = JoinRouteImport.update({
+  id: '/join',
+  path: '/join',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoginRoute = LoginRouteImport.update({
   id: '/login',
   path: '/login',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ResetPasswordRoute = ResetPasswordRouteImport.update({
+  id: '/reset-password',
+  path: '/reset-password',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SearchRoute = SearchRouteImport.update({
@@ -101,6 +140,41 @@ const SpacesRoute = SpacesRouteImport.update({
   id: '/spaces',
   path: '/spaces',
   getParentRoute: () => rootRouteImport,
+} as any)
+const AccountIndexRoute = AccountIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountBookingsRoute = AccountBookingsRouteImport.update({
+  id: '/bookings',
+  path: '/bookings',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountHelpRoute = AccountHelpRouteImport.update({
+  id: '/help',
+  path: '/help',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountOffersRoute = AccountOffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountProfileRoute = AccountProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountRewardsRoute = AccountRewardsRouteImport.update({
+  id: '/rewards',
+  path: '/rewards',
+  getParentRoute: () => AccountRoute,
+} as any)
+const AccountSettingsRoute = AccountSettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => AccountRoute,
 } as any)
 const AdminIndexRoute = AdminIndexRouteImport.update({
   id: '/',
@@ -152,6 +226,16 @@ const AdminContactsRoute = AdminContactsRouteImport.update({
   path: '/contacts',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminCustomerActivityRoute = AdminCustomerActivityRouteImport.update({
+  id: '/customer-activity',
+  path: '/customer-activity',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCustomersRoute = AdminCustomersRouteImport.update({
+  id: '/customers',
+  path: '/customers',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminFinanceRoute = AdminFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
@@ -182,6 +266,11 @@ const AdminInquiriesRoute = AdminInquiriesRouteImport.update({
   path: '/inquiries',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminLoyaltyRoute = AdminLoyaltyRouteImport.update({
+  id: '/loyalty',
+  path: '/loyalty',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMaintenanceRoute = AdminMaintenanceRouteImport.update({
   id: '/maintenance',
   path: '/maintenance',
@@ -192,6 +281,16 @@ const AdminMediaRoute = AdminMediaRouteImport.update({
   path: '/media',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMembershipRoute = AdminMembershipRouteImport.update({
+  id: '/membership',
+  path: '/membership',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMembershipTiersRoute = AdminMembershipTiersRouteImport.update({
+  id: '/membership-tiers',
+  path: '/membership-tiers',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMessagesRoute = AdminMessagesRouteImport.update({
   id: '/messages',
   path: '/messages',
@@ -200,6 +299,11 @@ const AdminMessagesRoute = AdminMessagesRouteImport.update({
 const AdminNotificationsRoute = AdminNotificationsRouteImport.update({
   id: '/notifications',
   path: '/notifications',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminOffersRoute = AdminOffersRouteImport.update({
+  id: '/offers',
+  path: '/offers',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminOwnerRoute = AdminOwnerRouteImport.update({
@@ -215,6 +319,11 @@ const AdminPagesRoute = AdminPagesRouteImport.update({
 const AdminPromotionsRoute = AdminPromotionsRouteImport.update({
   id: '/promotions',
   path: '/promotions',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminRedemptionsRoute = AdminRedemptionsRouteImport.update({
+  id: '/redemptions',
+  path: '/redemptions',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminReportsRoute = AdminReportsRouteImport.update({
@@ -256,6 +365,11 @@ const AdminSupportRoute = AdminSupportRouteImport.update({
   id: '/support',
   path: '/support',
   getParentRoute: () => AdminRoute,
+} as any)
+const AuthCallbackRoute = AuthCallbackRouteImport.update({
+  id: '/auth/callback',
+  path: '/auth/callback',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const BookingTokenRoute = BookingTokenRouteImport.update({
   id: '/booking/$token',
@@ -325,13 +439,23 @@ const AdminStatementIdRoute = AdminStatementIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/account': typeof AccountRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/book': typeof BookRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/gallery': typeof GalleryRoute
   '/install': typeof InstallRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
+  '/account/bookings': typeof AccountBookingsRoute
+  '/account/help': typeof AccountHelpRoute
+  '/account/offers': typeof AccountOffersRoute
+  '/account/profile': typeof AccountProfileRoute
+  '/account/rewards': typeof AccountRewardsRoute
+  '/account/settings': typeof AccountSettingsRoute
   '/admin/access': typeof AdminAccessRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
@@ -341,19 +465,26 @@ export interface FileRoutesByFullPath {
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/communications': typeof AdminCommunicationsRoute
   '/admin/contacts': typeof AdminContactsRoute
+  '/admin/customer-activity': typeof AdminCustomerActivityRoute
+  '/admin/customers': typeof AdminCustomersRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/gallery': typeof AdminGalleryRoute
   '/admin/homepage': typeof AdminHomepageRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
+  '/admin/loyalty': typeof AdminLoyaltyRoute
   '/admin/maintenance': typeof AdminMaintenanceRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/membership': typeof AdminMembershipRoute
+  '/admin/membership-tiers': typeof AdminMembershipTiersRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/offers': typeof AdminOffersRoute
   '/admin/owner': typeof AdminOwnerRoute
   '/admin/pages': typeof AdminPagesRoute
   '/admin/promotions': typeof AdminPromotionsRoute
+  '/admin/redemptions': typeof AdminRedemptionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
   '/admin/reviews': typeof AdminReviewsRoute
@@ -362,11 +493,13 @@ export interface FileRoutesByFullPath {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/admin/support': typeof AdminSupportRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/booking/$token': typeof BookingTokenRoute
   '/p/$slug': typeof PSlugRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
   '/request/$token': typeof RequestTokenRoute
+  '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/bookings/$id': typeof AdminBookingsIdRoute
   '/admin/bookings/new': typeof AdminBookingsNewRoute
@@ -380,11 +513,20 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/book': typeof BookRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/gallery': typeof GalleryRoute
   '/install': typeof InstallRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
+  '/account/bookings': typeof AccountBookingsRoute
+  '/account/help': typeof AccountHelpRoute
+  '/account/offers': typeof AccountOffersRoute
+  '/account/profile': typeof AccountProfileRoute
+  '/account/rewards': typeof AccountRewardsRoute
+  '/account/settings': typeof AccountSettingsRoute
   '/admin/access': typeof AdminAccessRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
@@ -394,19 +536,26 @@ export interface FileRoutesByTo {
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/communications': typeof AdminCommunicationsRoute
   '/admin/contacts': typeof AdminContactsRoute
+  '/admin/customer-activity': typeof AdminCustomerActivityRoute
+  '/admin/customers': typeof AdminCustomersRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/gallery': typeof AdminGalleryRoute
   '/admin/homepage': typeof AdminHomepageRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
+  '/admin/loyalty': typeof AdminLoyaltyRoute
   '/admin/maintenance': typeof AdminMaintenanceRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/membership': typeof AdminMembershipRoute
+  '/admin/membership-tiers': typeof AdminMembershipTiersRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/offers': typeof AdminOffersRoute
   '/admin/owner': typeof AdminOwnerRoute
   '/admin/pages': typeof AdminPagesRoute
   '/admin/promotions': typeof AdminPromotionsRoute
+  '/admin/redemptions': typeof AdminRedemptionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
   '/admin/reviews': typeof AdminReviewsRoute
@@ -415,11 +564,13 @@ export interface FileRoutesByTo {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/admin/support': typeof AdminSupportRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/booking/$token': typeof BookingTokenRoute
   '/p/$slug': typeof PSlugRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
   '/request/$token': typeof RequestTokenRoute
+  '/account': typeof AccountIndexRoute
   '/admin': typeof AdminIndexRoute
   '/admin/bookings/$id': typeof AdminBookingsIdRoute
   '/admin/bookings/new': typeof AdminBookingsNewRoute
@@ -433,13 +584,23 @@ export interface FileRoutesByTo {
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/account': typeof AccountRouteWithChildren
   '/admin': typeof AdminRouteWithChildren
   '/book': typeof BookRoute
+  '/forgot-password': typeof ForgotPasswordRoute
   '/gallery': typeof GalleryRoute
   '/install': typeof InstallRoute
+  '/join': typeof JoinRoute
   '/login': typeof LoginRoute
+  '/reset-password': typeof ResetPasswordRoute
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
+  '/account/bookings': typeof AccountBookingsRoute
+  '/account/help': typeof AccountHelpRoute
+  '/account/offers': typeof AccountOffersRoute
+  '/account/profile': typeof AccountProfileRoute
+  '/account/rewards': typeof AccountRewardsRoute
+  '/account/settings': typeof AccountSettingsRoute
   '/admin/access': typeof AdminAccessRoute
   '/admin/activity': typeof AdminActivityRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
@@ -449,19 +610,26 @@ export interface FileRoutesById {
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/communications': typeof AdminCommunicationsRoute
   '/admin/contacts': typeof AdminContactsRoute
+  '/admin/customer-activity': typeof AdminCustomerActivityRoute
+  '/admin/customers': typeof AdminCustomersRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/gallery': typeof AdminGalleryRoute
   '/admin/homepage': typeof AdminHomepageRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
+  '/admin/loyalty': typeof AdminLoyaltyRoute
   '/admin/maintenance': typeof AdminMaintenanceRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/membership': typeof AdminMembershipRoute
+  '/admin/membership-tiers': typeof AdminMembershipTiersRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
+  '/admin/offers': typeof AdminOffersRoute
   '/admin/owner': typeof AdminOwnerRoute
   '/admin/pages': typeof AdminPagesRoute
   '/admin/promotions': typeof AdminPromotionsRoute
+  '/admin/redemptions': typeof AdminRedemptionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
   '/admin/reviews': typeof AdminReviewsRoute
@@ -470,11 +638,13 @@ export interface FileRoutesById {
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
   '/admin/support': typeof AdminSupportRoute
+  '/auth/callback': typeof AuthCallbackRoute
   '/booking/$token': typeof BookingTokenRoute
   '/p/$slug': typeof PSlugRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
   '/request/$token': typeof RequestTokenRoute
+  '/account/': typeof AccountIndexRoute
   '/admin/': typeof AdminIndexRoute
   '/admin/bookings/$id': typeof AdminBookingsIdRoute
   '/admin/bookings/new': typeof AdminBookingsNewRoute
@@ -489,13 +659,23 @@ export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/account'
     | '/admin'
     | '/book'
+    | '/forgot-password'
     | '/gallery'
     | '/install'
+    | '/join'
     | '/login'
+    | '/reset-password'
     | '/search'
     | '/spaces'
+    | '/account/bookings'
+    | '/account/help'
+    | '/account/offers'
+    | '/account/profile'
+    | '/account/rewards'
+    | '/account/settings'
     | '/admin/access'
     | '/admin/activity'
     | '/admin/announcements'
@@ -505,19 +685,26 @@ export interface FileRouteTypes {
     | '/admin/change-password'
     | '/admin/communications'
     | '/admin/contacts'
+    | '/admin/customer-activity'
+    | '/admin/customers'
     | '/admin/finance'
     | '/admin/frontdesk'
     | '/admin/gallery'
     | '/admin/homepage'
     | '/admin/housekeeping'
     | '/admin/inquiries'
+    | '/admin/loyalty'
     | '/admin/maintenance'
     | '/admin/media'
+    | '/admin/membership'
+    | '/admin/membership-tiers'
     | '/admin/messages'
     | '/admin/notifications'
+    | '/admin/offers'
     | '/admin/owner'
     | '/admin/pages'
     | '/admin/promotions'
+    | '/admin/redemptions'
     | '/admin/reports'
     | '/admin/requests'
     | '/admin/reviews'
@@ -526,11 +713,13 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/staff'
     | '/admin/support'
+    | '/auth/callback'
     | '/booking/$token'
     | '/p/$slug'
     | '/properties/$slug'
     | '/receipt/$paymentId'
     | '/request/$token'
+    | '/account/'
     | '/admin/'
     | '/admin/bookings/$id'
     | '/admin/bookings/new'
@@ -544,11 +733,20 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/book'
+    | '/forgot-password'
     | '/gallery'
     | '/install'
+    | '/join'
     | '/login'
+    | '/reset-password'
     | '/search'
     | '/spaces'
+    | '/account/bookings'
+    | '/account/help'
+    | '/account/offers'
+    | '/account/profile'
+    | '/account/rewards'
+    | '/account/settings'
     | '/admin/access'
     | '/admin/activity'
     | '/admin/announcements'
@@ -558,19 +756,26 @@ export interface FileRouteTypes {
     | '/admin/change-password'
     | '/admin/communications'
     | '/admin/contacts'
+    | '/admin/customer-activity'
+    | '/admin/customers'
     | '/admin/finance'
     | '/admin/frontdesk'
     | '/admin/gallery'
     | '/admin/homepage'
     | '/admin/housekeeping'
     | '/admin/inquiries'
+    | '/admin/loyalty'
     | '/admin/maintenance'
     | '/admin/media'
+    | '/admin/membership'
+    | '/admin/membership-tiers'
     | '/admin/messages'
     | '/admin/notifications'
+    | '/admin/offers'
     | '/admin/owner'
     | '/admin/pages'
     | '/admin/promotions'
+    | '/admin/redemptions'
     | '/admin/reports'
     | '/admin/requests'
     | '/admin/reviews'
@@ -579,11 +784,13 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/staff'
     | '/admin/support'
+    | '/auth/callback'
     | '/booking/$token'
     | '/p/$slug'
     | '/properties/$slug'
     | '/receipt/$paymentId'
     | '/request/$token'
+    | '/account'
     | '/admin'
     | '/admin/bookings/$id'
     | '/admin/bookings/new'
@@ -596,13 +803,23 @@ export interface FileRouteTypes {
   id:
     | '__root__'
     | '/'
+    | '/account'
     | '/admin'
     | '/book'
+    | '/forgot-password'
     | '/gallery'
     | '/install'
+    | '/join'
     | '/login'
+    | '/reset-password'
     | '/search'
     | '/spaces'
+    | '/account/bookings'
+    | '/account/help'
+    | '/account/offers'
+    | '/account/profile'
+    | '/account/rewards'
+    | '/account/settings'
     | '/admin/access'
     | '/admin/activity'
     | '/admin/announcements'
@@ -612,19 +829,26 @@ export interface FileRouteTypes {
     | '/admin/change-password'
     | '/admin/communications'
     | '/admin/contacts'
+    | '/admin/customer-activity'
+    | '/admin/customers'
     | '/admin/finance'
     | '/admin/frontdesk'
     | '/admin/gallery'
     | '/admin/homepage'
     | '/admin/housekeeping'
     | '/admin/inquiries'
+    | '/admin/loyalty'
     | '/admin/maintenance'
     | '/admin/media'
+    | '/admin/membership'
+    | '/admin/membership-tiers'
     | '/admin/messages'
     | '/admin/notifications'
+    | '/admin/offers'
     | '/admin/owner'
     | '/admin/pages'
     | '/admin/promotions'
+    | '/admin/redemptions'
     | '/admin/reports'
     | '/admin/requests'
     | '/admin/reviews'
@@ -633,11 +857,13 @@ export interface FileRouteTypes {
     | '/admin/settings'
     | '/admin/staff'
     | '/admin/support'
+    | '/auth/callback'
     | '/booking/$token'
     | '/p/$slug'
     | '/properties/$slug'
     | '/receipt/$paymentId'
     | '/request/$token'
+    | '/account/'
     | '/admin/'
     | '/admin/bookings/$id'
     | '/admin/bookings/new'
@@ -651,13 +877,18 @@ export interface FileRouteTypes {
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  AccountRoute: typeof AccountRouteWithChildren
   AdminRoute: typeof AdminRouteWithChildren
   BookRoute: typeof BookRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
   GalleryRoute: typeof GalleryRoute
   InstallRoute: typeof InstallRoute
+  JoinRoute: typeof JoinRoute
   LoginRoute: typeof LoginRoute
+  ResetPasswordRoute: typeof ResetPasswordRoute
   SearchRoute: typeof SearchRoute
   SpacesRoute: typeof SpacesRoute
+  AuthCallbackRoute: typeof AuthCallbackRoute
   BookingTokenRoute: typeof BookingTokenRoute
   PSlugRoute: typeof PSlugRoute
   PropertiesSlugRoute: typeof PropertiesSlugRoute
@@ -674,6 +905,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/account': {
+      id: '/account'
+      path: '/account'
+      fullPath: '/account'
+      preLoaderRoute: typeof AccountRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/admin': {
       id: '/admin'
       path: '/admin'
@@ -686,6 +924,13 @@ declare module '@tanstack/react-router' {
       path: '/book'
       fullPath: '/book'
       preLoaderRoute: typeof BookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/gallery': {
@@ -702,11 +947,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InstallRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/join': {
+      id: '/join'
+      path: '/join'
+      fullPath: '/join'
+      preLoaderRoute: typeof JoinRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/login': {
       id: '/login'
       path: '/login'
       fullPath: '/login'
       preLoaderRoute: typeof LoginRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/reset-password': {
+      id: '/reset-password'
+      path: '/reset-password'
+      fullPath: '/reset-password'
+      preLoaderRoute: typeof ResetPasswordRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/search': {
@@ -722,6 +981,55 @@ declare module '@tanstack/react-router' {
       fullPath: '/spaces'
       preLoaderRoute: typeof SpacesRouteImport
       parentRoute: typeof rootRouteImport
+    }
+    '/account/': {
+      id: '/account/'
+      path: '/'
+      fullPath: '/account/'
+      preLoaderRoute: typeof AccountIndexRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/bookings': {
+      id: '/account/bookings'
+      path: '/bookings'
+      fullPath: '/account/bookings'
+      preLoaderRoute: typeof AccountBookingsRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/help': {
+      id: '/account/help'
+      path: '/help'
+      fullPath: '/account/help'
+      preLoaderRoute: typeof AccountHelpRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/offers': {
+      id: '/account/offers'
+      path: '/offers'
+      fullPath: '/account/offers'
+      preLoaderRoute: typeof AccountOffersRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/profile': {
+      id: '/account/profile'
+      path: '/profile'
+      fullPath: '/account/profile'
+      preLoaderRoute: typeof AccountProfileRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/rewards': {
+      id: '/account/rewards'
+      path: '/rewards'
+      fullPath: '/account/rewards'
+      preLoaderRoute: typeof AccountRewardsRouteImport
+      parentRoute: typeof AccountRoute
+    }
+    '/account/settings': {
+      id: '/account/settings'
+      path: '/settings'
+      fullPath: '/account/settings'
+      preLoaderRoute: typeof AccountSettingsRouteImport
+      parentRoute: typeof AccountRoute
     }
     '/admin/': {
       id: '/admin/'
@@ -793,6 +1101,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminContactsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/customer-activity': {
+      id: '/admin/customer-activity'
+      path: '/customer-activity'
+      fullPath: '/admin/customer-activity'
+      preLoaderRoute: typeof AdminCustomerActivityRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/customers': {
+      id: '/admin/customers'
+      path: '/customers'
+      fullPath: '/admin/customers'
+      preLoaderRoute: typeof AdminCustomersRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/finance': {
       id: '/admin/finance'
       path: '/finance'
@@ -835,6 +1157,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminInquiriesRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/loyalty': {
+      id: '/admin/loyalty'
+      path: '/loyalty'
+      fullPath: '/admin/loyalty'
+      preLoaderRoute: typeof AdminLoyaltyRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/maintenance': {
       id: '/admin/maintenance'
       path: '/maintenance'
@@ -849,6 +1178,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMediaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/membership': {
+      id: '/admin/membership'
+      path: '/membership'
+      fullPath: '/admin/membership'
+      preLoaderRoute: typeof AdminMembershipRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/membership-tiers': {
+      id: '/admin/membership-tiers'
+      path: '/membership-tiers'
+      fullPath: '/admin/membership-tiers'
+      preLoaderRoute: typeof AdminMembershipTiersRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/messages': {
       id: '/admin/messages'
       path: '/messages'
@@ -861,6 +1204,13 @@ declare module '@tanstack/react-router' {
       path: '/notifications'
       fullPath: '/admin/notifications'
       preLoaderRoute: typeof AdminNotificationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/offers': {
+      id: '/admin/offers'
+      path: '/offers'
+      fullPath: '/admin/offers'
+      preLoaderRoute: typeof AdminOffersRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/owner': {
@@ -882,6 +1232,13 @@ declare module '@tanstack/react-router' {
       path: '/promotions'
       fullPath: '/admin/promotions'
       preLoaderRoute: typeof AdminPromotionsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/redemptions': {
+      id: '/admin/redemptions'
+      path: '/redemptions'
+      fullPath: '/admin/redemptions'
+      preLoaderRoute: typeof AdminRedemptionsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/reports': {
@@ -939,6 +1296,13 @@ declare module '@tanstack/react-router' {
       fullPath: '/admin/support'
       preLoaderRoute: typeof AdminSupportRouteImport
       parentRoute: typeof AdminRoute
+    }
+    '/auth/callback': {
+      id: '/auth/callback'
+      path: '/auth/callback'
+      fullPath: '/auth/callback'
+      preLoaderRoute: typeof AuthCallbackRouteImport
+      parentRoute: typeof rootRouteImport
     }
     '/booking/$token': {
       id: '/booking/$token'
@@ -1034,6 +1398,29 @@ declare module '@tanstack/react-router' {
   }
 }
 
+interface AccountRouteChildren {
+  AccountBookingsRoute: typeof AccountBookingsRoute
+  AccountHelpRoute: typeof AccountHelpRoute
+  AccountOffersRoute: typeof AccountOffersRoute
+  AccountProfileRoute: typeof AccountProfileRoute
+  AccountRewardsRoute: typeof AccountRewardsRoute
+  AccountSettingsRoute: typeof AccountSettingsRoute
+  AccountIndexRoute: typeof AccountIndexRoute
+}
+
+const AccountRouteChildren: AccountRouteChildren = {
+  AccountBookingsRoute: AccountBookingsRoute,
+  AccountHelpRoute: AccountHelpRoute,
+  AccountOffersRoute: AccountOffersRoute,
+  AccountProfileRoute: AccountProfileRoute,
+  AccountRewardsRoute: AccountRewardsRoute,
+  AccountSettingsRoute: AccountSettingsRoute,
+  AccountIndexRoute: AccountIndexRoute,
+}
+
+const AccountRouteWithChildren =
+  AccountRoute._addFileChildren(AccountRouteChildren)
+
 interface AdminRouteChildren {
   AdminAccessRoute: typeof AdminAccessRoute
   AdminActivityRoute: typeof AdminActivityRoute
@@ -1044,19 +1431,26 @@ interface AdminRouteChildren {
   AdminChangePasswordRoute: typeof AdminChangePasswordRoute
   AdminCommunicationsRoute: typeof AdminCommunicationsRoute
   AdminContactsRoute: typeof AdminContactsRoute
+  AdminCustomerActivityRoute: typeof AdminCustomerActivityRoute
+  AdminCustomersRoute: typeof AdminCustomersRoute
   AdminFinanceRoute: typeof AdminFinanceRoute
   AdminFrontdeskRoute: typeof AdminFrontdeskRoute
   AdminGalleryRoute: typeof AdminGalleryRoute
   AdminHomepageRoute: typeof AdminHomepageRoute
   AdminHousekeepingRoute: typeof AdminHousekeepingRoute
   AdminInquiriesRoute: typeof AdminInquiriesRoute
+  AdminLoyaltyRoute: typeof AdminLoyaltyRoute
   AdminMaintenanceRoute: typeof AdminMaintenanceRoute
   AdminMediaRoute: typeof AdminMediaRoute
+  AdminMembershipRoute: typeof AdminMembershipRoute
+  AdminMembershipTiersRoute: typeof AdminMembershipTiersRoute
   AdminMessagesRoute: typeof AdminMessagesRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
+  AdminOffersRoute: typeof AdminOffersRoute
   AdminOwnerRoute: typeof AdminOwnerRoute
   AdminPagesRoute: typeof AdminPagesRoute
   AdminPromotionsRoute: typeof AdminPromotionsRoute
+  AdminRedemptionsRoute: typeof AdminRedemptionsRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminRequestsRoute: typeof AdminRequestsRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
@@ -1086,19 +1480,26 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminChangePasswordRoute: AdminChangePasswordRoute,
   AdminCommunicationsRoute: AdminCommunicationsRoute,
   AdminContactsRoute: AdminContactsRoute,
+  AdminCustomerActivityRoute: AdminCustomerActivityRoute,
+  AdminCustomersRoute: AdminCustomersRoute,
   AdminFinanceRoute: AdminFinanceRoute,
   AdminFrontdeskRoute: AdminFrontdeskRoute,
   AdminGalleryRoute: AdminGalleryRoute,
   AdminHomepageRoute: AdminHomepageRoute,
   AdminHousekeepingRoute: AdminHousekeepingRoute,
   AdminInquiriesRoute: AdminInquiriesRoute,
+  AdminLoyaltyRoute: AdminLoyaltyRoute,
   AdminMaintenanceRoute: AdminMaintenanceRoute,
   AdminMediaRoute: AdminMediaRoute,
+  AdminMembershipRoute: AdminMembershipRoute,
+  AdminMembershipTiersRoute: AdminMembershipTiersRoute,
   AdminMessagesRoute: AdminMessagesRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
+  AdminOffersRoute: AdminOffersRoute,
   AdminOwnerRoute: AdminOwnerRoute,
   AdminPagesRoute: AdminPagesRoute,
   AdminPromotionsRoute: AdminPromotionsRoute,
+  AdminRedemptionsRoute: AdminRedemptionsRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminRequestsRoute: AdminRequestsRoute,
   AdminReviewsRoute: AdminReviewsRoute,
@@ -1122,13 +1523,18 @@ const AdminRouteWithChildren = AdminRoute._addFileChildren(AdminRouteChildren)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  AccountRoute: AccountRouteWithChildren,
   AdminRoute: AdminRouteWithChildren,
   BookRoute: BookRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
   GalleryRoute: GalleryRoute,
   InstallRoute: InstallRoute,
+  JoinRoute: JoinRoute,
   LoginRoute: LoginRoute,
+  ResetPasswordRoute: ResetPasswordRoute,
   SearchRoute: SearchRoute,
   SpacesRoute: SpacesRoute,
+  AuthCallbackRoute: AuthCallbackRoute,
   BookingTokenRoute: BookingTokenRoute,
   PSlugRoute: PSlugRoute,
   PropertiesSlugRoute: PropertiesSlugRoute,

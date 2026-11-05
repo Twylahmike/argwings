@@ -40,6 +40,10 @@ export type Brand = {
   currency: string
   /** When true the public pages show a "back soon" notice (guests with a booking link still reach their booking). */
   maintenanceMode: boolean
+  /** When false, visitors must sign in to book. */
+  guestCheckout: boolean
+  /** Membership tiers shown on the join page. */
+  tiers: { key: string; name: string; benefits: string[] }[]
 }
 
 export const DEFAULT_BRAND: Brand = {
@@ -65,6 +69,8 @@ export const DEFAULT_BRAND: Brand = {
   businessAddress: '',
   currency: 'KES',
   maintenanceMode: false,
+  guestCheckout: true,
+  tiers: [],
 }
 
 type CatRow = { id: string; name: string; sort: number }
@@ -99,7 +105,7 @@ function m_content(rows: { key: string; value: unknown }[] | null): unknown {
 export async function fetchBrand(): Promise<Brand> {
   if (!isSupabaseConfigured) return DEFAULT_BRAND
   try {
-    const [{ data }, props, anns, revs, gcats, gitems, banners, contacts, bcats, bprods, pagesRes] = await Promise.all([
+    const [{ data }, props, anns, revs, gcats, gitems, banners, contacts, bcats, bprods, pagesRes, tiersRes] = await Promise.all([
       pub().from('settings').select('key, value'),
       pub().from('properties').select('id, name, slug').eq('active', true).order('sort').order('name'),
       pub().from('announcements').select('id, text, link, variant').order('created_at', { ascending: false }).limit(3),
@@ -111,6 +117,7 @@ export async function fetchBrand(): Promise<Brand> {
       pub().from('bar_categories').select('id, name').order('sort').order('name'),
       pub().from('bar_products').select('id, category_id, name, description, price, image_url').order('sort').order('name'),
       pub().from('site_pages').select('slug, title').eq('show_in_footer', true).order('sort'),
+      pub().from('membership_tiers').select('key, name, benefits, rank').order('rank'),
     ])
     const content = sanitizeSiteContent(m_content(data))
     const m = Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value]))
@@ -141,6 +148,8 @@ export async function fetchBrand(): Promise<Brand> {
       businessAddress: str('business_address', ''),
       currency: str('currency', 'KES'),
       maintenanceMode: m.maintenance_mode === true,
+      guestCheckout: m.guest_checkout_enabled !== false,
+      tiers: ((tiersRes.data ?? []) as { key: string; name: string; benefits: string[] | null }[]).map((t) => ({ key: t.key, name: t.name, benefits: t.benefits ?? [] })),
       gallery: managedGallery(gcats.data, gitems.data),
       ...splitBanners(banners.data),
       spaces: ((props.data ?? []) as { id: string; name: string; slug: string }[]).slice(0, 6),

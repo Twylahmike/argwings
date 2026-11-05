@@ -20,6 +20,7 @@ import { Faq } from '~/components/site/Faq'
 import { PromoStrip } from '~/components/site/PromoStrip'
 import { BarMenu } from '~/components/site/BarMenu'
 import { InquiryForm } from '~/components/site/InquiryForm'
+import { MembershipPromo } from '~/components/site/MembershipPromo'
 
 export const Route = createFileRoute('/')({
   loader: async () => ({ properties: isSupabaseConfigured ? await fetchProperties().catch(() => []) : [] }),
@@ -37,7 +38,7 @@ function Home() {
   const parts: Record<HomeSectionId, React.ReactNode> = {
     trust: <TrustBar />, spaces: <Spaces properties={properties} />, facilities: <Facilities />, amenities: <Amenities />, menu: <BarMenu />,
     how: <HowToBook />, payment: <PaymentExplainer />, reviews: <Reviews />, gallery: <Gallery properties={properties} limit={8} />,
-    faq: <Faq />, contact: <InquiryForm />, cta: <FinalCTA properties={properties} />,
+    membership: <MembershipPromo />, faq: <Faq />, contact: <InquiryForm />, cta: <FinalCTA properties={properties} />,
   }
   return (
     <PublicLayout overlay>

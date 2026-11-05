@@ -258,7 +258,7 @@ test('RLS: anon cannot read bookings, guests, payments; can use availability and
     for (const k of ['email', 'id_number', 'notes', 'guest_id', 'created_by']) assert.ok(!(k in info), `${k} must not leak`)
     assert.equal((await one(c, 'select get_booking_by_token($1) j', [randomUUID()])).j, null)
     const settings = await q(c, 'select key from settings')
-    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content', 'booking_mode', 'business_email', 'business_address', 'currency', 'maintenance_mode', 'module_bar_menu'].includes(s.key)))
+    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content', 'booking_mode', 'business_email', 'business_address', 'currency', 'maintenance_mode', 'guest_checkout_enabled', 'module_bar_menu'].includes(s.key)))
     assert.ok(settings.length > 0)
   }))
 
@@ -1741,4 +1741,272 @@ test('permission overrides: allow or block one permission for one person, owners
     assert.equal((await q(c, 'select * from user_permission_overrides')).length, 2, 'their own exceptions (deny bookings.create, grant users.manage)')
     await as(c, 'authenticated', f.cleaner)
     assert.equal((await q(c, 'select * from user_permission_overrides')).length, 0)
+  }))
+
+// ---------------------------------------------------------------------------------------------
+// Customer accounts, membership, offers (migration 0029)
+// ---------------------------------------------------------------------------------------------
+async function customer(c, name = 'Cust', { verified = true } = {}) {
+  const id = randomUUID()
+  await c.query(`insert into auth.users(id, email, email_confirmed_at, raw_user_meta_data) values ($1,$2,$3,$4)`,
+    [id, `${name.toLowerCase()}-${id.slice(0, 6)}@test.local`, verified ? new Date() : null, JSON.stringify({ full_name: name })])
+  return id
+}
+const activate = async (c, id) => { await as(c, 'authenticated', id); const r = await one(c, 'select ensure_customer_profile() r'); await admin(c); return r.r }
+const phone = () => '2547' + Math.floor(Math.random() * 1e8).toString().padStart(8, '0')
+
+test('membership: profile only after verification, welcome reward issued once, staff cannot be customers', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const un = await customer(c, 'Unverified', { verified: false })
+    assert.equal((await activate(c, un)).status, 'unverified')
+    assert.equal((await one(c, 'select count(*)::int n from customer_profiles where user_id = $1', [un])).n, 0)
+    const id = await customer(c, 'Wanjiru')
+    const r = await activate(c, id)
+    assert.equal(r.status, 'active'); assert.equal(r.welcome_rewards, 1)
+    await activate(c, id)   // idempotent
+    assert.equal((await one(c, 'select count(*)::int n from customer_rewards where user_id = $1', [id])).n, 1)
+    assert.equal((await activate(c, f.owner)).status, 'staff')
+    assert.equal((await one(c, 'select count(*)::int n from customer_profiles where user_id = $1', [f.owner])).n, 0)
+  }))
+
+test('membership: duplicate verified emails are impossible', async () =>
+  tx(async (c) => {
+    const a = await customer(c, 'Dup'); await activate(c, a)
+    const b = randomUUID()
+    const email = (await one(c, 'select email from customer_profiles where user_id = $1', [a])).email
+    await c.query(`insert into auth.users(id, email, email_confirmed_at) values ($1, $2, now())`, [b, email.toUpperCase().replace('@TEST.LOCAL', '@test.local') + 'x'])
+    await fails(c, `insert into customer_profiles(user_id, full_name, email) values ($1,'xx',$2)`, [b, email], '23505')
+  }))
+
+test('membership: customers see only their own data and cannot write', async () =>
+  tx(async (c) => {
+    const a = await customer(c, 'Alice'); const b = await customer(c, 'Bob')
+    await activate(c, a); await activate(c, b)
+    await as(c, 'authenticated', a)
+    assert.equal((await q(c, 'select * from customer_profiles')).length, 1)
+    assert.equal((await q(c, 'select * from customer_rewards')).length, 1)
+    assert.equal((await q(c, 'select * from loyalty_transactions')).length, 0)
+    await fails(c, `update customer_profiles set tier_key = 'vip' where user_id = $1`, [a], '42501')
+    await fails(c, `insert into customer_rewards(user_id, offer_id, code) select $1, id, 'HACK' from promotional_offers limit 1`, [a], '42501')
+    await fails(c, `insert into promotional_offers(name, audience, kind, value) values ('free','member','percent',100)`, [], '42501')
+    await fails(c, 'select admin_customer_list()', [], '42501')
+    await fails(c, 'select membership_overview()', [], '42501')
+    await admin(c)
+    assert.equal((await one(c, 'select tier_key from customer_profiles where user_id = $1', [a])).tier_key, 'standard')   // the update changed nothing
+    // anon sees tiers but nothing else
+    await as(c, 'anon')
+    assert.equal((await q(c, 'select * from membership_tiers')).length, 4)
+    await fails(c, 'select * from customer_profiles', [], '42501')
+  }))
+
+test('membership: welcome discount applied once, validated server-side, recorded; released on cancel', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const id = await customer(c, 'Achieng'); await activate(c, id)
+    const fri = fmt(f.friday)
+    const args = (code, reward, offer, from, to) => [id, code, reward, offer, f.ua, from, to, 2, 'Achieng', phone(), null, 'website']
+    const reward = (await one(c, 'select id from customer_rewards where user_id = $1', [id])).id
+    // preview says 5% of the room total (2 nights x 5000/6000 weekend)
+    await as(c, 'authenticated', id)
+    const prev = await q(c, 'select * from my_offers_for_stay($1,$2,$3)', [f.ua, fri, day(fri, 2)])
+    assert.equal(prev.length, 1); assert.equal(prev[0].ok, true)
+    await admin(c)
+    const quote = await one(c, 'select * from quote_stay($1,$2,$3)', [f.ua, fri, day(fri, 2)])
+    const b = await one(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', args(null, reward, null, fri, day(fri, 2)))
+    assert.equal(b.discount, Math.floor(quote.nightly_total * 5 / 100))
+    assert.equal(b.total_amount, quote.total - b.discount)
+    assert.equal(b.customer_id, id)
+    assert.equal((await one(c, `select status from customer_rewards where id = $1`, [reward])).status, 'redeemed')
+    assert.equal((await one(c, `select count(*)::int n from reward_redemptions where booking_id = $1`, [b.id])).n, 1)
+    // second use of the same reward is refused
+    const e = await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', args(null, reward, null, day(fri, 7), day(fri, 9)), '23514')
+    assert.match(e.message, /already been used/)
+    // cannot attach a second redemption to the same booking
+    await fails(c, `insert into reward_redemptions(reward_id, user_id, offer_id, booking_id, amount) select id, user_id, offer_id, $2, 1 from customer_rewards where id = $1`, [reward, b.id], '23505')
+    // cancelling gives the reward back
+    await c.query(`update bookings set status = 'cancelled' where id = $1`, [b.id])
+    assert.equal((await one(c, `select status from customer_rewards where id = $1`, [reward])).status, 'available')
+    assert.equal((await one(c, `select count(*)::int n from reward_redemptions where booking_id = $1 and released_at is null`, [b.id])).n, 0)
+    // and it can be used again
+    const b2 = await one(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', args(null, reward, null, day(fri, 7), day(fri, 9)))
+    assert.ok(b2.discount > 0)
+  }))
+
+test('membership: offers respect expiry, accommodation, minimum, stacking, other customers', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const id = await customer(c, 'Rules'); await activate(c, id)
+    const other = await customer(c, 'Other'); await activate(c, other)
+    const fri = fmt(f.friday)
+    const run = (reward, code = null, unit = f.ua, user = id) =>
+      one(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [user, code, reward, null, unit, fri, day(fri, 2), 2, 'X', phone(), null, 'website'])
+    const reward = (await one(c, 'select id from customer_rewards where user_id = $1', [id])).id
+    const offer = (await one(c, 'select offer_id from customer_rewards where id = $1', [reward])).offer_id
+    // someone else's reward
+    await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [other, null, reward, null, f.ua, fri, day(fri, 2), 2, 'X', phone(), null, 'website'], '23514')
+    // excluded accommodation
+    await c.query('update promotional_offers set property_ids = array[$1::uuid] where id = $2', [f.pb, offer])
+    let e = await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, null, reward, null, f.ua, fri, day(fri, 2), 2, 'X', phone(), null, 'website'], '23514')
+    assert.match(e.message, /does not apply/)
+    await c.query('update promotional_offers set property_ids = $1 where id = $2', ['{}', offer])
+    // below the minimum booking value
+    await c.query('update promotional_offers set min_total = 999999 where id = $1', [offer])
+    e = await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, null, reward, null, f.ua, fri, day(fri, 2), 2, 'X', phone(), null, 'website'], '23514')
+    assert.match(e.message, /at least/)
+    await c.query('update promotional_offers set min_total = 0 where id = $1', [offer])
+    // stacking with a discount code is refused unless the offer allows it
+    await c.query(`insert into discount_codes(code, kind, value) values ('SAVE10','percent',10)`)
+    e = await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, 'SAVE10', reward, null, f.ua, fri, day(fri, 2), 2, 'X', phone(), null, 'website'], '23514')
+    assert.match(e.message, /combined/)
+    await c.query('update promotional_offers set stackable = true where id = $1', [offer])
+    const both = await run(reward, 'SAVE10')
+    const quote = await one(c, 'select * from quote_stay($1,$2,$3)', [f.ua, fri, day(fri, 2)])
+    const codeAmt = Math.floor(quote.nightly_total * 10 / 100)
+    assert.equal(both.discount, codeAmt + Math.floor((quote.nightly_total - codeAmt) * 5 / 100))
+    await c.query(`update bookings set status = 'cancelled' where id = $1`, [both.id])
+    // expired reward
+    await c.query(`update customer_rewards set expires_at = now() - interval '1 day' where id = $1`, [reward])
+    e = await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, null, reward, null, f.ua, fri, day(fri, 2), 2, 'X', phone(), null, 'website'], '23514')
+    assert.match(e.message, /expired/)
+    // switched-off offer
+    await c.query(`update customer_rewards set expires_at = null where id = $1`, [reward])
+    await c.query(`update promotional_offers set active = false where id = $1`, [offer])
+    await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, null, reward, null, f.ua, fri, day(fri, 2), 2, 'X', phone(), null, 'website'], '23514')
+    // suspended accounts cannot book as members
+    await c.query(`update promotional_offers set active = true where id = $1`, [offer])
+    await c.query(`update customer_profiles set status = 'suspended' where user_id = $1`, [id])
+    await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, null, reward, null, f.ua, fri, day(fri, 2), 2, 'X', phone(), null, 'website'], '23514')
+  }))
+
+test('membership: first-booking and returning rules, open member offers claimed at checkout, max discount', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const id = await customer(c, 'Member'); await activate(c, id)
+    const fri = fmt(f.friday)
+    const open = (await one(c, `insert into promotional_offers(name, audience, kind, value, max_discount, returning_only) values ('Welcome back','member','percent',20,1000,true) returning id`)).id
+    const call = (offer, from) => one(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, null, null, offer, f.ua, from, day(from, 2), 2, 'M', phone(), null, 'website'])
+    let e = await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, null, null, open, f.ua, fri, day(fri, 2), 2, 'M', phone(), null, 'website'], '23514')
+    assert.match(e.message, /returning/)
+    // a completed stay makes them a returning guest
+    const prior = await booking(c, f, { from: day(fri, -20), to: day(fri, -18), status: 'checked_out', total: 10000 })
+    await c.query('update bookings set customer_id = $1 where id = $2', [id, prior.id])
+    const b = await call(open, fri)
+    assert.equal(b.discount, 1000)                     // 20% would be more: capped
+    const r = await one(c, `select status, note from customer_rewards where user_id = $1 and offer_id = $2`, [id, open])
+    assert.deepEqual([r.status, r.note], ['redeemed', 'Claimed at checkout'])
+    // per-customer limit of 1: a second booking cannot reuse the offer while the first is live
+    e = await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, null, null, open, f.ua, day(fri, 14), day(fri, 16), 2, 'M', phone(), null, 'website'], '23514')
+    assert.match(e.message, /already used/)
+    // the welcome offer is first-booking-only: the prior stay rules it out
+    const welcome = (await one(c, `select id from customer_rewards where user_id = $1 and offer_id <> $2`, [id, open])).id
+    e = await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, null, welcome, null, f.ua, day(fri, 21), day(fri, 23), 2, 'M', phone(), null, 'website'], '23514')
+    assert.match(e.message, /first booking/)
+  }))
+
+test('membership: completed stays earn points and earn tiers; hand-set tiers stick; staff permissions', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const id = await customer(c, 'Loyal'); await activate(c, id)
+    const fri = fmt(f.friday)
+    const stay = async (n) => {
+      const b = await booking(c, f, { from: day(fri, -100 + n * 3), to: day(fri, -98 + n * 3), status: 'confirmed', total: 30000 })
+      await c.query('update bookings set customer_id = $1, amount_paid = 30000 where id = $2', [id, b.id])
+      await c.query(`update bookings set status = 'checked_in' where id = $1`, [b.id])
+      await c.query(`update bookings set status = 'checked_out' where id = $1`, [b.id])
+      return b
+    }
+    await stay(0); await stay(1)
+    assert.equal((await one(c, 'select coalesce(sum(points),0)::int p from loyalty_transactions where user_id = $1', [id])).p, 600)
+    assert.equal((await one(c, 'select tier_key from customer_profiles where user_id = $1', [id])).tier_key, 'standard')   // 2 stays < 3
+    await stay(2)
+    assert.equal((await one(c, 'select tier_key from customer_profiles where user_id = $1', [id])).tier_key, 'silver')     // 3 stays, 90000 >= 60000
+    // owner can change the criteria; tiers are not handed out without meeting them
+    await c.query(`update membership_tiers set min_completed_stays = 50 where key = 'silver'`)
+    await c.query(`update customer_profiles set tier_key = 'standard' where user_id = $1`, [id])
+    await stay(3)
+    assert.equal((await one(c, 'select tier_key from customer_profiles where user_id = $1', [id])).tier_key, 'standard')
+    // staff with the permission can set a tier by hand; it is then left alone
+    const mgr = f.manager
+    await as(c, 'authenticated', mgr)
+    await one(c, `select set_customer_tier($1, 'gold') t`, [id])
+    await one(c, `select adjust_loyalty_points($1, 50, 'goodwill') x`, [id])
+    assert.equal((await one(c, 'select membership_overview() o')).o.verified, 1)
+    await fails(c, `select adjust_loyalty_points($1, -100000, 'too much')`, [id], '23514')
+    await admin(c)
+    await stay(4)
+    assert.equal((await one(c, 'select tier_key from customer_profiles where user_id = $1', [id])).tier_key, 'gold')
+    // cleaners have no customer permissions
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, 'select admin_customer_list()', [], '42501')
+  }))
+
+test('membership: claiming a guest booking needs reference AND phone; others are not exposed', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const fri = fmt(f.friday)
+    const b = await booking(c, f, { from: fri, to: day(fri, 2) })
+    const g = await one(c, 'select g.phone from guests g join bookings b on b.guest_id = g.id where b.id = $1', [b.id])
+    const mine = await customer(c, 'Claimer'); const thief = await customer(c, 'Thief')
+    await activate(c, mine); await activate(c, thief)
+    await as(c, 'authenticated', thief)
+    await fails(c, 'select claim_booking($1,$2)', [b.reference, '254700000000'], '23514')              // right reference, wrong phone
+    assert.equal((await one(c, 'select jsonb_array_length(my_bookings()) n')).n, 0)
+    await admin(c)
+    await as(c, 'authenticated', mine)
+    const r = await one(c, 'select claim_booking($1,$2) r', [b.reference, g.phone])
+    assert.equal(r.r.reference, b.reference)
+    assert.equal((await one(c, 'select jsonb_array_length(my_bookings()) n')).n, 1)
+    await admin(c)
+    await as(c, 'authenticated', thief)
+    await fails(c, 'select claim_booking($1,$2)', [b.reference, g.phone], '23514')                    // already someone else's
+    assert.equal((await one(c, 'select jsonb_array_length(my_bookings()) n')).n, 0)
+    // a customer can ask to cancel only their own booking
+    await fails(c, `select request_booking_change($1, 'cancellation', 'please cancel')`, [b.id], 'P0002')
+    await admin(c)
+    await as(c, 'authenticated', mine)
+    await one(c, `select request_booking_change($1, 'cancellation', 'Plans changed') x`, [b.id])
+    await fails(c, `select request_booking_change($1, 'cancellation', 'again')`, [b.id], '23514')
+  }))
+
+test('membership: birthday rewards issue once a year and welcome offer can be switched off', async () =>
+  tx(async (c) => {
+    const id = await customer(c, 'Born'); await activate(c, id)
+    const today = (await one(c, `select nairobi_today() d`)).d
+    await c.query(`update customer_profiles set birthday = ($1::date - interval '30 years')::date where user_id = $2`, [today, id])
+    await c.query(`update promotional_offers set active = true where audience = 'birthday'`)
+    assert.equal((await one(c, 'select issue_birthday_rewards() n')).n, 1)
+    assert.equal((await one(c, 'select issue_birthday_rewards() n')).n, 0)
+    // new members get no welcome reward when the offer is off
+    await c.query(`update promotional_offers set active = false where audience = 'welcome'`)
+    const id2 = await customer(c, 'Late')
+    assert.equal((await activate(c, id2)).welcome_rewards, 0)
+  }))
+
+test('membership emails: pending welcome offer listed once; marketing opt-out respected for birthday; promo audience filtered', async () =>
+  tx(async (c) => {
+    const id = await customer(c, 'Mailer'); await activate(c, id)
+    let rows = await q(c, 'select * from pending_reward_emails($1)', [id])
+    assert.equal(rows.length, 1); assert.equal(rows[0].audience, 'welcome'); assert.match(rows[0].code, /^RGW-[A-F0-9]{8}$/)
+    await c.query('select mark_reward_emailed($1)', [rows[0].reward_id])
+    assert.equal((await q(c, 'select * from pending_reward_emails($1)', [id])).length, 0)
+    // birthday rewards are marketing: skipped when the member opted out
+    const today = (await one(c, 'select nairobi_today() d')).d
+    await c.query(`update customer_profiles set birthday = ($1::date - interval '30 years')::date, marketing_opt_in = false where user_id = $2`, [today, id])
+    await c.query(`update promotional_offers set active = true where audience = 'birthday'`)
+    await c.query('select issue_birthday_rewards()')
+    assert.equal((await q(c, 'select * from pending_reward_emails($1)', [id])).length, 0)
+    await c.query('update customer_profiles set marketing_opt_in = true where user_id = $1', [id])
+    assert.equal((await q(c, 'select * from pending_reward_emails($1)', [id])).length, 1)
+    // promotion audience: only opted-in, active members at or above the offer's tier
+    const o = (await one(c, `insert into promotional_offers(name, audience, kind, value, min_tier_key) values ('Gold only','member','percent',10,'gold') returning id`)).id
+    assert.equal((await q(c, 'select * from promo_recipients($1)', [o])).length, 0)
+    await c.query(`update customer_profiles set tier_key = 'gold' where user_id = $1`, [id])
+    assert.equal((await q(c, 'select * from promo_recipients($1)', [o])).length, 1)
+    await c.query(`update customer_profiles set marketing_opt_in = false where user_id = $1`, [id])
+    assert.equal((await q(c, 'select * from promo_recipients($1)', [o])).length, 0)
+    // customers cannot call these
+    await as(c, 'authenticated', id)
+    await fails(c, 'select * from pending_reward_emails()', [], '42501')
+    await fails(c, 'select * from promo_recipients($1)', [o], '42501')
   }))

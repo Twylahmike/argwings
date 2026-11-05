@@ -109,3 +109,7 @@ Nothing from 0009 onward is applied to the live project yet: run `docs/sql/apply
 
 Still open: calendar drag-and-drop rescheduling (rescheduling works from the booking page), per-user permission overrides,
 website section ordering, SMS/email providers, real smart-lock provider adapter, M-Pesa callback secret.
+
+
+## Customer accounts and membership
+Built. See [MEMBERSHIP.md](MEMBERSHIP.md). Migration 0029, `member-emails` edge function, `/join`, `/login`, `/account/*`, and the Customers & membership admin group.

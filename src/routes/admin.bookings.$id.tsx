@@ -24,6 +24,7 @@ import { UseCreditButton } from '~/components/booking/UseCreditButton'
 import { RecordPaymentDialog } from '~/components/booking/RecordPaymentDialog'
 import { MessagesPanel } from '~/components/booking/MessagesPanel'
 import { RequestPaymentDialog } from '~/components/booking/RequestPaymentDialog'
+import { CustomerRequests } from '~/components/booking/CustomerRequests'
 import { useAdmin } from '~/components/layout/AdminShell'
 
 export const Route = createFileRoute('/admin/bookings/$id')({
@@ -198,6 +199,7 @@ function BookingDetail() {
         <CardContent><p className="whitespace-pre-line text-sm">{b.notes || <span className="text-muted-foreground">No notes.</span>}</p></CardContent>
       </Card>
 
+      <CustomerRequests bookingId={id} />
       {isOwner(me) && <History id={id} />}
       {requesting && <RequestPaymentDialog booking={b} onClose={() => setRequesting(false)} onDone={() => { setRequesting(false); refresh() }} />}
       {recording && <RecordPaymentDialog booking={b} userId={me.id} onClose={() => setRecording(false)} onDone={() => { setRecording(false); refresh() }} />}

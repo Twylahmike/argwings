@@ -26,6 +26,7 @@ export type RateOverrideRow = { id: string; unit_id: string; label: string | nul
 export type Guest = {
   id: string; full_name: string; phone: string; email: string | null; id_number: string | null
   notes: string | null; anonymised_at: string | null; created_at: string
+  vip: boolean; flagged: boolean; flag_reason: string | null
 }
 export type Booking = {
   id: string; reference: string; public_token: string; property_id: string; unit_id: string; guest_id: string | null

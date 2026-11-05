@@ -17,6 +17,7 @@ import { Dialog, DialogContent } from '~/components/ui/dialog'
 import { Field, Textarea } from '~/components/ui/form'
 import { ErrorState, Skeleton } from '~/components/ui/misc'
 import { Money } from '~/components/booking/BookingBits'
+import { UseCreditButton } from '~/components/booking/UseCreditButton'
 import { RecordPaymentDialog } from '~/components/booking/RecordPaymentDialog'
 import { MessagesPanel } from '~/components/booking/MessagesPanel'
 import { RequestPaymentDialog } from '~/components/booking/RequestPaymentDialog'
@@ -139,6 +140,7 @@ function BookingDetail() {
             <CardTitle>Payments</CardTitle>
             <div className="flex flex-wrap gap-2">
               {bal > 0 && b.guest && ['pending', 'confirmed', 'checked_in', 'checked_out'].includes(b.status) && <Button size="sm" onClick={() => setRequesting(true)}><Smartphone className="h-4 w-4" /> Request payment by M-Pesa</Button>}
+              {b.guest && bal > 0 && ['pending', 'confirmed', 'checked_in', 'checked_out'].includes(b.status) && <UseCreditButton bookingId={b.id} guestId={b.guest.id} balance={bal} onDone={refresh} />}
               <Button size="sm" variant="outline" onClick={() => setRecording(true)}><Plus className="h-4 w-4" /> Record manual payment</Button>
             </div>
           </CardHeader>

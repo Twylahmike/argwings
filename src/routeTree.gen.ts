@@ -44,6 +44,7 @@ import { Route as AdminGuestsIndexRouteImport } from './routes/admin.guests.inde
 import { Route as AdminGuestsIdRouteImport } from './routes/admin.guests.$id'
 import { Route as AdminPropertiesIndexRouteImport } from './routes/admin.properties.index'
 import { Route as AdminPropertiesIdRouteImport } from './routes/admin.properties.$id'
+import { Route as AdminStatementIdRouteImport } from './routes/admin.statement.$id'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -220,6 +221,11 @@ const AdminPropertiesIdRoute = AdminPropertiesIdRouteImport.update({
   path: '/properties/$id',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminStatementIdRoute = AdminStatementIdRouteImport.update({
+  id: '/statement/$id',
+  path: '/statement/$id',
+  getParentRoute: () => AdminRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -254,6 +260,7 @@ export interface FileRoutesByFullPath {
   '/admin/bookings/new': typeof AdminBookingsNewRoute
   '/admin/guests/$id': typeof AdminGuestsIdRoute
   '/admin/properties/$id': typeof AdminPropertiesIdRoute
+  '/admin/statement/$id': typeof AdminStatementIdRoute
   '/admin/bookings/': typeof AdminBookingsIndexRoute
   '/admin/guests/': typeof AdminGuestsIndexRoute
   '/admin/properties/': typeof AdminPropertiesIndexRoute
@@ -290,6 +297,7 @@ export interface FileRoutesByTo {
   '/admin/bookings/new': typeof AdminBookingsNewRoute
   '/admin/guests/$id': typeof AdminGuestsIdRoute
   '/admin/properties/$id': typeof AdminPropertiesIdRoute
+  '/admin/statement/$id': typeof AdminStatementIdRoute
   '/admin/bookings': typeof AdminBookingsIndexRoute
   '/admin/guests': typeof AdminGuestsIndexRoute
   '/admin/properties': typeof AdminPropertiesIndexRoute
@@ -328,6 +336,7 @@ export interface FileRoutesById {
   '/admin/bookings/new': typeof AdminBookingsNewRoute
   '/admin/guests/$id': typeof AdminGuestsIdRoute
   '/admin/properties/$id': typeof AdminPropertiesIdRoute
+  '/admin/statement/$id': typeof AdminStatementIdRoute
   '/admin/bookings/': typeof AdminBookingsIndexRoute
   '/admin/guests/': typeof AdminGuestsIndexRoute
   '/admin/properties/': typeof AdminPropertiesIndexRoute
@@ -367,6 +376,7 @@ export interface FileRouteTypes {
     | '/admin/bookings/new'
     | '/admin/guests/$id'
     | '/admin/properties/$id'
+    | '/admin/statement/$id'
     | '/admin/bookings/'
     | '/admin/guests/'
     | '/admin/properties/'
@@ -403,6 +413,7 @@ export interface FileRouteTypes {
     | '/admin/bookings/new'
     | '/admin/guests/$id'
     | '/admin/properties/$id'
+    | '/admin/statement/$id'
     | '/admin/bookings'
     | '/admin/guests'
     | '/admin/properties'
@@ -440,6 +451,7 @@ export interface FileRouteTypes {
     | '/admin/bookings/new'
     | '/admin/guests/$id'
     | '/admin/properties/$id'
+    | '/admin/statement/$id'
     | '/admin/bookings/'
     | '/admin/guests/'
     | '/admin/properties/'
@@ -706,6 +718,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminPropertiesIdRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/statement/$id': {
+      id: '/admin/statement/$id'
+      path: '/statement/$id'
+      fullPath: '/admin/statement/$id'
+      preLoaderRoute: typeof AdminStatementIdRouteImport
+      parentRoute: typeof AdminRoute
+    }
   }
 }
 
@@ -731,6 +750,7 @@ interface AdminRouteChildren {
   AdminBookingsNewRoute: typeof AdminBookingsNewRoute
   AdminGuestsIdRoute: typeof AdminGuestsIdRoute
   AdminPropertiesIdRoute: typeof AdminPropertiesIdRoute
+  AdminStatementIdRoute: typeof AdminStatementIdRoute
   AdminBookingsIndexRoute: typeof AdminBookingsIndexRoute
   AdminGuestsIndexRoute: typeof AdminGuestsIndexRoute
   AdminPropertiesIndexRoute: typeof AdminPropertiesIndexRoute
@@ -758,6 +778,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminBookingsNewRoute: AdminBookingsNewRoute,
   AdminGuestsIdRoute: AdminGuestsIdRoute,
   AdminPropertiesIdRoute: AdminPropertiesIdRoute,
+  AdminStatementIdRoute: AdminStatementIdRoute,
   AdminBookingsIndexRoute: AdminBookingsIndexRoute,
   AdminGuestsIndexRoute: AdminGuestsIndexRoute,
   AdminPropertiesIndexRoute: AdminPropertiesIndexRoute,

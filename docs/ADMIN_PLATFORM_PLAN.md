@@ -24,7 +24,7 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 | 6 | Occupancy calendar | PARTIAL | Exists (timeline); week/day views, drag to reschedule TODO |
 | 7 | Bookings | PARTIAL | Full lifecycle exists (pending/confirmed/checked in/out/cancelled/no-show). Request approval workflow (migration 0009, Admin > Requests) added; booking mode setting (instant or request first) |
 | 8 | Booking requests and inquiries | **DONE** | Migration 0007 (inquiries) and 0009 (booking requests: approve, decline, offer other dates, guest tracking page /request/token) |
-| 9 | Guests and credit | PARTIAL | Guest list/profile/anonymise exist. Credit limits, statements TODO |
+| 9 | Guests and credit | **MOSTLY DONE** | Slice 7 (migration 0013): append-only credit ledger (never below zero, owner-only corrections), use credit on a booking (creates a real payment), VIP and flag-with-reason, printable guest statement. Credit limits and tags TODO |
 | 10 | Media library, gallery, homepage images | TODO | Needs `media` tables + Storage policies |
 | 11 | Branding and CMS | PARTIAL | Website text tab (headline, tagline, socials, feature band, SEO basics). Section ordering, drafts/preview, policies pages TODO |
 | 12 | Reviews and announcements | **DONE** | Migration 0007, Admin > Reviews (approve/hide/flag/reply), Admin > Announcements (schedule/publish/archive), public display + review submission |
@@ -42,7 +42,7 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 | 24 | Database and security | ONGOING | Every new table ships with RLS, indexes, checks, audit trigger and SQL tests |
 | 25 | Admin UX | PARTIAL | Grouped sidebar + "Back to website" added. Breadcrumbs, global search TODO |
 | 26 | Interaction quality | ONGOING | New pages have search/filters, empty/error/loading states, confirmations |
-| 27 | Testing | ONGOING | 113 app tests, 30 SQL tests, browser checks of public pages |
+| 27 | Testing | ONGOING | 113 app tests, 32 SQL tests, browser checks of public pages |
 
 ## Slice 1 (this change): Inquiries, Reviews, Announcements
 - Migration `0007_inquiries_reviews_announcements.sql` (applied to the live project): tables `inquiries`, `inquiry_notes`,

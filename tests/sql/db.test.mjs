@@ -905,3 +905,62 @@ test('property SEO fields are length limited', async () =>
     await fails(c, `update properties set seo_title=$2 where id=$1`, [f.pa, 'A'.repeat(71)], '23514')
     await fails(c, `update properties set seo_description=$2 where id=$1`, [f.pa, 'B'.repeat(201)], '23514')
   }))
+
+test('guest credit: append-only ledger, never negative, applied to a booking through a payment, scoped by access', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    const b = await booking(c, f, { from: d0, to: day(d0, 2), status: 'confirmed', total: 10000, deposit: 5000 })
+    const other = await booking(c, f, { unit: f.ub, prop: f.pb, from: d0, to: day(d0, 2), status: 'confirmed' })
+    const gid = b.guest_id
+    await as(c, 'authenticated', f.manager)
+    assert.equal((await one(c, 'select add_guest_credit($1,3000,$2) b', [gid, 'Refund held as credit'])).b, 3000)
+    await fails(c, 'select add_guest_credit($1,0,$2)', [gid, 'zero'], '23514')
+    await fails(c, 'select add_guest_credit($1,100,$2)', [gid, 'x'], '23514')          // reason too short
+    await fails(c, 'select adjust_guest_credit($1,-100,$2)', [gid, 'manager tries'], '42501')
+    await fails(c, `insert into guest_credit_entries(guest_id, amount, kind, reason) values ($1,999,'credit_added','direct insert')`, [gid], '42501')
+    await fails(c, `update guest_credit_entries set amount = 99999 where guest_id=$1`, [gid], '42501')
+    await fails(c, `delete from guest_credit_entries where guest_id=$1`, [gid], '42501')
+    // a guest this manager cannot see
+    await fails(c, 'select add_guest_credit($1,500,$2)', [other.guest_id, 'not my guest'], '42501')
+    assert.equal((await one(c, 'select guest_credit_balance($1) b', [other.guest_id])).b, null)
+
+    // apply credit: needs balance on both sides
+    await fails(c, 'select apply_guest_credit($1,3500)', [b.id], '23514')               // more than the credit
+    await fails(c, 'select apply_guest_credit($1,10001)', [b.id], '23514')              // more than the booking balance
+    assert.equal((await one(c, 'select apply_guest_credit($1,2000) b', [b.id])).b, 1000)
+    const after = await one(c, 'select amount_paid from bookings where id=$1', [b.id])
+    assert.equal(after.amount_paid, 2000, 'credit became a real payment')
+    assert.equal((await one(c, 'select guest_credit_balance($1) b', [gid])).b, 1000)
+    await fails(c, 'select apply_guest_credit($1,1500)', [b.id], '23514')
+    await fails(c, 'select apply_guest_credit($1,100)', [other.id], '42501')
+
+    // owner correction can not push below zero
+    await as(c, 'authenticated', f.owner)
+    await fails(c, 'select adjust_guest_credit($1,-1500,$2)', [gid, 'too much'], '23514')
+    assert.equal((await one(c, 'select adjust_guest_credit($1,-400,$2) b', [gid, 'Typo fix'])).b, 600)
+
+    // statement matches the ledger and the booking
+    const st = (await one(c, 'select guest_statement($1) s', [gid])).s
+    assert.equal(st.credit_balance, 600)
+    assert.equal(st.credit.length, 3)
+    assert.equal(st.bookings.length, 1)
+    assert.equal(st.bookings[0].paid, 2000)
+    assert.equal(st.bookings[0].balance, 8000)
+    assert.equal(st.payments.length, 1)
+
+    await as(c, 'authenticated', f.cleaner)
+    assert.equal((await q(c, 'select * from guest_credit_entries')).length, 0)
+    await fails(c, 'select add_guest_credit($1,500,$2)', [gid, 'cleaner'], '42501')
+    await as(c, 'anon')
+    await fails(c, 'select * from guest_credit_entries', [], '42501')
+  }))
+
+test('guest flags need a reason', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const b = await booking(c, f, { from: fmt(f.friday), to: day(fmt(f.friday), 1) })
+    await fails(c, `update guests set flagged=true where id=$1`, [b.guest_id], '23514')
+    await c.query(`update guests set flagged=true, flag_reason='Damaged furniture' where id=$1`, [b.guest_id])
+    await c.query(`update guests set vip=true where id=$1`, [b.guest_id])
+  }))

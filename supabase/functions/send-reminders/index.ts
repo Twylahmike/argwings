@@ -39,9 +39,9 @@ Deno.serve(serve('send-reminders', async (req, log) => {
   const { data: left } = await db.from('bookings').select('id').eq('status', 'checked_out').eq('check_out', addDays(today, -1))
   await run('thank_you', left)
 
-  // Retry reminders that failed in the last day (at most 3 attempts each). Skipped messages are never retried.
+  // Retry reminders that failed in the last day (at most 3 attempts each). Skipped messages are never retried. WhatsApp rows only.
   const { data: failed } = await db.from('message_log').select('id, to_phone, body, attempts, booking_id, guest_id, property_id, template')
-    .eq('status', 'failed').gte('created_at', new Date(Date.now() - 24 * 3600_000).toISOString()).lt('attempts', 3).limit(50)
+    .eq('status', 'failed').eq('channel', 'whatsapp').gte('created_at', new Date(Date.now() - 24 * 3600_000).toISOString()).lt('attempts', 3).limit(50)
   for (const m of failed ?? []) {
     if (!m.body) continue
     const out = await deliver(db, log, { bookingId: m.booking_id, guestId: m.guest_id, propertyId: m.property_id, to: m.to_phone, template: m.template as TemplateName, text: m.body as string, existingLogId: m.id as string })

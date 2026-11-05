@@ -1,6 +1,6 @@
 // member-emails: the branded emails of the membership programme.
 //   action "welcome"  (signed-in member)   welcome email + "your offer is ready" for their own pending rewards. Idempotent.
-//   action "sweep"    (service role / cron) issues birthday rewards, then emails every reward still waiting.
+//   action "sweep"    (service role / cron) emails every reward still waiting (birthday rewards are issued by the daily database job first).
 //   action "promote"  (staff with offers.manage) emails an open member offer to opted-in members.
 // "sent" means the email provider ACCEPTED the message. Delivery is never claimed.
 import { z } from 'npm:zod@3.24.1'

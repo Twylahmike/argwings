@@ -1,5 +1,6 @@
 import { createContext, useContext } from 'react'
 import { pub } from './public-client'
+import { sanitizeAppInstall, DEFAULT_APP_INSTALL, type AppInstallSettings } from './pwa'
 import { isSupabaseConfigured } from './config'
 import { DEFAULT_SITE_CONTENT, sanitizeSiteContent, type SiteContent } from './site-content'
 
@@ -44,6 +45,8 @@ export type Brand = {
   guestCheckout: boolean
   /** When false the "Join for free" invitations are hidden and no new memberships are created. */
   registrationEnabled: boolean
+  /** Owner-editable text and switch for the install invitation. */
+  appInstall: AppInstallSettings
   /** Membership tiers shown on the join page. */
   tiers: { key: string; name: string; benefits: string[] }[]
 }
@@ -73,6 +76,7 @@ export const DEFAULT_BRAND: Brand = {
   maintenanceMode: false,
   guestCheckout: true,
   registrationEnabled: true,
+  appInstall: DEFAULT_APP_INSTALL,
   tiers: [],
 }
 
@@ -153,6 +157,7 @@ export async function fetchBrand(): Promise<Brand> {
       maintenanceMode: m.maintenance_mode === true,
       guestCheckout: m.guest_checkout_enabled !== false,
       registrationEnabled: m.registration_enabled !== false,
+      appInstall: sanitizeAppInstall(m.app_install),
       tiers: ((tiersRes.data ?? []) as { key: string; name: string; benefits: string[] | null }[]).map((t) => ({ key: t.key, name: t.name, benefits: t.benefits ?? [] })),
       gallery: managedGallery(gcats.data, gitems.data),
       ...splitBanners(banners.data),

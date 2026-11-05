@@ -7,7 +7,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 const MARKERS = {
   '0009': 't:booking_requests', '0010': 'f:dashboard_overview(date,date,uuid)', '0011': 't:support_tickets', '0012': 't:discount_codes',
   '0013': 'c:guests.vip', '0014': 't:booking_charges', '0015': 't:blocked_ranges', '0016': 't:media_assets', '0017': 't:expense_categories',
-  '0018': 't:contact_numbers', '0019': 't:bar_products', '0020': 't:permissions_catalog', '0021': 'f:global_search(text)', '0022': "s:position('elsif tg_table_name = ''message_log'' then' in pg_get_functiondef('public.trg_notify_more()'::regprocedure)) = 0", '0023': 't:booking_changes', '0024': 't:stay_discounts', '0025': 't:housekeeping_task_photos', '0026': 't:site_pages', '0027': 'c:properties.video_url', '0028': 't:user_permission_overrides', '0029': 't:membership_tiers', '0030': 'c:promotional_offers.min_nights', '0031': 'c:customer_profiles.anonymised_at', '0032': 'f:points_for_stay(uuid,date,date,int)',
+  '0018': 't:contact_numbers', '0019': 't:bar_products', '0020': 't:permissions_catalog', '0021': 'f:global_search(text)', '0022': "s:position('elsif tg_table_name = ''message_log'' then' in pg_get_functiondef('public.trg_notify_more()'::regprocedure)) = 0", '0023': 't:booking_changes', '0024': 't:stay_discounts', '0025': 't:housekeeping_task_photos', '0026': 't:site_pages', '0027': 'c:properties.video_url', '0028': 't:user_permission_overrides', '0029': 't:membership_tiers', '0030': 'c:promotional_offers.min_nights', '0031': 'c:customer_profiles.anonymised_at', '0032': 'f:points_for_stay(uuid,date,date,int)', '0033': 't:app_install_events',
 }
 const dir = 'supabase/migrations'
 const files = readdirSync(dir).filter((f) => /^\d{4}_.*\.sql$/.test(f) && f.slice(0, 4) >= '0009').sort()
@@ -44,7 +44,7 @@ pending += 'end\n$apply$;\n'
 writeFileSync('docs/sql/apply_pending.sql', pending)
 // The same thing in four smaller pastes (a phone's SQL editor copes better). Run them in order; each is guarded and re-runnable.
 const header = pending.slice(0, pending.indexOf('  if ' + cond(MARKERS[files[0].slice(0, 4)])))
-const parts = [['0009', '0011'], ['0012', '0014'], ['0015', '0018'], ['0019', '0021'], ['0022', '0027'], ['0028', '0028'], ['0029', '0029'], ['0030', '0030'], ['0031', '0031'], ['0032', '0032']]
+const parts = [['0009', '0011'], ['0012', '0014'], ['0015', '0018'], ['0019', '0021'], ['0022', '0027'], ['0028', '0028'], ['0029', '0029'], ['0030', '0030'], ['0031', '0031'], ['0032', '0032'], ['0033', '0033']]
 const blocks = new Map()
 for (const f of files) {
   const n = f.slice(0, 4)

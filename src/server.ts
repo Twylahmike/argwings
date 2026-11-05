@@ -4,6 +4,8 @@ import { buildRobots, buildSitemap } from '~/lib/sitemap'
 import { isSupabaseConfigured } from '~/lib/config'
 import { pub } from '~/lib/public-client'
 import { sanitizeSiteContent } from '~/lib/site-content'
+import { buildManifest } from '~/lib/manifest'
+import { DEFAULT_APP_INSTALL, sanitizeAppInstall } from '~/lib/pwa'
 
 const handler = createStartHandler(defaultStreamHandler)
 
@@ -36,6 +38,23 @@ export default createServerEntry({
       const isRobots = url.pathname === '/robots.txt'
       return new Response(isRobots ? buildRobots(origin) : buildSitemap(origin, slugs, pageSlugs), {
         headers: { 'Content-Type': isRobots ? 'text/plain; charset=utf-8' : 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' },
+      })
+    }
+    if (url.pathname === '/manifest.webmanifest') {
+      let businessName = 'RG Wings Stays'
+      let brandColor = ''
+      let app = DEFAULT_APP_INSTALL
+      if (isSupabaseConfigured) {
+        try {
+          const { data } = await pub().from('settings').select('key, value').in('key', ['business_name', 'brand_color', 'app_install'])
+          const m = Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value as unknown]))
+          if (typeof m.business_name === 'string' && m.business_name && m.business_name !== 'Your BNB Brand') businessName = m.business_name
+          if (typeof m.brand_color === 'string') brandColor = m.brand_color
+          app = sanitizeAppInstall(m.app_install)
+        } catch { /* fall back to the defaults */ }
+      }
+      return new Response(JSON.stringify(buildManifest(url.origin, { businessName, brandColor, app })), {
+        headers: { 'Content-Type': 'application/manifest+json; charset=utf-8', 'Cache-Control': 'public, max-age=600' },
       })
     }
     const res = await handler(request, opts)

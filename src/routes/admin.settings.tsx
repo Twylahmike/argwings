@@ -16,6 +16,7 @@ import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Field, Input, Select, Textarea } from '~/components/ui/form'
+import { AppInstall } from '~/components/admin/AppInstall'
 import { ErrorState, PageHeader, Skeleton, Tabs, TableWrap, td, th } from '~/components/ui/misc'
 
 export const Route = createFileRoute('/admin/settings')({
@@ -28,13 +29,14 @@ const KEYS = ['business_name', 'brand_color', 'logo_url', 'support_whatsapp', 'o
   'default_check_in_time', 'default_check_out_time', 'cancellation_policy', 'reminder_days_before', 'balance_reminder_days_before'] as const
 
 function SettingsPage() {
-  const [tab, setTab] = useState<'business' | 'website' | 'system' | 'audit' | 'export'>('business')
+  const [tab, setTab] = useState<'business' | 'website' | 'app' | 'system' | 'audit' | 'export'>('business')
   return (
     <div>
       <PageHeader title="Settings" />
-      <div className="mb-5"><Tabs label="Settings sections" value={tab} onChange={setTab} tabs={[{ value: 'business', label: 'Business' }, { value: 'website', label: 'Website' }, { value: 'system', label: 'Payments & WhatsApp' }, { value: 'audit', label: 'Audit log' }, { value: 'export', label: 'Data export' }]} /></div>
+      <div className="mb-5"><Tabs label="Settings sections" value={tab} onChange={setTab} tabs={[{ value: 'business', label: 'Business' }, { value: 'website', label: 'Website' }, { value: 'app', label: 'App installation' }, { value: 'system', label: 'Payments & WhatsApp' }, { value: 'audit', label: 'Audit log' }, { value: 'export', label: 'Data export' }]} /></div>
       {tab === 'business' && <Business />}
       {tab === 'website' && <WebsiteContentForm />}
+      {tab === 'app' && <AppInstall />}
       {tab === 'system' && <System />}
       {tab === 'audit' && <Audit />}
       {tab === 'export' && <Export />}

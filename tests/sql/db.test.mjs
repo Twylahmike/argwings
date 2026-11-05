@@ -258,7 +258,7 @@ test('RLS: anon cannot read bookings, guests, payments; can use availability and
     for (const k of ['email', 'id_number', 'notes', 'guest_id', 'created_by']) assert.ok(!(k in info), `${k} must not leak`)
     assert.equal((await one(c, 'select get_booking_by_token($1) j', [randomUUID()])).j, null)
     const settings = await q(c, 'select key from settings')
-    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content', 'booking_mode', 'business_email', 'business_address', 'currency', 'maintenance_mode', 'guest_checkout_enabled', 'registration_enabled', 'module_bar_menu'].includes(s.key)))
+    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content', 'booking_mode', 'business_email', 'business_address', 'currency', 'maintenance_mode', 'guest_checkout_enabled', 'registration_enabled', 'app_install', 'module_bar_menu'].includes(s.key)))
     assert.ok(settings.length > 0)
   }))
 
@@ -2216,4 +2216,37 @@ test('points combine with an offer: the cap applies to what is left after other 
     const b = await one(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)', [id, null, reward, null, f.ua, fri, day(fri, 2), 2, 'C', phone(), null, 'website', cap])
     assert.equal(b.discount, offerAmt + cap)
     await fails(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)', [id, null, null, null, f.ua, day(fri, 9), day(fri, 11), 2, 'C', phone(), null, 'website', 99999], '23514')
+  }))
+
+// ---------------------------------------------------------------------------------------------
+// App installation analytics (migration 0033)
+// ---------------------------------------------------------------------------------------------
+test('app install: anyone can record events (deduplicated, validated); only the owner can read the numbers; nothing else is exposed', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await as(c, 'anon')
+    await one(c, `select record_install_event('impression', 'android-chrome', 'visit-0001')`)
+    await one(c, `select record_install_event('impression', 'android-chrome', 'visit-0001')`)     // same visit, same kind: counted once
+    await one(c, `select record_install_event('click', 'android-chrome', 'visit-0001')`)
+    await one(c, `select record_install_event('installed', 'android-chrome', 'visit-0001')`)
+    await one(c, `select record_install_event('impression', 'ios-safari', 'visit-0002')`)
+    await one(c, `select record_install_event('bogus', 'ios-safari', 'visit-0003')`)            // ignored
+    await one(c, `select record_install_event('impression', 'Bad Platform!', 'visit-0004')`)    // ignored
+    await one(c, `select record_install_event('impression', 'x', 'short')`)                    // ignored
+    await fails(c, 'select * from app_install_events', [], '42501')
+    await fails(c, 'select app_install_stats()', [], '42501')
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, 'select app_install_stats()', [], '42501')
+    await as(c, 'authenticated', f.owner)
+    const s = (await one(c, 'select app_install_stats(30) s')).s
+    assert.deepEqual([s.impressions, s.clicks, s.installed, s.accepted], [2, 1, 1, 0])
+    const android = s.by_platform.find((p) => p.platform === 'android-chrome')
+    assert.deepEqual([android.impressions, android.clicks, android.installed], [1, 1, 1])
+    await admin(c)
+    await as(c, 'anon')
+    assert.equal((await q(c, `select key from settings where key = 'app_install'`)).length, 0)   // no row yet, but the key is publicly readable
+    await admin(c)
+    await c.query(`insert into settings(key, value) values ('app_install', '{"enabled": true}'::jsonb)`)
+    await as(c, 'anon')
+    assert.equal((await q(c, `select key from settings where key = 'app_install'`)).length, 1)
   }))

@@ -47,6 +47,7 @@ create or replace function add_guest_credit(p_guest uuid, p_amount int, p_reason
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid()); v_bal int;
 begin
+  perform require_permission('credit.manage');
   if not can_see_guest(v_uid, p_guest) then raise exception 'Not allowed' using errcode = '42501'; end if;
   if p_amount is null or p_amount < 1 then raise exception 'Enter an amount greater than zero.' using errcode = 'check_violation'; end if;
   perform 1 from guests where id = p_guest for update;
@@ -76,6 +77,7 @@ create or replace function apply_guest_credit(p_booking uuid, p_amount int) retu
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid()); b bookings; v_bal int; v_due int;
 begin
+  perform require_permission('credit.manage');
   select * into b from bookings where id = p_booking for update;
   if not found or b.guest_id is null or not can_manage_property(v_uid, b.property_id) then raise exception 'Not allowed' using errcode = '42501'; end if;
   if b.status not in ('pending','confirmed','checked_in','checked_out') then raise exception 'This booking cannot take a payment.' using errcode = 'check_violation'; end if;

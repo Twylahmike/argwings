@@ -18,6 +18,7 @@ import { Route as SearchRouteImport } from './routes/search'
 import { Route as SpacesRouteImport } from './routes/spaces'
 import { Route as AdminIndexRouteImport } from './routes/admin.index'
 import { Route as AdminAccessRouteImport } from './routes/admin.access'
+import { Route as AdminActivityRouteImport } from './routes/admin.activity'
 import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcements'
 import { Route as AdminBarRouteImport } from './routes/admin.bar'
 import { Route as AdminBlockedRouteImport } from './routes/admin.blocked'
@@ -40,6 +41,7 @@ import { Route as AdminPromotionsRouteImport } from './routes/admin.promotions'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminRequestsRouteImport } from './routes/admin.requests'
 import { Route as AdminReviewsRouteImport } from './routes/admin.reviews'
+import { Route as AdminRolesRouteImport } from './routes/admin.roles'
 import { Route as AdminRoomsRouteImport } from './routes/admin.rooms'
 import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminStaffRouteImport } from './routes/admin.staff'
@@ -100,6 +102,11 @@ const AdminIndexRoute = AdminIndexRouteImport.update({
 const AdminAccessRoute = AdminAccessRouteImport.update({
   id: '/access',
   path: '/access',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminActivityRoute = AdminActivityRouteImport.update({
+  id: '/activity',
+  path: '/activity',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminAnnouncementsRoute = AdminAnnouncementsRouteImport.update({
@@ -212,6 +219,11 @@ const AdminReviewsRoute = AdminReviewsRouteImport.update({
   path: '/reviews',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminRolesRoute = AdminRolesRouteImport.update({
+  id: '/roles',
+  path: '/roles',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminRoomsRoute = AdminRoomsRouteImport.update({
   id: '/rooms',
   path: '/rooms',
@@ -302,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
   '/admin/access': typeof AdminAccessRoute
+  '/admin/activity': typeof AdminActivityRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/bar': typeof AdminBarRoute
   '/admin/blocked': typeof AdminBlockedRoute
@@ -324,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/roles': typeof AdminRolesRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
@@ -350,6 +364,7 @@ export interface FileRoutesByTo {
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
   '/admin/access': typeof AdminAccessRoute
+  '/admin/activity': typeof AdminActivityRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/bar': typeof AdminBarRoute
   '/admin/blocked': typeof AdminBlockedRoute
@@ -372,6 +387,7 @@ export interface FileRoutesByTo {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/roles': typeof AdminRolesRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
@@ -400,6 +416,7 @@ export interface FileRoutesById {
   '/search': typeof SearchRoute
   '/spaces': typeof SpacesRoute
   '/admin/access': typeof AdminAccessRoute
+  '/admin/activity': typeof AdminActivityRoute
   '/admin/announcements': typeof AdminAnnouncementsRoute
   '/admin/bar': typeof AdminBarRoute
   '/admin/blocked': typeof AdminBlockedRoute
@@ -422,6 +439,7 @@ export interface FileRoutesById {
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
   '/admin/reviews': typeof AdminReviewsRoute
+  '/admin/roles': typeof AdminRolesRoute
   '/admin/rooms': typeof AdminRoomsRoute
   '/admin/settings': typeof AdminSettingsRoute
   '/admin/staff': typeof AdminStaffRoute
@@ -451,6 +469,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/spaces'
     | '/admin/access'
+    | '/admin/activity'
     | '/admin/announcements'
     | '/admin/bar'
     | '/admin/blocked'
@@ -473,6 +492,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/requests'
     | '/admin/reviews'
+    | '/admin/roles'
     | '/admin/rooms'
     | '/admin/settings'
     | '/admin/staff'
@@ -499,6 +519,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/spaces'
     | '/admin/access'
+    | '/admin/activity'
     | '/admin/announcements'
     | '/admin/bar'
     | '/admin/blocked'
@@ -521,6 +542,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/requests'
     | '/admin/reviews'
+    | '/admin/roles'
     | '/admin/rooms'
     | '/admin/settings'
     | '/admin/staff'
@@ -548,6 +570,7 @@ export interface FileRouteTypes {
     | '/search'
     | '/spaces'
     | '/admin/access'
+    | '/admin/activity'
     | '/admin/announcements'
     | '/admin/bar'
     | '/admin/blocked'
@@ -570,6 +593,7 @@ export interface FileRouteTypes {
     | '/admin/reports'
     | '/admin/requests'
     | '/admin/reviews'
+    | '/admin/roles'
     | '/admin/rooms'
     | '/admin/settings'
     | '/admin/staff'
@@ -666,6 +690,13 @@ declare module '@tanstack/react-router' {
       path: '/access'
       fullPath: '/admin/access'
       preLoaderRoute: typeof AdminAccessRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/activity': {
+      id: '/admin/activity'
+      path: '/activity'
+      fullPath: '/admin/activity'
+      preLoaderRoute: typeof AdminActivityRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/announcements': {
@@ -822,6 +853,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminReviewsRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/roles': {
+      id: '/admin/roles'
+      path: '/roles'
+      fullPath: '/admin/roles'
+      preLoaderRoute: typeof AdminRolesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/rooms': {
       id: '/admin/rooms'
       path: '/rooms'
@@ -939,6 +977,7 @@ declare module '@tanstack/react-router' {
 
 interface AdminRouteChildren {
   AdminAccessRoute: typeof AdminAccessRoute
+  AdminActivityRoute: typeof AdminActivityRoute
   AdminAnnouncementsRoute: typeof AdminAnnouncementsRoute
   AdminBarRoute: typeof AdminBarRoute
   AdminBlockedRoute: typeof AdminBlockedRoute
@@ -961,6 +1000,7 @@ interface AdminRouteChildren {
   AdminReportsRoute: typeof AdminReportsRoute
   AdminRequestsRoute: typeof AdminRequestsRoute
   AdminReviewsRoute: typeof AdminReviewsRoute
+  AdminRolesRoute: typeof AdminRolesRoute
   AdminRoomsRoute: typeof AdminRoomsRoute
   AdminSettingsRoute: typeof AdminSettingsRoute
   AdminStaffRoute: typeof AdminStaffRoute
@@ -978,6 +1018,7 @@ interface AdminRouteChildren {
 
 const AdminRouteChildren: AdminRouteChildren = {
   AdminAccessRoute: AdminAccessRoute,
+  AdminActivityRoute: AdminActivityRoute,
   AdminAnnouncementsRoute: AdminAnnouncementsRoute,
   AdminBarRoute: AdminBarRoute,
   AdminBlockedRoute: AdminBlockedRoute,
@@ -1000,6 +1041,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminReportsRoute: AdminReportsRoute,
   AdminRequestsRoute: AdminRequestsRoute,
   AdminReviewsRoute: AdminReviewsRoute,
+  AdminRolesRoute: AdminRolesRoute,
   AdminRoomsRoute: AdminRoomsRoute,
   AdminSettingsRoute: AdminSettingsRoute,
   AdminStaffRoute: AdminStaffRoute,

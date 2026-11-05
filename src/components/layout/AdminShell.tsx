@@ -1,10 +1,11 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react'
 import { Link, Outlet, useNavigate, useRouterState } from '@tanstack/react-router'
+import { usePermissions } from '~/lib/permissions'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3, BedDouble, Brush, Building2, CalendarCheck, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
   Settings, Star, UserCog, Users, Wallet, type LucideIcon,
-  Ban, Crown, KeyRound, Wine, Phone, Send, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
+  Ban, Crown, History, ShieldCheck, KeyRound, Wine, Phone, Send, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
 import { canManage, isOwner, type Me } from '~/lib/auth'
@@ -30,36 +31,38 @@ export function useAdmin(): AdminCtx {
   return v
 }
 
-type NavItem = { to: string; label: string; icon: LucideIcon; show: (me: Me) => boolean; primary?: boolean; group: string; module?: 'module_bar_menu' | 'module_bar_stock' }
+type NavItem = { to: string; label: string; icon: LucideIcon; show: (me: Me) => boolean; primary?: boolean; group: string; perm?: string; module?: 'module_bar_menu' | 'module_bar_stock' }
 const NAV: NavItem[] = [
-  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, show: canManage, primary: true, group: 'Operations' },
-  { to: '/admin/calendar', label: 'Calendar', icon: CalendarDays, show: canManage, primary: true, group: 'Operations' },
-  { to: '/admin/bookings', label: 'Bookings', icon: ClipboardList, show: canManage, primary: true, group: 'Operations' },
-  { to: '/admin/requests', label: 'Requests', icon: CalendarCheck, show: canManage, group: 'Operations' },
-  { to: '/admin/frontdesk', label: 'Check-in & out', icon: DoorOpen, show: canManage, group: 'Operations' },
-  { to: '/admin/blocked', label: 'Blocked dates', icon: Ban, show: canManage, group: 'Operations' },
-  { to: '/admin/inquiries', label: 'Inquiries', icon: Inbox, show: canManage, group: 'Operations' },
-  { to: '/admin/support', label: 'Support', icon: LifeBuoy, show: canManage, group: 'Operations' },
-  { to: '/admin/housekeeping', label: 'Housekeeping', icon: Brush, show: () => true, primary: true, group: 'Operations' },
-  { to: '/admin/maintenance', label: 'Maintenance', icon: Wrench, show: () => true, group: 'Operations' },
-  { to: '/admin/properties', label: 'Properties', icon: Building2, show: canManage, group: 'Operations' },
-  { to: '/admin/rooms', label: 'Rooms', icon: BedDouble, show: canManage, group: 'Operations' },
-  { to: '/admin/guests', label: 'Guests', icon: Users, show: canManage, group: 'Operations' },
-  { to: '/admin/media', label: 'Media library', icon: ImagePlus, show: canManage, group: 'Website' },
-  { to: '/admin/gallery', label: 'Gallery', icon: Images, show: canManage, group: 'Website' },
-  { to: '/admin/homepage', label: 'Homepage images', icon: PanelTop, show: canManage, group: 'Website' },
-  { to: '/admin/bar', label: 'Bar menu & stock', icon: Wine, show: canManage, group: 'Hospitality services', module: 'module_bar_menu' },
-  { to: '/admin/reviews', label: 'Reviews', icon: Star, show: canManage, group: 'Website' },
-  { to: '/admin/announcements', label: 'Announcements', icon: Megaphone, show: canManage, group: 'Website' },
-  { to: '/admin/owner', label: "Owner's overview", icon: Crown, show: isOwner, group: 'Business' },
-  { to: '/admin/promotions', label: 'Promotions', icon: Tag, show: canManage, group: 'Business' },
-  { to: '/admin/finance', label: 'Finance', icon: Wallet, show: canManage, group: 'Business' },
-  { to: '/admin/reports', label: 'Reports', icon: BarChart3, show: canManage, group: 'Business' },
-  { to: '/admin/communications', label: 'Guest communications', icon: Send, show: canManage, group: 'Guest experience' },
-  { to: '/admin/access', label: 'Smart access', icon: KeyRound, show: canManage, group: 'Guest experience' },
+  { to: '/admin', label: 'Dashboard', icon: LayoutDashboard, show: canManage, primary: true, group: 'Operations', perm: 'dashboard.view' },
+  { to: '/admin/calendar', label: 'Calendar', icon: CalendarDays, show: canManage, primary: true, group: 'Operations', perm: 'bookings.view' },
+  { to: '/admin/bookings', label: 'Bookings', icon: ClipboardList, show: canManage, primary: true, group: 'Operations', perm: 'bookings.view' },
+  { to: '/admin/requests', label: 'Requests', icon: CalendarCheck, show: canManage, group: 'Operations', perm: 'requests.manage' },
+  { to: '/admin/frontdesk', label: 'Check-in & out', icon: DoorOpen, show: canManage, group: 'Operations', perm: 'checkin.manage' },
+  { to: '/admin/blocked', label: 'Blocked dates', icon: Ban, show: canManage, group: 'Operations', perm: 'blocked.manage' },
+  { to: '/admin/inquiries', label: 'Inquiries', icon: Inbox, show: canManage, group: 'Operations', perm: 'inquiries.manage' },
+  { to: '/admin/support', label: 'Support', icon: LifeBuoy, show: canManage, group: 'Operations', perm: 'support.manage' },
+  { to: '/admin/housekeeping', label: 'Housekeeping', icon: Brush, show: () => true, primary: true, group: 'Operations', perm: 'housekeeping.view' },
+  { to: '/admin/maintenance', label: 'Maintenance', icon: Wrench, show: () => true, group: 'Operations', perm: 'maintenance.report' },
+  { to: '/admin/properties', label: 'Properties', icon: Building2, show: canManage, group: 'Operations', perm: 'listings.manage' },
+  { to: '/admin/rooms', label: 'Rooms', icon: BedDouble, show: canManage, group: 'Operations', perm: 'rooms.manage' },
+  { to: '/admin/guests', label: 'Guests', icon: Users, show: canManage, group: 'Operations', perm: 'guests.view' },
+  { to: '/admin/media', label: 'Media library', icon: ImagePlus, show: canManage, group: 'Website', perm: 'media.manage' },
+  { to: '/admin/gallery', label: 'Gallery', icon: Images, show: canManage, group: 'Website', perm: 'media.manage' },
+  { to: '/admin/homepage', label: 'Homepage images', icon: PanelTop, show: canManage, group: 'Website', perm: 'media.manage' },
+  { to: '/admin/bar', label: 'Bar menu & stock', icon: Wine, show: canManage, group: 'Hospitality services', module: 'module_bar_menu', perm: 'bar.manage' },
+  { to: '/admin/reviews', label: 'Reviews', icon: Star, show: canManage, group: 'Website', perm: 'cms.manage' },
+  { to: '/admin/announcements', label: 'Announcements', icon: Megaphone, show: canManage, group: 'Website', perm: 'cms.manage' },
+  { to: '/admin/owner', label: "Owner's overview", icon: Crown, show: canManage, group: 'Business', perm: 'owner.overview' },
+  { to: '/admin/promotions', label: 'Promotions', icon: Tag, show: canManage, group: 'Business', perm: 'marketing.manage' },
+  { to: '/admin/finance', label: 'Finance', icon: Wallet, show: canManage, group: 'Business', perm: 'finance.view' },
+  { to: '/admin/reports', label: 'Reports', icon: BarChart3, show: canManage, group: 'Business', perm: 'reports.view' },
+  { to: '/admin/communications', label: 'Guest communications', icon: Send, show: canManage, group: 'Guest experience', perm: 'comms.manage' },
+  { to: '/admin/access', label: 'Smart access', icon: KeyRound, show: canManage, group: 'Guest experience', perm: 'access.manage' },
   { to: '/admin/contacts', label: 'Contact numbers', icon: Phone, show: canManage, group: 'System' },
-  { to: '/admin/messages', label: 'Messages', icon: MessageCircle, show: canManage, group: 'Guest experience' },
-  { to: '/admin/staff', label: 'Staff', icon: UserCog, show: isOwner, group: 'System' },
+  { to: '/admin/messages', label: 'Messages', icon: MessageCircle, show: canManage, group: 'Guest experience', perm: 'comms.manage' },
+  { to: '/admin/staff', label: 'Users', icon: UserCog, show: isOwner, group: 'System' },
+  { to: '/admin/roles', label: 'Team roles', icon: ShieldCheck, show: isOwner, group: 'System' },
+  { to: '/admin/activity', label: 'Activity log', icon: History, show: canManage, group: 'System', perm: 'audit.view' },
   { to: '/admin/settings', label: 'Settings', icon: Settings, show: isOwner, group: 'System' },
 ]
 const GROUPS = ['Operations', 'Hospitality services', 'Website', 'Business', 'Guest experience', 'System']
@@ -113,7 +116,8 @@ export function AdminShell({ me }: { me: Me }) {
     return Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value === true]))
   }, staleTime: 60_000 })
   const modOn = (k?: string) => !k || mods.data?.module_bar_menu === true || mods.data?.module_bar_stock === true
-  const items = NAV.filter((n) => n.show(me) && modOn(n.module))
+  const perms = usePermissions()
+  const items = NAV.filter((n) => n.show(me) && modOn(n.module) && perms.can(n.perm))
   const primary = items.filter((n) => n.primary)
   const showFilter = canManage(me) && me.properties.length > 1
 

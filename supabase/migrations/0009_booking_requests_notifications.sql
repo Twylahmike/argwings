@@ -162,6 +162,7 @@ create or replace function approve_booking_request(p_request uuid, p_note text d
 language plpgsql security definer set search_path = public as $$
 declare r booking_requests; b bookings; v_hours int;
 begin
+  perform require_permission('requests.manage');
   select * into r from booking_requests where id = p_request for update;
   if not found or not (is_owner_or_manager(auth.uid()) and can_manage_property(auth.uid(), r.property_id)) then
     raise exception 'Not allowed' using errcode = '42501';
@@ -184,6 +185,7 @@ create or replace function reject_booking_request(p_request uuid, p_note text de
 language plpgsql security definer set search_path = public as $$
 declare r booking_requests;
 begin
+  perform require_permission('requests.manage');
   select * into r from booking_requests where id = p_request for update;
   if not found or not (is_owner_or_manager(auth.uid()) and can_manage_property(auth.uid(), r.property_id)) then
     raise exception 'Not allowed' using errcode = '42501';
@@ -198,6 +200,7 @@ create or replace function offer_alternative_dates(p_request uuid, p_in date, p_
 language plpgsql security definer set search_path = public as $$
 declare r booking_requests;
 begin
+  perform require_permission('requests.manage');
   select * into r from booking_requests where id = p_request for update;
   if not found or not (is_owner_or_manager(auth.uid()) and can_manage_property(auth.uid(), r.property_id)) then
     raise exception 'Not allowed' using errcode = '42501';

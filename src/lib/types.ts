@@ -53,7 +53,7 @@ export type MessageLog = {
   id: string; booking_id: string | null; guest_id: string | null; property_id: string | null; channel: string
   template: string; to_phone: string; body: string | null; status: string; provider_id: string | null; error: string | null; created_at: string
 }
-export type Profile = { id: string; full_name: string; phone: string | null; active: boolean; created_at: string }
+export type Profile = { id: string; full_name: string; phone: string | null; active: boolean; created_at: string; team_role_id?: string | null }
 
 /** Shape returned by the get_booking_by_token RPC (safe fields only). */
 export type PublicBooking = {

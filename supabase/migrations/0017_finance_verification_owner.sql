@@ -16,7 +16,7 @@ create or replace function payment_verification_default() returns trigger langua
 declare v_uid uuid := auth.uid();
 begin
   -- Gateway-confirmed payments (STK) and anything recorded by the owner or the service role are verified at once.
-  if v_uid is null or has_role(v_uid, 'owner') or (new.method = 'mpesa_stk') then
+  if v_uid is null or has_permission(v_uid, 'payments.verify') or (new.method = 'mpesa_stk') then
     new.verified := true;
   elsif new.kind = 'refund' or new.method in ('mpesa_manual','bank') then
     new.verified := false;
@@ -32,8 +32,8 @@ create trigger trg_payment_verification before insert on payments for each row e
 create or replace function guard_payment_verification() returns trigger language plpgsql security definer set search_path = public as $$
 begin
   if (new.verified is distinct from old.verified or new.verified_by is distinct from old.verified_by or new.verified_at is distinct from old.verified_at)
-     and auth.uid() is not null and not has_role(auth.uid(), 'owner') then
-    raise exception 'Only the owner can verify payments' using errcode = '42501';
+     and auth.uid() is not null and not has_permission(auth.uid(), 'payments.verify') then
+    raise exception 'You do not have permission to verify payments' using errcode = '42501';
   end if;
   return new;
 end $$;
@@ -43,7 +43,7 @@ create or replace function verify_payment(p_payment uuid, p_ok boolean default t
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid());
 begin
-  if not has_role(v_uid, 'owner') then raise exception 'Only the owner can verify payments' using errcode = '42501'; end if;
+  perform require_permission('payments.verify');
   update payments set verified = p_ok, verified_by = v_uid, verified_at = now() where id = p_payment;
   if not found then raise exception 'Payment not found' using errcode = 'no_data_found'; end if;
 end $$;
@@ -74,10 +74,10 @@ create or replace function expense_status_default() returns trigger language plp
 declare v_uid uuid := auth.uid();
 begin
   if tg_op = 'INSERT' then
-    if v_uid is not null and not has_role(v_uid, 'owner') then new.status := 'pending'; new.reviewed_by := null; new.reviewed_at := null; end if;
+    if v_uid is not null and not has_permission(v_uid, 'expenses.approve') then new.status := 'pending'; new.reviewed_by := null; new.reviewed_at := null; end if;
   elsif new.status is distinct from old.status or new.reviewed_by is distinct from old.reviewed_by then
-    if v_uid is not null and not has_role(v_uid, 'owner') then raise exception 'Only the owner can approve expenses' using errcode = '42501'; end if;
-  elsif v_uid is not null and not has_role(v_uid, 'owner') and old.status = 'approved'
+    if v_uid is not null and not has_permission(v_uid, 'expenses.approve') then raise exception 'You do not have permission to approve expenses' using errcode = '42501'; end if;
+  elsif v_uid is not null and not has_permission(v_uid, 'expenses.approve') and old.status = 'approved'
         and (new.amount is distinct from old.amount or new.category is distinct from old.category or new.expense_date is distinct from old.expense_date) then
     new.status := 'pending';                      -- changing an approved expense sends it back for approval
   end if;
@@ -89,7 +89,7 @@ create or replace function review_expense(p_expense uuid, p_approve boolean, p_n
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid());
 begin
-  if not has_role(v_uid, 'owner') then raise exception 'Only the owner can approve expenses' using errcode = '42501'; end if;
+  perform require_permission('expenses.approve');
   if not p_approve and char_length(trim(coalesce(p_note, ''))) < 3 then raise exception 'Say why the expense was rejected.' using errcode = 'check_violation'; end if;
   update expenses set status = case when p_approve then 'approved' else 'rejected' end, reviewed_by = v_uid, reviewed_at = now(), review_note = nullif(trim(coalesce(p_note, '')), '') where id = p_expense;
   if not found then raise exception 'Expense not found' using errcode = 'no_data_found'; end if;
@@ -255,7 +255,7 @@ declare
   v_gross bigint; v_collected bigint; v_unverified bigint; v_refunds bigint; v_outstanding bigint; v_exp bigint; v_exp_pending bigint;
   v_monthly jsonb; v_by_prop jsonb; v_units int; v_occupied int; v_maint int; v_book jsonb; v_ops jsonb; v_staff jsonb; v_perf jsonb;
 begin
-  if not has_role(v_uid, 'owner') then raise exception 'Only the owner can open this overview' using errcode = '42501'; end if;
+  perform require_permission('owner.overview');
   if p_from is null or p_to is null or p_to < p_from or p_to - p_from > 731 then raise exception 'Choose a valid date range of two years or less' using errcode = 'check_violation'; end if;
 
   select coalesce(sum(total_amount), 0) into v_gross from bookings

@@ -22,27 +22,27 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 | 4 | Listings management | **MOSTLY DONE** | Slice 2: publish/unpublish, featured, archive/restore, per-property cancellation policy, bathrooms, bed setup, min/max stay, maintenance flag. Video upload and length-of-stay discounts TODO |
 | 5 | Rooms and occupancy | **DONE** | Slice 2: Admin > Rooms board (7 colour-coded statuses for any day), room condition control; overlap prevention already in the database |
 | 6 | Occupancy calendar | PARTIAL | Exists (timeline); week/day views, drag to reschedule TODO |
-| 7 | Bookings | PARTIAL | Full lifecycle exists (pending/confirmed/checked in/out/cancelled/no-show). Request approval workflow (migration 0009, Admin > Requests) added; booking mode setting (instant or request first) |
+| 7 | Bookings | **DONE (core)** | Lifecycle, manual booking, request approval (0009), digital check-in/out with extra charges (0014), charges ledger, payments, credit, discounts (0012). "Rejected" shows as a declined request |
 | 8 | Booking requests and inquiries | **DONE** | Migration 0007 (inquiries) and 0009 (booking requests: approve, decline, offer other dates, guest tracking page /request/token) |
 | 9 | Guests and credit | **MOSTLY DONE** | Slice 7 (migration 0013): append-only credit ledger (never below zero, owner-only corrections), use credit on a booking (creates a real payment), VIP and flag-with-reason, printable guest statement. Credit limits and tags TODO |
-| 10 | Media library, gallery, homepage images | TODO | Needs `media` tables + Storage policies |
-| 11 | Branding and CMS | PARTIAL | Website text tab (headline, tagline, socials, feature band, SEO basics). Section ordering, drafts/preview, policies pages TODO |
+| 10 | Media library, gallery, homepage images | **DONE** | Migration 0016: Admin > Media library (image/video upload, categories, search, in-use delete protection), Gallery (categories, reorder, publish), Homepage images (hero + promo banners, scheduling). Public site reads them; falls back to property photos |
+| 11 | Branding and CMS | **MOSTLY DONE** | Website text, drafts, preview of the top section, publish and version history (0020). Brand colour and logo in Settings. Section ordering and separate policy pages TODO |
 | 12 | Reviews and announcements | **DONE** | Migration 0007, Admin > Reviews (approve/hide/flag/reply), Admin > Announcements (schedule/publish/archive), public display + review submission |
-| 13 | Blocked dates | PARTIAL | `staff_block_dates` exists (calendar). Multi-unit/property block UI, reasons TODO |
-| 14 | Financial management | PARTIAL | Payments, expenses, P&L exist. Approval status, categories table, refund workflow, card/bank verification UI TODO |
-| 15 | Reports | PARTIAL | Reports + CSV. PDF/Excel exports, 14 report set TODO |
-| 16 | Bar menu and stock | TODO | Optional module behind a settings flag |
+| 13 | Blocked dates | **DONE** | Migration 0015: Admin > Blocked dates (room / several rooms / whole property, reasons, refuses to cover real bookings, release) and Maintenance requests (assign, priority, completion notes, can take a room out of service) |
+| 14 | Financial management | **MOSTLY DONE** | Migration 0017: payments verification (manual M-Pesa/bank/card and refunds by managers wait for the owner), unverified money is never revenue, expense categories and approval, financial records never hard-deleted, card method. Bank reconciliation matching TODO |
+| 15 | Reports | **DONE** | Reporting centre: 14 reports, filters, CSV, Excel (.xlsx) and branded PDF/print |
+| 16 | Bar menu and stock | **DONE (optional)** | Migration 0019: bar menu + stock behind two settings switches; public menu only when on; stock only changes through a ledger; low-stock alerts |
 | 17 | Marketing and SEO | **MOSTLY DONE** | Slice 6 (migration 0012): Admin > Promotions (percent/fixed codes, property scope, dates, min nights/total, max uses; applied in the database, race-safe, cancelled bookings return the use), code box on the booking page, per-listing search title/description, robots.txt and sitemap.xml. Campaign emails/WhatsApp blasts TODO |
 | 18 | Support tickets | **DONE** | Slice 5 (migration 0011): Admin > Support, categories, priority, status, assignment, linked booking, internal/staff thread, resolved time stamped by the database |
-| 19 | Roles and permissions | PARTIAL | 3 fixed roles enforced by RLS. Custom roles/permission matrix, suspension (active flag exists), login history TODO |
-| 20 | Site settings and contacts | PARTIAL | Business, brand, WhatsApp, deposit, policy exist. Currency/time zone/tax/maintenance mode/contact numbers TODO |
-| 21 | Activity log | PARTIAL | Audit triggers on bookings, payments, units, expenses, roles, settings and now inquiries/reviews/announcements. Login events TODO |
-| 22 | Public site integration | PARTIAL | Listings, prices, availability, contact, reviews, announcements, site text wired. Homepage images TODO |
-| 23 | Notifications | **DONE** | Migration 0009: bell + Admin > Notifications, per-user read state and preferences, daily check-in/check-out/balance reminders |
+| 19 | Roles and permissions | **MOSTLY DONE** | Migration 0020: 9 built-in team roles + custom roles, 36 permissions, enforced with restrictive RLS policies and checks inside the sensitive functions; suspension; assign role; last-owner protection. Per-user permission overrides TODO |
+| 20 | Site settings and contacts | **DONE** | Migration 0018: contact numbers (public/private), business email/address, currency, time zone, tax, maintenance mode, enabled payment methods, public site wired |
+| 21 | Activity log | **DONE** | Audit triggers across modules + login events incl. failed attempts (0020) + Activity log page with filters |
+| 22 | Public site integration | **MOSTLY DONE** | Listings, prices, availability, blocked dates, contacts, reviews, announcements, site text, gallery, banners, bar menu, maintenance mode all wired. Per-section ordering TODO |
+| 23 | Notifications | **DONE** | Migration 0009 + 0019: notification centre incl. housekeeping, maintenance, tickets, low stock, failed messages, payments to verify |
 | 24 | Database and security | ONGOING | Every new table ships with RLS, indexes, checks, audit trigger and SQL tests |
 | 25 | Admin UX | PARTIAL | Grouped sidebar + "Back to website" added. Breadcrumbs, global search TODO |
 | 26 | Interaction quality | ONGOING | New pages have search/filters, empty/error/loading states, confirmations |
-| 27 | Testing | ONGOING | 113 app tests, 32 SQL tests, browser checks of public pages |
+| 27 | Testing | ONGOING | 122 app tests, 46 SQL tests, browser checks of public pages |
 
 ## Slice 1 (this change): Inquiries, Reviews, Announcements
 - Migration `0007_inquiries_reviews_announcements.sql` (applied to the live project): tables `inquiries`, `inquiry_notes`,
@@ -81,3 +81,17 @@ holds expire in the database. Payments: M-Pesa STK (mock/sandbox/production), ma
 - Email/SMS/WhatsApp notification delivery: WhatsApp Cloud API credentials and approved templates (WhatsApp is switched off today).
 - Real M-Pesa production credentials for live payments; `MPESA_CALLBACK_SECRET` and `SITE_URL` function secrets must be set in Supabase.
 - Edge Functions are NOT changed by slice 1 (public writes use database RPCs instead), so no redeploy is needed.
+
+## Slices 8 to 14 (this change)
+| Slice | Migration | What |
+|---|---|---|
+| 8 | 0014 | Digital check-in/out (deposit, ready room, early approval, room change), extra charges ledger, front-desk screen |
+| 9 | 0015 | Blocked dates (rooms/property) and maintenance requests |
+| 10 | 0016 | Media library, managed gallery, homepage banners |
+| 11 | 0017 | Payment verification, expense approval/categories, owner overview, reporting centre (CSV/Excel/PDF) |
+| 12 | 0018 | Contact numbers, site settings, message templates and schedule, communication opt-out, retries |
+| 13 | 0019 | Bar menu/stock (optional), smart access framework (no fake lock), extra notification kinds |
+| 14 | 0020 | Team roles + permissions, login events, website content drafts/versions |
+
+Nothing from 0009 onward is applied to the live project yet: run `docs/sql/apply_pending.sql` (regenerate with
+`node scripts/build-sql-bundles.mjs`).

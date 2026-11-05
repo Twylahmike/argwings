@@ -5,7 +5,7 @@ import { ImagePlus } from 'lucide-react'
 import { sb } from '~/lib/supabase'
 import { uploadImage } from '~/lib/images'
 import { errMessage } from '~/lib/utils'
-import { DEFAULT_SITE_CONTENT, sanitizeSiteContent, type SiteContent } from '~/lib/site-content'
+import { DEFAULT_SITE_CONTENT, parseHeadline, sanitizeSiteContent, type SiteContent } from '~/lib/site-content'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Field, Input, Textarea } from '~/components/ui/form'
@@ -31,18 +31,37 @@ export function WebsiteContentForm() {
 
   const set = <K extends keyof SiteContent>(k: K, v: SiteContent[K]) => setC((s) => ({ ...s, [k]: v }))
 
-  const save = useMutation({
-    mutationFn: async () => {
-      const clean = sanitizeSiteContent({
-        ...c,
-        tickerItems: ticker.split('\n'),
-      })
-      const { error } = await sb().from('settings').upsert({ key: KEY, value: clean, updated_at: new Date().toISOString() })
+  const history = useQuery({
+    queryKey: ['site-content-versions'],
+    queryFn: async () => {
+      const { data, error } = await sb().from('site_content_versions').select('id, content, status, note, created_at, published_at').order('created_at', { ascending: false }).limit(20)
       if (error) throw error
+      return data as { id: string; content: unknown; status: 'draft' | 'published' | 'archived'; note: string | null; created_at: string; published_at: string | null }[]
     },
-    onSuccess: () => { toast.success('Website content saved'); qc.invalidateQueries({ queryKey: ['site-content'] }); setTimeout(() => window.location.reload(), 600) },
+  })
+  const [note, setNote] = useState('')
+  const draft = () => sanitizeSiteContent({ ...c, tickerItems: ticker.split('\n') })
+  async function newVersion() {
+    const { data: u } = await sb().auth.getUser()
+    const { data, error } = await sb().from('site_content_versions').insert({ content: draft(), note: note.trim() || null, created_by: u.user?.id }).select('id').single()
+    if (error) throw error
+    return data.id as string
+  }
+  const saveDraft = useMutation({
+    mutationFn: newVersion,
+    onSuccess: () => { toast.success('Draft saved. The website has not changed yet.'); setNote(''); qc.invalidateQueries({ queryKey: ['site-content-versions'] }) },
     onError: (e) => toast.error(errMessage(e)),
   })
+  const publish = useMutation({
+    mutationFn: async (existing?: string) => {
+      const id = existing ?? (await newVersion())
+      const { error } = await sb().rpc('publish_site_content', { p_version: id })
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success('Published. The website now shows this content.'); setNote(''); qc.invalidateQueries({ queryKey: ['site-content'] }); qc.invalidateQueries({ queryKey: ['site-content-versions'] }); setTimeout(() => window.location.reload(), 800) },
+    onError: (e) => toast.error(errMessage(e)),
+  })
+  const load = (content: unknown) => { const v = sanitizeSiteContent(content); setC(v); setTicker(v.tickerItems.join('\n')); toast.success('Loaded into the editor. Save a draft or publish when ready.') }
 
   async function image(file?: File) {
     if (!file) return
@@ -87,7 +106,27 @@ export function WebsiteContentForm() {
         {t('w-url', 'Website address', c.siteUrl, (v) => set('siteUrl', v), 'e.g. https://yourdomain.co.ke (used for share links).')}
         {t('w-og', 'Share image link', c.ogImage, (v) => set('ogImage', v), 'Picture shown when the site link is shared (1200x630).')}
       </CardContent></Card>
-      <div><Button size="lg" loading={save.isPending} onClick={() => save.mutate()}>Save website content</Button></div>
+      <Card><CardHeader><CardTitle>Preview</CardTitle></CardHeader><CardContent>
+        <div className="rounded-xl bg-neutral-900 p-6 text-center text-white" aria-label="Preview of the home page top">
+          <p className="font-display text-3xl">{parseHeadline(c.heroHeadline).map((p, i) => p.accent ? <em key={i}>{p.text}</em> : <span key={i}>{p.text}</span>)}</p>
+          {c.heroSubline && <p className="mt-2 text-sm text-white/80">{c.heroSubline}</p>}
+          {c.tagline && <p className="mt-4 text-xs italic text-white/60">{c.tagline}</p>}
+        </div>
+      </CardContent></Card>
+      <Card><CardHeader><CardTitle>Save or publish</CardTitle></CardHeader><CardContent className="grid gap-3">
+        <p className="text-sm text-muted-foreground">A draft is stored privately. Publishing puts this content on the live website and keeps the previous version in the history below.</p>
+        <Field label="Note for the history (optional)" htmlFor="w-note"><Input id="w-note" maxLength={200} placeholder="e.g. New Christmas headline" value={note} onChange={(e) => setNote(e.target.value)} /></Field>
+        <div className="flex flex-wrap gap-2"><Button variant="outline" loading={saveDraft.isPending} onClick={() => saveDraft.mutate()}>Save draft</Button><Button size="lg" loading={publish.isPending && !publish.variables} onClick={() => publish.mutate(undefined)}>Publish to website</Button></div>
+      </CardContent></Card>
+      <Card><CardHeader><CardTitle>Version history</CardTitle></CardHeader><CardContent>
+        {history.isLoading && <Skeleton className="h-16" />}
+        {history.data?.length === 0 && <p className="text-sm text-muted-foreground">No saved versions yet. Publishing or saving a draft creates one.</p>}
+        <ul className="divide-y text-sm">{history.data?.map((v) => (
+          <li key={v.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <span><b className="capitalize">{v.status}</b> · {new Date(v.published_at ?? v.created_at).toLocaleString('en-KE')}{v.note ? ` · ${v.note}` : ''}</span>
+            <span className="flex gap-1"><Button size="sm" variant="ghost" onClick={() => load(v.content)}>Load</Button>{v.status !== 'published' && <Button size="sm" variant="outline" loading={publish.isPending && publish.variables === v.id} onClick={() => publish.mutate(v.id)}>Publish this</Button>}</span>
+          </li>))}</ul>
+      </CardContent></Card>
     </div>
   )
 }

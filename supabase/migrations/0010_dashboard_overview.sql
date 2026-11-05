@@ -10,6 +10,7 @@ declare
   v_days int; v_pf date; v_pt date;
   cur jsonb; v_by_source jsonb; v_by_method jsonb; v_daily jsonb; v_units int;
 begin
+  perform require_permission('dashboard.view');
   if not is_owner_or_manager((select auth.uid())) then
     raise exception 'Not allowed' using errcode = '42501';
   end if;

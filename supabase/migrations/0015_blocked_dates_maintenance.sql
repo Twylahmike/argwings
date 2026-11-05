@@ -32,6 +32,7 @@ returns blocked_ranges
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid()); v_units uuid[]; r blocked_ranges; v_scope text; v_clash text; u uuid;
 begin
+  perform require_permission('blocked.manage');
   if not can_manage_property(v_uid, p_property) then raise exception 'Not allowed' using errcode = '42501'; end if;
   if p_out is null or p_in is null or p_out <= p_in then raise exception 'The end date must be after the start date.' using errcode = 'check_violation'; end if;
   if p_reason not in ('maintenance','renovation','private_use','closure','other') then raise exception 'Choose a reason.' using errcode = 'check_violation'; end if;
@@ -69,6 +70,7 @@ create or replace function release_blocked_range(p_range uuid) returns void
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid()); r blocked_ranges;
 begin
+  perform require_permission('blocked.manage');
   select * into r from blocked_ranges where id = p_range for update;
   if not found or not can_manage_property(v_uid, r.property_id) then raise exception 'Not allowed' using errcode = '42501'; end if;
   if r.released_at is not null then return; end if;

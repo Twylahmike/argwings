@@ -73,6 +73,7 @@ create or replace function add_booking_charge(p_booking uuid, p_label text, p_am
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid()); b bookings; c booking_charges;
 begin
+  perform require_permission('bookings.manage');
   select * into b from bookings where id = p_booking for update;
   if not found or not can_manage_property(v_uid, b.property_id) then raise exception 'Not allowed' using errcode = '42501'; end if;
   if b.status not in ('confirmed','checked_in','checked_out') then raise exception 'Charges can only be added to a confirmed or active stay.' using errcode = 'check_violation'; end if;
@@ -85,6 +86,7 @@ create or replace function void_booking_charge(p_charge uuid, p_reason text) ret
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid()); c booking_charges; b bookings;
 begin
+  perform require_permission('bookings.manage');
   select * into c from booking_charges where id = p_charge for update;
   if not found then raise exception 'Charge not found' using errcode = 'no_data_found'; end if;
   select * into b from bookings where id = c.booking_id;
@@ -103,6 +105,7 @@ create or replace function check_in_booking(
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid()); b bookings; v_unit units; v_target uuid; r checkin_records; v_today date := nairobi_today(); v_early boolean;
 begin
+  perform require_permission('checkin.manage');
   select * into b from bookings where id = p_booking for update;
   if not found or not can_manage_property(v_uid, b.property_id) then raise exception 'Not allowed' using errcode = '42501'; end if;
   if b.status <> 'confirmed' then raise exception 'Only a confirmed booking can be checked in (this one is %).', b.status using errcode = 'check_violation'; end if;
@@ -147,6 +150,7 @@ returns checkout_records
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid()); b bookings; r checkout_records; v_due int; v_late boolean;
 begin
+  perform require_permission('checkin.manage');
   select * into b from bookings where id = p_booking for update;
   if not found or not can_manage_property(v_uid, b.property_id) then raise exception 'Not allowed' using errcode = '42501'; end if;
   if b.status <> 'checked_in' then raise exception 'Only a checked-in guest can be checked out (this booking is %).', b.status using errcode = 'check_violation'; end if;

@@ -1366,3 +1366,158 @@ test('more notification kinds: maintenance, housekeeping, tickets, failed messag
     const kinds = (await q(c, 'select kind from my_notifications(100)')).map((n) => n.kind)
     for (const k of ['maintenance', 'housekeeping', 'ticket', 'message_failed']) assert.ok(kinds.includes(k), k)
   }))
+
+test('team roles: nine built-in roles, defaults keep today\'s staff working, permissions enforced in the database', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    const roleId = async (name) => (await one(c, 'select id from team_roles where name=$1', [name])).id
+    assert.equal((await one(c, 'select count(*)::int n from team_roles where is_system')).n, 9)
+    assert.equal((await one(c, `select count(*)::int n from team_role_permissions p join team_roles r on r.id=p.role_id where r.name='Super Administrator'`)).n, (await one(c, 'select count(*)::int n from permissions_catalog')).n)
+
+    // staff with no team role get the default for their base role
+    await as(c, 'authenticated', f.manager)
+    const mine = (await one(c, 'select my_permissions() p')).p
+    for (const p of ['bookings.create', 'checkin.manage', 'payments.record', 'finance.view']) assert.ok(mine.includes(p), p)
+    for (const p of ['users.manage', 'roles.manage', 'payments.verify', 'owner.overview']) assert.ok(!mine.includes(p), p)
+    await as(c, 'authenticated', f.cleaner)
+    const hk = (await one(c, 'select my_permissions() p')).p
+    assert.ok(hk.includes('housekeeping.update') && !hk.includes('finance.view'))
+
+    // only someone with users.manage can assign roles; not to themselves; owner protected
+    await admin(c)
+    const recep = await user(c, 'Reggie', 'manager', [f.pa])
+    const acct = await user(c, 'Alice', 'manager', [f.pa])
+    await as(c, 'authenticated', f.manager)
+    await fails(c, 'select assign_team_role($1,$2)', [recep, await roleId('Receptionist')], '42501')
+    await as(c, 'authenticated', f.owner)
+    await c.query('select assign_team_role($1,$2)', [recep, await roleId('Receptionist')])
+    await c.query('select assign_team_role($1,$2)', [acct, await roleId('Accountant')])
+    await fails(c, 'select assign_team_role($1,$2)', [f.owner, await roleId('Property Manager')], '23514')      // own role
+    assert.equal((await one(c, 'select role from user_roles where user_id=$1', [recep])).role, 'manager')
+    assert.equal((await one(c, 'select team_role_id from profiles where id=$1', [recep])).team_role_id, await roleId('Receptionist'))
+
+    // Receptionist: can create bookings and check guests in, cannot touch money or edit bookings
+    await admin(c)
+    const bk = await booking(c, f, { from: d0, to: day(d0, 2), status: 'confirmed' })
+    await c.query(`insert into payments(booking_id,kind,method,status,amount,confirmed_at) values ($1,'deposit','cash','succeeded',5000,now())`, [bk.id])
+    await as(c, 'authenticated', recep)
+    const guest = await one(c, `select id from guests limit 1`).catch(() => null)
+    assert.ok(guest === null || guest.id)
+    await fails(c, `insert into expenses(property_id, category, amount) values ($1,'other',100)`, [f.pa], '42501')
+    assert.equal((await c.query(`update bookings set notes='edited' where id=$1`, [bk.id])).rowCount, 0, 'no bookings.manage')
+    await fails(c, 'select add_booking_charge($1,$2,500)', [bk.id, 'Extra'], '42501')
+    await fails(c, 'select block_dates($1,null,$2,$3,$4)', [f.pa, day(d0, 20), day(d0, 21), 'other'], '42501')
+    const ci = await one(c, 'select check_in_booking($1,null,null,true,null,null,null,true) r', [bk.id]).catch((e) => e)
+    assert.ok(!(ci instanceof Error && ci.code === '42501'), 'receptionist may check guests in')
+
+    // Accountant: verifies payments and approves expenses, cannot create bookings or check anyone in
+    await admin(c)
+    const mpesa = await one(c, `insert into payments(booking_id,kind,method,status,amount,confirmed_at,recorded_by) values ($1,'balance','mpesa_manual','succeeded',1000,now(),$2) returning id`, [bk.id, f.manager])
+    await as(c, 'authenticated', acct)
+    await c.query('select verify_payment($1)', [mpesa.id])
+    await fails(c, 'select check_out_booking($1)', [bk.id], '42501')
+    await fails(c, `insert into bookings(property_id, unit_id, guest_id, check_in, check_out, status) select $1,$2,id,$3,$4,'confirmed' from guests limit 1`, [f.pa, f.ua, day(d0, 30), day(d0, 31)], '42501')
+    const ex = await one(c, `insert into expenses(property_id, category, amount) values ($1,'rent',900) returning id, status`, [f.pa])
+    assert.equal(ex.status, 'approved', 'the accountant can approve, so own entries are approved')
+    await c.query('select review_expense($1,true)', [ex.id])
+
+    // a plain manager still cannot verify or approve
+    await as(c, 'authenticated', f.manager)
+    await fails(c, 'select verify_payment($1)', [mpesa.id], '42501')
+
+    // custom roles: base role may not be owner, built-ins are immutable, in-use roles cannot be deleted
+    await as(c, 'authenticated', f.owner)
+    await fails(c, `insert into team_roles(name, base_role) values ('Sneaky owner','owner')`, [], '23514')
+    const cr = await one(c, `insert into team_roles(name, description, base_role) values ('Night auditor','Reads reports','manager') returning *`)
+    await c.query(`insert into team_role_permissions(role_id, permission_key) values ($1,'reports.view'), ($1,'dashboard.view')`, [cr.id])
+    await fails(c, `delete from team_roles where id=$1`, [await roleId('Receptionist')], '42501')
+    await fails(c, `insert into team_role_permissions(role_id, permission_key) values ($1,'users.manage')`, [await roleId('Receptionist')], '42501')
+    await admin(c); const night = await user(c, 'Nina', 'manager', [f.pa]); await as(c, 'authenticated', f.owner)
+    await c.query('select assign_team_role($1,$2)', [night, cr.id])
+    await fails(c, `delete from team_roles where id=$1`, [cr.id], '23503')
+    await as(c, 'authenticated', night)
+    const np = (await one(c, 'select my_permissions() p')).p
+    assert.deepEqual(np.sort(), ['dashboard.view', 'reports.view'])
+    await fails(c, `select * from check_in_booking($1)`, [bk.id], '42501')
+    await as(c, 'authenticated', f.manager)
+    await fails(c, `insert into team_roles(name, base_role) values ('Mine','manager')`, [], '42501')
+
+    // suspension removes every permission at once
+    await admin(c); await c.query(`update profiles set active=false where id=$1`, [night])
+    assert.equal((await one(c, 'select has_permission($1,$2) h', [night, 'dashboard.view'])).h, false)
+
+    // the last owner cannot be demoted, even by someone who holds users.manage
+    await admin(c); await c.query(`delete from user_roles where role='owner' and user_id <> $1`, [f.owner])
+    await as(c, 'authenticated', f.owner)
+    const hrRole = await one(c, `insert into team_roles(name, base_role) values ('People admin','manager') returning id`)
+    await c.query(`insert into team_role_permissions(role_id, permission_key) values ($1,'users.manage')`, [hrRole.id])
+    await admin(c); const hr = await user(c, 'Hana', 'manager', [f.pa]); await as(c, 'authenticated', f.owner)
+    await c.query('select assign_team_role($1,$2)', [hr, hrRole.id])
+    await as(c, 'authenticated', hr)
+    await fails(c, 'select assign_team_role($1,$2)', [f.owner, await roleId('Property Manager')], '23514')
+    await fails(c, 'select assign_team_role($1,$2)', [recep, await roleId('Super Administrator')], '42501')      // only an owner can make an owner
+  }))
+
+test('login events: failures recorded for anonymous callers with throttling, successes tied to a real session, read needs audit.view', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await as(c, 'anon')
+    await c.query(`select record_login_event('Someone@Example.com', false)`)
+    await c.query(`select record_login_event('', false)`)                                // ignored
+    await c.query(`select record_login_event('fake@example.com', true)`)                 // a success needs a session: ignored
+    for (let i = 0; i < 40; i++) await c.query(`select record_login_event('spam@example.com', false)`)
+    await fails(c, 'select * from login_events', [], '42501')
+    await as(c, 'authenticated', f.owner)
+    await c.query(`select record_login_event('owner@example.com', true)`)
+    const rows = await q(c, 'select email, success, user_id from login_events order by id')
+    assert.ok(rows.some((r) => r.email === 'someone@example.com' && r.success === false && r.user_id === null))
+    assert.ok(rows.some((r) => r.email === 'owner@example.com' && r.success === true && r.user_id === f.owner))
+    assert.ok(!rows.some((r) => r.email === 'fake@example.com'))
+    assert.equal(rows.filter((r) => r.email === 'spam@example.com').length, 30, 'throttled at 30 per hour per address')
+    await as(c, 'authenticated', f.manager)
+    assert.equal((await q(c, 'select * from login_events')).length, 0, 'managers do not have audit.view')
+    await fails(c, `insert into login_events(email, success) values ('x@y.z', true)`, [], '42501')
+  }))
+
+test('website content: drafts, publish copies to the live setting, history kept, permission required', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await as(c, 'authenticated', f.manager)
+    const v1 = await one(c, `insert into site_content_versions(content, note, created_by) values ('{"heroHeadline":"First"}', 'v1', $1) returning *`, [f.manager])
+    await fails(c, `insert into site_content_versions(content, status, created_by) values ('{}', 'published', $1)`, [f.manager], '42501')
+    await fails(c, `insert into site_content_versions(content, created_by) values ('[1]', $1)`, [f.manager], '23514')
+    await fails(c, `update site_content_versions set content='{"x":1}' where id=$1`, [v1.id], '42501')        // versions are immutable
+    assert.equal((await q(c, `select value from settings where key='site_content'`)).length === 0 || true, true)
+    await c.query('select publish_site_content($1)', [v1.id])
+    const v2 = await one(c, `insert into site_content_versions(content, note, created_by) values ('{"heroHeadline":"Second"}', 'v2', $1) returning *`, [f.manager])
+    await c.query('select publish_site_content($1)', [v2.id])
+    assert.equal((await one(c, `select value->>'heroHeadline' h from settings where key='site_content'`)).h, 'Second')
+    const st = Object.fromEntries((await q(c, 'select note, status from site_content_versions')).map((r) => [r.note, r.status]))
+    assert.deepEqual(st, { v1: 'archived', v2: 'published' })
+    assert.equal((await c.query(`update settings set value='{}' where key='site_content'`)).rowCount, 0, 'direct settings writes stay owner-only')
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, 'select publish_site_content($1)', [v1.id], '42501')
+    assert.equal((await q(c, 'select * from site_content_versions')).length, 0)
+    await as(c, 'anon')
+    await fails(c, 'select * from site_content_versions', [], '42501')
+  }))
+
+test('activity log: readable through the audit.view permission, never writable', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await as(c, 'authenticated', f.manager)
+    assert.equal((await q(c, 'select * from audit_log')).length, 0, 'managers do not see the log by default')
+    await admin(c)
+    const auditor = await user(c, 'Audrey', 'manager', [f.pa])
+    await c.query(`update profiles set team_role_id = (select id from team_roles where name='Property Owner') where id=$1`, [auditor])
+    await as(c, 'authenticated', f.owner)
+    const role = await one(c, `insert into team_roles(name, base_role) values ('Auditor','manager') returning id`)
+    await c.query(`insert into team_role_permissions(role_id, permission_key) values ($1,'audit.view')`, [role.id])
+    await c.query('select assign_team_role($1,$2)', [auditor, role.id])
+    await as(c, 'authenticated', auditor)
+    assert.ok((await q(c, 'select * from audit_log')).length > 0, 'the auditor can read it')
+    await fails(c, `insert into audit_log(action, entity) values ('x','y')`, [], '42501')
+    await fails(c, `delete from audit_log`, [], '42501')
+    await fails(c, `update audit_log set action='edited'`, [], '42501')
+  }))

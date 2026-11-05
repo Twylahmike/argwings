@@ -102,6 +102,7 @@ create or replace function record_stock_movement(p_product uuid, p_kind text, p_
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid()); p bar_products; v_signed int;
 begin
+  perform require_permission('bar.manage');
   if not is_owner_or_manager(v_uid) then raise exception 'Not allowed' using errcode = '42501'; end if;
   if not module_on('module_bar_stock') then raise exception 'Bar stock is switched off in Settings.' using errcode = 'check_violation'; end if;
   if p_kind not in ('purchase','wastage','adjustment') then raise exception 'Use the sale button to record sales.' using errcode = 'check_violation'; end if;
@@ -121,6 +122,7 @@ create or replace function sell_bar_item(p_product uuid, p_qty int, p_booking uu
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid()); p bar_products; b bookings;
 begin
+  perform require_permission('bar.manage');
   if not is_owner_or_manager(v_uid) then raise exception 'Not allowed' using errcode = '42501'; end if;
   if p_qty is null or p_qty < 1 or p_qty > 500 then raise exception 'Enter a quantity from 1 to 500.' using errcode = 'check_violation'; end if;
   select * into p from bar_products where id = p_product for update;
@@ -239,6 +241,7 @@ language plpgsql security definer set search_path = public as $$
 declare
   v_uid uuid := (select auth.uid()); b bookings; d smart_lock_devices; v_pin text; v_salt bytea; v_from timestamptz; v_until timestamptz; v_id uuid; v_status text;
 begin
+  perform require_permission('access.manage');
   select * into b from bookings where id = p_booking for update;
   if not found or not can_manage_property(v_uid, b.property_id) then raise exception 'Not allowed' using errcode = '42501'; end if;
   select * into d from smart_lock_devices where id = p_device and active;
@@ -271,6 +274,7 @@ create or replace function revoke_access_credential(p_credential uuid, p_reason 
 language plpgsql security definer set search_path = public as $$
 declare v_uid uuid := (select auth.uid()); c access_credentials; b bookings;
 begin
+  perform require_permission('access.manage');
   select * into c from access_credentials where id = p_credential for update;
   if not found then raise exception 'Access code not found' using errcode = 'no_data_found'; end if;
   select * into b from bookings where id = c.booking_id;

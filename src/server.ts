@@ -19,19 +19,22 @@ export default createServerEntry({
     if (url.pathname === '/robots.txt' || url.pathname === '/sitemap.xml') {
       let origin = url.origin
       let slugs: string[] = []
+      let pageSlugs: string[] = []
       if (isSupabaseConfigured) {
         try {
-          const [{ data: settings }, { data: props }] = await Promise.all([
+          const [{ data: settings }, { data: props }, { data: pgs }] = await Promise.all([
             pub().from('settings').select('key, value').eq('key', 'site_content'),
             pub().from('properties').select('slug').eq('active', true).order('sort'),
+            pub().from('site_pages').select('slug'),
           ])
+          pageSlugs = (pgs ?? []).map((p) => p.slug as string)
           const configured = sanitizeSiteContent(settings?.[0]?.value).siteUrl
           if (configured) origin = configured
           slugs = (props ?? []).map((p) => p.slug as string)
         } catch { /* fall back to the request origin and static pages */ }
       }
       const isRobots = url.pathname === '/robots.txt'
-      return new Response(isRobots ? buildRobots(origin) : buildSitemap(origin, slugs), {
+      return new Response(isRobots ? buildRobots(origin) : buildSitemap(origin, slugs, pageSlugs), {
         headers: { 'Content-Type': isRobots ? 'text/plain; charset=utf-8' : 'application/xml; charset=utf-8', 'Cache-Control': 'public, max-age=3600' },
       })
     }

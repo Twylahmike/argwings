@@ -37,6 +37,7 @@ import { Route as AdminMediaRouteImport } from './routes/admin.media'
 import { Route as AdminMessagesRouteImport } from './routes/admin.messages'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
 import { Route as AdminOwnerRouteImport } from './routes/admin.owner'
+import { Route as AdminPagesRouteImport } from './routes/admin.pages'
 import { Route as AdminPromotionsRouteImport } from './routes/admin.promotions'
 import { Route as AdminReportsRouteImport } from './routes/admin.reports'
 import { Route as AdminRequestsRouteImport } from './routes/admin.requests'
@@ -47,6 +48,7 @@ import { Route as AdminSettingsRouteImport } from './routes/admin.settings'
 import { Route as AdminStaffRouteImport } from './routes/admin.staff'
 import { Route as AdminSupportRouteImport } from './routes/admin.support'
 import { Route as BookingTokenRouteImport } from './routes/booking.$token'
+import { Route as PSlugRouteImport } from './routes/p.$slug'
 import { Route as PropertiesSlugRouteImport } from './routes/properties.$slug'
 import { Route as ReceiptPaymentIdRouteImport } from './routes/receipt.$paymentId'
 import { Route as RequestTokenRouteImport } from './routes/request.$token'
@@ -199,6 +201,11 @@ const AdminOwnerRoute = AdminOwnerRouteImport.update({
   path: '/owner',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminPagesRoute = AdminPagesRouteImport.update({
+  id: '/pages',
+  path: '/pages',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminPromotionsRoute = AdminPromotionsRouteImport.update({
   id: '/promotions',
   path: '/promotions',
@@ -247,6 +254,11 @@ const AdminSupportRoute = AdminSupportRouteImport.update({
 const BookingTokenRoute = BookingTokenRouteImport.update({
   id: '/booking/$token',
   path: '/booking/$token',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PSlugRoute = PSlugRouteImport.update({
+  id: '/p/$slug',
+  path: '/p/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PropertiesSlugRoute = PropertiesSlugRouteImport.update({
@@ -333,6 +345,7 @@ export interface FileRoutesByFullPath {
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/owner': typeof AdminOwnerRoute
+  '/admin/pages': typeof AdminPagesRoute
   '/admin/promotions': typeof AdminPromotionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
@@ -343,6 +356,7 @@ export interface FileRoutesByFullPath {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/support': typeof AdminSupportRoute
   '/booking/$token': typeof BookingTokenRoute
+  '/p/$slug': typeof PSlugRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
   '/request/$token': typeof RequestTokenRoute
@@ -383,6 +397,7 @@ export interface FileRoutesByTo {
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/owner': typeof AdminOwnerRoute
+  '/admin/pages': typeof AdminPagesRoute
   '/admin/promotions': typeof AdminPromotionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
@@ -393,6 +408,7 @@ export interface FileRoutesByTo {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/support': typeof AdminSupportRoute
   '/booking/$token': typeof BookingTokenRoute
+  '/p/$slug': typeof PSlugRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
   '/request/$token': typeof RequestTokenRoute
@@ -435,6 +451,7 @@ export interface FileRoutesById {
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
   '/admin/owner': typeof AdminOwnerRoute
+  '/admin/pages': typeof AdminPagesRoute
   '/admin/promotions': typeof AdminPromotionsRoute
   '/admin/reports': typeof AdminReportsRoute
   '/admin/requests': typeof AdminRequestsRoute
@@ -445,6 +462,7 @@ export interface FileRoutesById {
   '/admin/staff': typeof AdminStaffRoute
   '/admin/support': typeof AdminSupportRoute
   '/booking/$token': typeof BookingTokenRoute
+  '/p/$slug': typeof PSlugRoute
   '/properties/$slug': typeof PropertiesSlugRoute
   '/receipt/$paymentId': typeof ReceiptPaymentIdRoute
   '/request/$token': typeof RequestTokenRoute
@@ -488,6 +506,7 @@ export interface FileRouteTypes {
     | '/admin/messages'
     | '/admin/notifications'
     | '/admin/owner'
+    | '/admin/pages'
     | '/admin/promotions'
     | '/admin/reports'
     | '/admin/requests'
@@ -498,6 +517,7 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/support'
     | '/booking/$token'
+    | '/p/$slug'
     | '/properties/$slug'
     | '/receipt/$paymentId'
     | '/request/$token'
@@ -538,6 +558,7 @@ export interface FileRouteTypes {
     | '/admin/messages'
     | '/admin/notifications'
     | '/admin/owner'
+    | '/admin/pages'
     | '/admin/promotions'
     | '/admin/reports'
     | '/admin/requests'
@@ -548,6 +569,7 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/support'
     | '/booking/$token'
+    | '/p/$slug'
     | '/properties/$slug'
     | '/receipt/$paymentId'
     | '/request/$token'
@@ -589,6 +611,7 @@ export interface FileRouteTypes {
     | '/admin/messages'
     | '/admin/notifications'
     | '/admin/owner'
+    | '/admin/pages'
     | '/admin/promotions'
     | '/admin/reports'
     | '/admin/requests'
@@ -599,6 +622,7 @@ export interface FileRouteTypes {
     | '/admin/staff'
     | '/admin/support'
     | '/booking/$token'
+    | '/p/$slug'
     | '/properties/$slug'
     | '/receipt/$paymentId'
     | '/request/$token'
@@ -622,6 +646,7 @@ export interface RootRouteChildren {
   SearchRoute: typeof SearchRoute
   SpacesRoute: typeof SpacesRoute
   BookingTokenRoute: typeof BookingTokenRoute
+  PSlugRoute: typeof PSlugRoute
   PropertiesSlugRoute: typeof PropertiesSlugRoute
   ReceiptPaymentIdRoute: typeof ReceiptPaymentIdRoute
   RequestTokenRoute: typeof RequestTokenRoute
@@ -825,6 +850,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminOwnerRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/pages': {
+      id: '/admin/pages'
+      path: '/pages'
+      fullPath: '/admin/pages'
+      preLoaderRoute: typeof AdminPagesRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/promotions': {
       id: '/admin/promotions'
       path: '/promotions'
@@ -893,6 +925,13 @@ declare module '@tanstack/react-router' {
       path: '/booking/$token'
       fullPath: '/booking/$token'
       preLoaderRoute: typeof BookingTokenRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/p/$slug': {
+      id: '/p/$slug'
+      path: '/p/$slug'
+      fullPath: '/p/$slug'
+      preLoaderRoute: typeof PSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/properties/$slug': {
@@ -996,6 +1035,7 @@ interface AdminRouteChildren {
   AdminMessagesRoute: typeof AdminMessagesRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
   AdminOwnerRoute: typeof AdminOwnerRoute
+  AdminPagesRoute: typeof AdminPagesRoute
   AdminPromotionsRoute: typeof AdminPromotionsRoute
   AdminReportsRoute: typeof AdminReportsRoute
   AdminRequestsRoute: typeof AdminRequestsRoute
@@ -1037,6 +1077,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminMessagesRoute: AdminMessagesRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,
   AdminOwnerRoute: AdminOwnerRoute,
+  AdminPagesRoute: AdminPagesRoute,
   AdminPromotionsRoute: AdminPromotionsRoute,
   AdminReportsRoute: AdminReportsRoute,
   AdminRequestsRoute: AdminRequestsRoute,
@@ -1068,6 +1109,7 @@ const rootRouteChildren: RootRouteChildren = {
   SearchRoute: SearchRoute,
   SpacesRoute: SpacesRoute,
   BookingTokenRoute: BookingTokenRoute,
+  PSlugRoute: PSlugRoute,
   PropertiesSlugRoute: PropertiesSlugRoute,
   ReceiptPaymentIdRoute: ReceiptPaymentIdRoute,
   RequestTokenRoute: RequestTokenRoute,

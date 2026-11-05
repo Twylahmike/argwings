@@ -1677,3 +1677,23 @@ test('housekeeping photos: assignee or manager adds, others cannot, never edited
     await as(c, 'anon')
     await fails(c, 'select * from housekeeping_task_photos', [], '42501')
   }))
+
+test('site pages: public sees published pages only, starter drafts are unpublished, editing needs cms.manage', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await as(c, 'anon')
+    assert.equal((await q(c, 'select * from site_pages')).length, 0, 'starter pages ship unpublished')
+    await fails(c, `insert into site_pages(slug, title) values ('hack','Hack')`, [], '42501')
+    await as(c, 'authenticated', f.manager)
+    assert.deepEqual((await q(c, 'select slug from site_pages order by sort')).map((r) => r.slug), ['terms', 'privacy'])
+    await c.query(`update site_pages set published=true, body='Real terms.' where slug='terms'`)
+    const row = await one(c, `select updated_by from site_pages where slug='terms'`)
+    assert.equal(row.updated_by, f.manager, 'who edited it is recorded')
+    await c.query(`insert into site_pages(slug, title, body, published) values ('house-rules','House rules','No smoking.',true)`)
+    await fails(c, `insert into site_pages(slug, title) values ('Bad Slug!','x')`, [], '23514')
+    await as(c, 'anon')
+    assert.deepEqual((await q(c, 'select slug from site_pages order by slug')).map((r) => r.slug), ['house-rules', 'terms'])
+    await as(c, 'authenticated', f.cleaner)
+    assert.equal((await c.query(`update site_pages set published=false where slug='terms'`)).rowCount, 0)
+    assert.equal((await c.query(`delete from site_pages where slug='terms'`)).rowCount, 0)
+  }))

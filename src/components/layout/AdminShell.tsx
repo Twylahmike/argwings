@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3, BedDouble, Brush, Building2, CalendarCheck, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
   Settings, Star, UserCog, Users, Wallet, type LucideIcon,
-  Ban, Crown, PanelLeft, History, ShieldCheck, KeyRound, Wine, Phone, Send, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
+  Ban, Crown, FileText, PanelLeft, History, ShieldCheck, KeyRound, Wine, Phone, Send, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
 import { canManage, isOwner, type Me } from '~/lib/auth'
@@ -52,6 +52,7 @@ const NAV: NavItem[] = [
   { to: '/admin/gallery', label: 'Gallery', icon: Images, show: canManage, group: 'Website', perm: 'media.manage' },
   { to: '/admin/homepage', label: 'Homepage images', icon: PanelTop, show: canManage, group: 'Website', perm: 'media.manage' },
   { to: '/admin/bar', label: 'Bar menu & stock', icon: Wine, show: canManage, group: 'Hospitality services', module: 'module_bar_menu', perm: 'bar.manage' },
+  { to: '/admin/pages', label: 'Policy pages', icon: FileText, show: canManage, group: 'Website', perm: 'cms.manage' },
   { to: '/admin/reviews', label: 'Reviews', icon: Star, show: canManage, group: 'Website', perm: 'cms.manage' },
   { to: '/admin/announcements', label: 'Announcements', icon: Megaphone, show: canManage, group: 'Website', perm: 'cms.manage' },
   { to: '/admin/owner', label: "Owner's overview", icon: Crown, show: canManage, group: 'Business', perm: 'owner.overview' },

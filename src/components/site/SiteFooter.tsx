@@ -39,6 +39,7 @@ export function SiteFooter() {
             <li><Link to="/" className="inline-flex h-9 items-center hover:text-brand-glow">Home</Link></li>
             <li><Link to="/spaces" className="inline-flex h-9 items-center hover:text-brand-glow">Our spaces</Link></li>
             <li><Link to="/gallery" className="inline-flex h-9 items-center hover:text-brand-glow">Gallery</Link></li>
+            {brand.pages.map((pg) => <li key={pg.slug}><Link to="/p/$slug" params={{ slug: pg.slug }} className="inline-flex h-9 items-center hover:text-brand-glow">{pg.title}</Link></li>)}
             <li><Link to="/login" className="inline-flex h-9 items-center hover:text-brand-glow">Staff login</Link></li>
           </ul>
         </div>

@@ -144,7 +144,7 @@ function BookPage() {
               </Field>}
               <div className="rounded-lg border bg-muted/40 p-3 text-sm">
                 <label className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" {...register('consent')} />
-                  <span>I agree that {brand.businessName} may use my name, phone number and email to manage this booking and send me confirmations and reminders (WhatsApp/SMS). We keep only what we need and never sell your data.</span></label>
+                  <span>I agree that {brand.businessName} may use my name, phone number and email to manage this booking and send me confirmations and reminders (WhatsApp/SMS). We keep only what we need and never sell your data.{brand.pages.some((x) => x.slug === 'privacy') && <> <Link to="/p/$slug" params={{ slug: 'privacy' }} target="_blank" className="underline">Read our privacy notice</Link>.</>}</span></label>
                 {errors.consent && <p role="alert" className="mt-2 text-xs text-danger">{errors.consent.message}</p>}
               </div>
               {formError && <p role="alert" className="rounded-md border border-danger/40 bg-danger/5 p-3 text-sm text-danger">{formError}</p>}

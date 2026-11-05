@@ -42,5 +42,5 @@ Deno.serve(serve('send-whatsapp', async (req, log) => {
     out = await sendBookingTemplate(db, log, booking.id, b.template, b.amount ? { amount: b.amount } : {})
     if (!out) throw new HttpError(500, 'send_failed', 'Could not prepare that message.')
   }
-  return json(req, { status: out.status, log_id: out.logId, text: out.text, wa_link: `https://wa.me/${phone}?text=${encodeURIComponent(out.text)}` })
+  return json(req, { status: out.status, email: (out as { email?: string }).email ?? null, log_id: out.logId, text: out.text, wa_link: `https://wa.me/${phone}?text=${encodeURIComponent(out.text)}` })
 }))

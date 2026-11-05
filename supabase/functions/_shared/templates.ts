@@ -107,3 +107,16 @@ export function applyOverride(body: string, c: TemplateContext): string {
   }
   return body.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, k: string) => v[k.toLowerCase()] ?? '').replace(/[ \t]+\n/g, '\n').trim()
 }
+
+/** Email subject line for a template. */
+export function emailSubject(name: TemplateName, c: TemplateContext): string {
+  switch (name) {
+    case 'booking_confirmed': return `Booking confirmed: ${c.property} (${c.reference})`
+    case 'payment_receipt': return `Payment received for ${c.reference}`
+    case 'balance_reminder': return `Balance due for booking ${c.reference}`
+    case 'checkin_reminder': return `See you tomorrow at ${c.property}`
+    case 'checkout_reminder': return `Check-out reminder: ${c.property}`
+    case 'thank_you': return `Thank you for staying at ${c.property}`
+    default: return `A message from ${c.business}`
+  }
+}

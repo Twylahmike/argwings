@@ -2,6 +2,7 @@
 // Returns modes only, never secrets.
 import { json, serve } from '../_shared/http.ts'
 import { requireOwner, serviceClient, staffFromRequest } from '../_shared/supabase.ts'
+import { emailConfigured } from '../_shared/email.ts'
 import { whatsappConfigured } from '../_shared/whatsapp.ts'
 
 declare const Deno: { serve(h: (r: Request) => Promise<Response>): void; env: { get(k: string): string | undefined } }
@@ -14,6 +15,7 @@ Deno.serve(serve('system-status', async (req) => {
     whatsapp_env_enabled: Deno.env.get('WHATSAPP_ENABLED') === 'true',
     whatsapp_configured: whatsappConfigured(),
     whatsapp_templates: Deno.env.get('WHATSAPP_USE_TEMPLATES') === 'true',
+    email_configured: emailConfigured(),
     site_url: Deno.env.get('SITE_URL') ?? '',
   })
 }))

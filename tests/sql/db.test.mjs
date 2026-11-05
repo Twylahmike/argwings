@@ -258,7 +258,7 @@ test('RLS: anon cannot read bookings, guests, payments; can use availability and
     for (const k of ['email', 'id_number', 'notes', 'guest_id', 'created_by']) assert.ok(!(k in info), `${k} must not leak`)
     assert.equal((await one(c, 'select get_booking_by_token($1) j', [randomUUID()])).j, null)
     const settings = await q(c, 'select key from settings')
-    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content', 'booking_mode', 'business_email', 'business_address', 'currency', 'maintenance_mode', 'guest_checkout_enabled', 'registration_enabled', 'module_bar_menu'].includes(s.key)))
+    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content', 'booking_mode', 'business_email', 'business_address', 'currency', 'maintenance_mode', 'guest_checkout_enabled', 'registration_enabled', 'app_install', 'module_bar_menu'].includes(s.key)))
     assert.ok(settings.length > 0)
   }))
 
@@ -2151,4 +2151,102 @@ test('privacy: members download only their own data; deletion request notifies s
     assert.deepEqual([kept.total_amount, kept.amount_paid], [12000, 6000])                     // the books are untouched
     // an anonymised member cannot make member bookings any more
     await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [me, null, null, null, f.ua, day(fri, 9), day(fri, 11), 2, 'X', phone(), null, 'website'], '23514')
+  }))
+
+// ---------------------------------------------------------------------------------------------
+// Spend points at checkout (migration 0032)
+// ---------------------------------------------------------------------------------------------
+test('points: off by default; owner switches on; spend is capped, checked, recorded and returned on cancel exactly once', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const fri = fmt(f.friday)
+    const id = await customer(c, 'Spender'); await activate(c, id)
+    await c.query(`insert into loyalty_transactions(user_id, kind, points, note) values ($1, 'adjust', 10000, 'seed')`, [id])
+    const quote = await one(c, 'select * from quote_stay($1,$2,$3)', [f.ua, fri, day(fri, 2)])
+    const book = (points, from = fri) => one(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)', [id, null, null, null, f.ua, from, day(from, 2), 2, 'S', phone(), null, 'website', points])
+    // off by default
+    let e = await fails(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)', [id, null, null, null, f.ua, fri, day(fri, 2), 2, 'S', phone(), null, 'website', 100], '23514')
+    assert.match(e.message, /cannot be spent/)
+    // only staff with customers.manage can configure; bad numbers refused
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, 'select set_loyalty_settings(true, 1, 50, 100)', [], '42501')
+    await as(c, 'authenticated', f.manager)
+    await fails(c, 'select set_loyalty_settings(true, 0, 50, 100)', [], '23514')
+    await fails(c, 'select set_loyalty_settings(true, 1, 101, 100)', [], '23514')
+    await one(c, 'select set_loyalty_settings(true, 2, 50, 100) x')                            // 1 point = KES 2, at most 50% of a stay
+    await admin(c)
+    // preview
+    await as(c, 'authenticated', id)
+    const pv = (await one(c, 'select points_for_stay($1,$2,$3) p', [f.ua, fri, day(fri, 2)])).p
+    const cap = Math.floor(quote.nightly_total * 50 / 100)
+    assert.deepEqual([pv.enabled, pv.balance, pv.max_points, pv.max_discount], [true, 10000, Math.min(10000, Math.floor(cap / 2)), Math.min(10000, Math.floor(cap / 2)) * 2])
+    await admin(c)
+    // over the cap, over the balance
+    e = await fails(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)', [id, null, null, null, f.ua, fri, day(fri, 2), 2, 'S', phone(), null, 'website', Math.floor(cap / 2) + 1], '23514')
+    assert.match(e.message, /at most KES/)
+    // a valid spend: discount, ledger row, balance
+    const b = await book(100)
+    assert.equal(b.discount, 200); assert.equal(b.total_amount, quote.total - 200)
+    assert.equal((await one(c, `select points from loyalty_transactions where booking_id = $1 and kind = 'redeem'`, [b.id])).points, -100)
+    assert.equal((await one(c, 'select sum(points)::int s from loyalty_transactions where user_id = $1', [id])).s, 9900)
+    e = await fails(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)', [id, null, null, null, f.ua, day(fri, 7), day(fri, 9), 2, 'S', phone(), null, 'website', 50000], '23514')
+    assert.match(e.message, /only have 9900/)
+    // cancelling gives the points back once, and re-cancelling cannot give them twice
+    await c.query(`update bookings set status = 'cancelled' where id = $1`, [b.id])
+    assert.equal((await one(c, 'select sum(points)::int s from loyalty_transactions where user_id = $1', [id])).s, 10000)
+    await fails(c, `update bookings set status = 'confirmed' where id = $1`, [b.id])               // a dead booking cannot come back
+    assert.equal((await one(c, `select count(*)::int n from loyalty_transactions where booking_id = $1 and kind = 'reverse'`, [b.id])).n, 1)
+    // summary for staff
+    await as(c, 'authenticated', f.manager)
+    const s = (await one(c, 'select loyalty_settings() s')).s
+    assert.equal(s.redeem_enabled, true); assert.equal(s.kes_per_point, 2); assert.equal(s.points_redeemed, 0)
+  }))
+
+test('points combine with an offer: the cap applies to what is left after other discounts', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const fri = fmt(f.friday)
+    const id = await customer(c, 'Combo'); await activate(c, id)
+    await c.query(`insert into loyalty_transactions(user_id, kind, points, note) values ($1, 'adjust', 20000, 'seed')`, [id])
+    await c.query(`update settings set value = 'true'::jsonb where key = 'loyalty_redeem_enabled'`)
+    const reward = (await one(c, 'select id from customer_rewards where user_id = $1', [id])).id
+    const quote = await one(c, 'select * from quote_stay($1,$2,$3)', [f.ua, fri, day(fri, 2)])
+    const offerAmt = Math.floor(quote.nightly_total * 5 / 100)
+    const cap = Math.floor((quote.nightly_total - offerAmt) * 50 / 100)
+    const b = await one(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)', [id, null, reward, null, f.ua, fri, day(fri, 2), 2, 'C', phone(), null, 'website', cap])
+    assert.equal(b.discount, offerAmt + cap)
+    await fails(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)', [id, null, null, null, f.ua, day(fri, 9), day(fri, 11), 2, 'C', phone(), null, 'website', 99999], '23514')
+  }))
+
+// ---------------------------------------------------------------------------------------------
+// App installation analytics (migration 0033)
+// ---------------------------------------------------------------------------------------------
+test('app install: anyone can record events (deduplicated, validated); only the owner can read the numbers; nothing else is exposed', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    await as(c, 'anon')
+    await one(c, `select record_install_event('impression', 'android-chrome', 'visit-0001')`)
+    await one(c, `select record_install_event('impression', 'android-chrome', 'visit-0001')`)     // same visit, same kind: counted once
+    await one(c, `select record_install_event('click', 'android-chrome', 'visit-0001')`)
+    await one(c, `select record_install_event('installed', 'android-chrome', 'visit-0001')`)
+    await one(c, `select record_install_event('impression', 'ios-safari', 'visit-0002')`)
+    await one(c, `select record_install_event('bogus', 'ios-safari', 'visit-0003')`)            // ignored
+    await one(c, `select record_install_event('impression', 'Bad Platform!', 'visit-0004')`)    // ignored
+    await one(c, `select record_install_event('impression', 'x', 'short')`)                    // ignored
+    await fails(c, 'select * from app_install_events', [], '42501')
+    await fails(c, 'select app_install_stats()', [], '42501')
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, 'select app_install_stats()', [], '42501')
+    await as(c, 'authenticated', f.owner)
+    const s = (await one(c, 'select app_install_stats(30) s')).s
+    assert.deepEqual([s.impressions, s.clicks, s.installed, s.accepted], [2, 1, 1, 0])
+    const android = s.by_platform.find((p) => p.platform === 'android-chrome')
+    assert.deepEqual([android.impressions, android.clicks, android.installed], [1, 1, 1])
+    await admin(c)
+    await as(c, 'anon')
+    assert.equal((await q(c, `select key from settings where key = 'app_install'`)).length, 0)   // no row yet, but the key is publicly readable
+    await admin(c)
+    await c.query(`insert into settings(key, value) values ('app_install', '{"enabled": true}'::jsonb)`)
+    await as(c, 'anon')
+    assert.equal((await q(c, `select key from settings where key = 'app_install'`)).length, 1)
   }))

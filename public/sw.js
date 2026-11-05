@@ -1,6 +1,8 @@
 // RG Wings Stays service worker: makes the site installable and keeps the public pages usable on a weak connection.
 // Safe by design: it never stores or serves anything private (admin, bookings, receipts, login, API calls).
-const VERSION = 'v1'
+// Bump VERSION when this file's behaviour changes: old caches are deleted on activate. Built assets have hashed names, so they never go stale.
+const VERSION = 'v2'
+const MAX_STATIC = 200
 const STATIC = `static-${VERSION}`
 const PAGES = `pages-${VERSION}`
 // The offline page lives inside the worker so it works whatever the host does to /offline.html (it redirects).
@@ -12,7 +14,12 @@ button{height:44px;padding:0 24px;border:0;border-radius:8px;background:#a9761f;
 @media (prefers-color-scheme:dark){body{background:#131211;color:#f1ece4}p{color:#b8b0a4}}</style></head>
 <body><main><h1>You are offline</h1><p>Check your connection and try again. Pages you opened before may still be available.</p><button onclick="location.reload()">Try again</button></main></body></html>`
 const offline = () => new Response(OFFLINE_HTML, { status: 503, headers: { 'Content-Type': 'text/html; charset=utf-8' } })
-const PRIVATE = /^\/(admin|booking|receipt|request|login|api)(\/|$)/
+const PRIVATE = /^\/(admin|booking|receipt|request|login|account|auth|forgot-password|reset-password|api)(\/|$)/
+
+// Keep the asset cache bounded: drop the oldest entries beyond MAX_STATIC.
+function trim(cache) {
+  return cache.keys().then((keys) => (keys.length > MAX_STATIC ? Promise.all(keys.slice(0, keys.length - MAX_STATIC).map((k) => cache.delete(k))) : undefined))
+}
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(STATIC).then((c) => c.add('/app-icon-192.png')).then(() => self.skipWaiting()))
@@ -35,7 +42,7 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname.startsWith('/assets/') || /\.(?:png|webp|jpg|jpeg|svg|ico|woff2?)$/.test(url.pathname)) {
     e.respondWith(
       caches.match(req).then((hit) => hit || fetch(req).then((res) => {
-        if (res.ok) { const copy = res.clone(); caches.open(STATIC).then((c) => c.put(req, copy)) }
+        if (res.ok) { const copy = res.clone(); caches.open(STATIC).then((c) => c.put(req, copy).then(() => trim(c))) }
         return res
       })),
     )

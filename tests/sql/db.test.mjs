@@ -1653,3 +1653,27 @@ test('length-of-stay discounts: best rule wins, applied in the quote everywhere,
     const bk = await one(c, `select * from create_booking($1,$2,$3,1,'Long Stay','254712000777',null,'website','confirmed')`, [f.ua, d0, day(d0, 7)])
     assert.equal(bk.total_amount, q7.total)
   }))
+
+test('housekeeping photos: assignee or manager adds, others cannot, never edited or deleted', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const task = await one(c, `insert into housekeeping_tasks(property_id, unit_id, assigned_to) values ($1,$2,$3) returning id`, [f.pa, f.ua, f.cleaner])
+    const stranger = await user(c, 'Other Cleaner', 'cleaner', [f.pa])
+    const mgrB = await user(c, 'MgrB4', 'manager', [f.pb])
+    await as(c, 'authenticated', f.cleaner)
+    await c.query(`insert into housekeeping_task_photos(task_id, url, caption, created_by) values ($1,'https://cdn.example.test/p.webp','Finished',$2)`, [task.id, f.cleaner])
+    await fails(c, `insert into housekeeping_task_photos(task_id, url, created_by) values ($1,'http://insecure',$2)`, [task.id, f.cleaner], '23514')
+    await fails(c, `insert into housekeeping_task_photos(task_id, url, created_by) values ($1,'https://cdn.example.test/x.webp',$2)`, [task.id, f.manager], '42501')   // cannot sign for someone else
+    await fails(c, `update housekeeping_task_photos set caption='edit'`, [], '42501')
+    await fails(c, `delete from housekeeping_task_photos`, [], '42501')
+    await as(c, 'authenticated', stranger)
+    await fails(c, `insert into housekeeping_task_photos(task_id, url, created_by) values ($1,'https://cdn.example.test/y.webp',$2)`, [task.id, stranger], '42501')
+    assert.equal((await q(c, 'select * from housekeeping_task_photos')).length, 0, 'not their task')
+    await as(c, 'authenticated', f.manager)
+    assert.equal((await q(c, 'select * from housekeeping_task_photos')).length, 1)
+    await c.query(`insert into housekeeping_task_photos(task_id, url, created_by) values ($1,'https://cdn.example.test/m.webp',$2)`, [task.id, f.manager])
+    await as(c, 'authenticated', mgrB)
+    assert.equal((await q(c, 'select * from housekeeping_task_photos')).length, 0, 'other property')
+    await as(c, 'anon')
+    await fails(c, 'select * from housekeeping_task_photos', [], '42501')
+  }))

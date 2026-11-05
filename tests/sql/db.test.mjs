@@ -2119,3 +2119,36 @@ test('analytics: guest vs member bookings and returning-customer rate come from 
     assert.ok(o.returning_rate >= 0 && o.returning_rate <= 100)
     assert.equal(o.registration_enabled, true); assert.equal(o.guest_checkout_enabled, true)
   }))
+
+// ---------------------------------------------------------------------------------------------
+// Member privacy (migration 0031)
+// ---------------------------------------------------------------------------------------------
+test('privacy: members download only their own data; deletion request notifies staff; anonymise keeps the books', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const fri = fmt(f.friday)
+    const me = await customer(c, 'Private'); await activate(c, me)
+    const other = await customer(c, 'Neighbour'); await activate(c, other)
+    const b = await booking(c, f, { from: fri, to: day(fri, 2), total: 12000 })
+    await c.query('update bookings set customer_id = $1, amount_paid = 6000 where id = $2', [me, b.id])
+    await as(c, 'authenticated', me)
+    const d = (await one(c, 'select my_data_export() d')).d
+    assert.equal(d.profile.full_name, 'Private'); assert.equal(d.bookings.length, 1)
+    assert.ok(!JSON.stringify(d).includes('Neighbour'))
+    await one(c, `select request_account_deletion('moving abroad') x`)
+    await admin(c)
+    assert.equal((await one(c, `select count(*)::int n from notifications where kind = 'customer_request' and entity_id = $1`, [me])).n, 1)
+    // only staff with customers.manage can anonymise
+    await as(c, 'authenticated', me)
+    await fails(c, 'select anonymise_customer($1)', [me], '42501')
+    await admin(c)
+    await as(c, 'authenticated', f.manager)
+    await one(c, 'select anonymise_customer($1) x', [me])
+    await admin(c)
+    const p = await one(c, 'select full_name, email, phone, status, anonymised_at from customer_profiles where user_id = $1', [me])
+    assert.equal(p.full_name, 'Former member'); assert.match(p.email, /@removed\.invalid$/); assert.equal(p.phone, null); assert.equal(p.status, 'suspended'); assert.ok(p.anonymised_at)
+    const kept = await one(c, 'select total_amount, amount_paid, customer_id from bookings where id = $1', [b.id])
+    assert.deepEqual([kept.total_amount, kept.amount_paid], [12000, 6000])                     // the books are untouched
+    // an anonymised member cannot make member bookings any more
+    await fails(c, 'select create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [me, null, null, null, f.ua, day(fri, 9), day(fri, 11), 2, 'X', phone(), null, 'website'], '23514')
+  }))

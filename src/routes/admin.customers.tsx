@@ -52,7 +52,7 @@ function Customers() {
 }
 
 type Detail = {
-  profile: { user_id: string; full_name: string; email: string; phone: string | null; country: string | null; birthday: string | null; status: string; suspended_reason: string | null; tier_key: string; tier_override: boolean; created_at: string; marketing_opt_in: boolean }
+  profile: { user_id: string; full_name: string; email: string; phone: string | null; country: string | null; birthday: string | null; anonymised_at: string | null; status: string; suspended_reason: string | null; tier_key: string; tier_override: boolean; created_at: string; marketing_opt_in: boolean }
   tier: { name: string } | null; points: number
   bookings: { id: string; reference: string; status: string; check_in: string; check_out: string; total: number; paid: number; discount: number }[]
   rewards: { id: string; code: string; name: string; status: string; issued_at: string; expires_at: string | null }[]
@@ -71,6 +71,7 @@ function Detail({ id, onClose }: { id: string; onClose: () => void }) {
   const status = useMutation(run(() => adminRpc('set_customer_status', { p_user: id, p_status: q.data!.profile.status === 'active' ? 'suspended' : 'active', p_reason: reason }), 'Saved'))
   const tier = useMutation({ ...run(() => Promise.resolve(), 'Tier saved'), mutationFn: (key: string) => adminRpc('set_customer_tier', { p_user: id, p_tier: key || null }) })
   const points = useMutation(run(() => adminRpc('adjust_loyalty_points', { p_user: id, p_points: Number(pts), p_note: ptsNote }).then(() => { setPts(''); setPtsNote('') }), 'Points adjusted'))
+  const anon = useMutation(run(() => adminRpc('anonymise_customer', { p_user: id }), 'Personal details removed'))
   const issue = useMutation(run(() => adminRpc('admin_issue_reward', { p_user: id, p_offer: offer, p_note: 'Issued by staff' }).then(() => setOffer('')), 'Reward issued'))
   const d = q.data
   return (
@@ -105,6 +106,12 @@ function Detail({ id, onClose }: { id: string; onClose: () => void }) {
                   <Button variant={d.profile.status === 'active' ? 'danger' : 'default'} loading={status.isPending} disabled={d.profile.status === 'active' && reason.trim().length < 3} onClick={() => status.mutate()}>{d.profile.status === 'active' ? 'Suspend' : 'Reactivate'}</Button>
                 </div>
               </section>
+            )}
+            {can('customers.manage') && !d.profile.anonymised_at && (
+              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-danger/30 p-3">
+                <p className="max-w-md text-xs text-muted-foreground">Remove this member's personal details at their request. Bookings, payments and points stay in the records. The sign-in itself is removed separately in Supabase, Authentication, Users.</p>
+                <Button size="sm" variant="danger" loading={anon.isPending} onClick={() => { if (window.confirm(`Remove all personal details for ${d.profile.full_name}? This cannot be undone.`)) anon.mutate() }}>Remove personal details</Button>
+              </div>
             )}
             {can('offers.manage') && (
               <div className="grid gap-2 sm:grid-cols-[1fr_auto] sm:items-end">

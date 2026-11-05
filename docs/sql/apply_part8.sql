@@ -1,5 +1,5 @@
 -- apply_pending.sql: paste into the Supabase SQL Editor of project "bnb-system" (ref bxpgpzrtoxjmynyjnfkg) and press Run.
--- PART 8 of 8: migrations 0030 to 0030. Run the parts in order.
+-- PART 8 of 9: migrations 0030 to 0030. Run the parts in order.
 -- Stops without changes if this is the wrong project or migration 0008 is missing.
 do $apply$
 begin

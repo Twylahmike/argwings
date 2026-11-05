@@ -41,17 +41,17 @@ function MessagesPage() {
   const resend = useSendBooking()
   return (
     <div>
-      <PageHeader title="Messages" description="Every WhatsApp message the system sends. If sending is off or fails, use the green button to send it yourself."
+      <PageHeader title="Messages" description="Every WhatsApp message and email the system sends. If WhatsApp is off or fails, use the button to send the same text from your own phone. Email shows as sent once the email provider accepts it."
         actions={<Button onClick={() => setComposing(true)}><Send className="h-4 w-4" /> New message</Button>} />
       <div className="mb-4 max-w-xs"><Select aria-label="Status" value={status} onChange={(e) => setStatus(e.target.value)}><option value="">All statuses</option>{['sent', 'delivered', 'read', 'skipped', 'failed', 'queued'].map((s) => <option key={s}>{s}</option>)}</Select></div>
       {q.isLoading && <Skeleton className="h-48" />}
       {q.error && <ErrorState error={q.error} retry={() => q.refetch()} />}
       {q.data?.length === 0 && <EmptyState icon={MessageCircle} title="No messages yet" description="Confirmations and reminders appear here." />}
       {!!q.data?.length && <TableWrap>
-        <thead><tr>{['When', 'To', 'Booking', 'Type', 'Status', 'Message', ''].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
+        <thead><tr>{['When', 'To', 'Channel', 'Booking', 'Type', 'Status', 'Message', ''].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
         <tbody className="divide-y">{q.data.map((m) => (
           <tr key={m.id} className="align-top">
-            <td className={`${td} whitespace-nowrap`}>{formatDateTime(m.created_at)}</td><td className={td}>{formatPhoneLocal(m.to_phone)}</td>
+            <td className={`${td} whitespace-nowrap`}>{formatDateTime(m.created_at)}</td><td className={`${td} break-all`}>{m.channel === 'email' ? m.to_phone : formatPhoneLocal(m.to_phone)}</td><td className={`${td} capitalize`}>{m.channel}</td>
             <td className={td}>{m.booking ? <BookingLink id={m.booking.id}>{m.booking.reference}</BookingLink> : '—'}</td>
             <td className={`${td} capitalize`}>{m.template.replace(/_/g, ' ')}</td>
             <td className={td}><MessageStatus status={m.status} />{m.error && <p className="mt-1 max-w-[12rem] text-xs text-muted-foreground">{m.error}</p>}</td>

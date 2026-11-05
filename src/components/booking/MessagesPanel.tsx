@@ -24,8 +24,9 @@ export function MessageStatus({ status }: { status: string }) {
 }
 
 /** Resend a logged message. If WhatsApp is off, `wa.me` lets staff send the exact same text from their own phone. */
-export function ManualSendButton({ m }: { m: Pick<MessageLog, 'to_phone' | 'body' | 'status'> }) {
-  if (!m.body || (m.status !== 'skipped' && m.status !== 'failed')) return null
+export function ManualSendButton({ m }: { m: Pick<MessageLog, 'to_phone' | 'body' | 'status'> & { channel?: string } }) {
+  // Email rows keep the address in to_phone: a wa.me link makes no sense for them.
+  if (m.channel === 'email' || !m.body || (m.status !== 'skipped' && m.status !== 'failed')) return null
   return (
     <Button variant="outline" size="sm" asChild>
       <a href={waLink(m.to_phone, m.body)} target="_blank" rel="noopener noreferrer"><MessageCircle className="h-4 w-4" /> Send via WhatsApp</a>
@@ -67,7 +68,7 @@ export function MessagesPanel({ bookingId }: { bookingId: string }) {
         {q.data?.map((m) => (
           <li key={m.id} className="grid gap-1 py-3 text-sm">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="font-medium">{m.template.replace(/_/g, ' ')} <span className="font-normal text-muted-foreground">· {formatDateTime(m.created_at)}</span></span>
+              <span className="font-medium">{m.template.replace(/_/g, ' ')} <span className="font-normal text-muted-foreground">· {m.channel === 'email' ? `email to ${m.to_phone}` : 'WhatsApp'} · {formatDateTime(m.created_at)}</span></span>
               <span className="flex items-center gap-2"><MessageStatus status={m.status} /><ManualSendButton m={m} /></span>
             </div>
             {m.error && <p className="text-xs text-muted-foreground">{m.error}</p>}

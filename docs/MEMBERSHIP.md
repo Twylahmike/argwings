@@ -87,6 +87,10 @@ Edited under Membership settings. Nothing is hardcoded: percentage or fixed KES 
 
 Settings key `guest_checkout_enabled` (default on). When off, visitors must sign in to book. The booking function enforces it, not only the page.
 
+## Privacy
+
+In Account settings a member can **download their data** (one JSON file) and **request deletion**. The request reaches staff as a notification; in Customer accounts, staff with `customers.manage` can then **Remove personal details**. That clears name, email, phone, country and birthday and suspends the profile, but keeps bookings, payments, redemptions and points in the records (financial records are never deleted). The sign-in itself is removed separately in Supabase, Authentication, Users. Run `docs/sql/apply_part9.sql` for this.
+
 ## Not built
 
 - SMS and smart-lock integrations (no provider connected).

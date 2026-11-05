@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Check, ExternalLink, MapPin } from 'lucide-react'
-import { fetchPropertyBySlug, mapsLink } from '~/lib/public-api'
+import { fetchPropertyBySlug, fetchStayOffers, mapsLink } from '~/lib/public-api'
 import { formatTime } from '~/lib/dates'
 import { fromRate } from '~/lib/pricing'
 import { useBrand } from '~/lib/brand'
@@ -23,7 +23,8 @@ export const Route = createFileRoute('/properties/$slug')({
   loader: async ({ params }) => {
     const property = await fetchPropertyBySlug(params.slug)
     if (!property) throw notFound()
-    return { property }
+    const offers = await fetchStayOffers(property.id).catch(() => [])
+    return { property, offers }
   },
   notFoundComponent: NotFound,
   head: ({ loaderData }) => {
@@ -55,7 +56,7 @@ export const Route = createFileRoute('/properties/$slug')({
 })
 
 function PropertyPage() {
-  const { property: p } = Route.useLoaderData()
+  const { property: p, offers } = Route.useLoaderData()
   const s = Route.useSearch()
   const brand = useBrand()
   const photos = [p.cover_image, ...p.gallery].filter((x, i, a): x is string => !!x && a.indexOf(x) === i)
@@ -118,6 +119,7 @@ function PropertyPage() {
             <div className="sticky top-24 rounded-2xl border bg-card p-4">
               <h2 className="mb-3 font-semibold">Search all dates</h2>
               <p className="mb-3 text-sm text-muted-foreground">See what is free across all our properties.</p>
+              {offers.length > 0 && <p className="mb-3 rounded-lg bg-brand/10 p-3 text-sm text-brand">{offers.map((o) => `Stay ${o.min_nights}+ nights and save ${o.percent}%`).join(' · ')}</p>}
               <SearchBar propertyId={p.id} initial={{ checkIn: s.in, checkOut: s.out, guests: s.guests }} />
             </div>
           </aside>

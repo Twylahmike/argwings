@@ -226,6 +226,61 @@ function PhotosSection({ property }: { property: Property }) {
   )
 }
 
+/* ------------------------------ Length-of-stay discounts ------------------------------ */
+
+type StayRule = { id: string; unit_id: string | null; min_nights: number; percent: number; active: boolean }
+
+function StayDiscountsCard({ property }: { property: Property }) {
+  const qc = useQueryClient()
+  const [nights, setNights] = useState('7')
+  const [percent, setPercent] = useState('10')
+  const [err, setErr] = useState('')
+  const rules = useQuery({ queryKey: ['stay-discounts', property.id], queryFn: async () => {
+    const { data, error } = await sb().from('stay_discounts').select('id, unit_id, min_nights, percent, active').eq('property_id', property.id).order('min_nights')
+    if (error) throw error
+    return data as StayRule[]
+  } })
+  const refresh = () => qc.invalidateQueries({ queryKey: ['stay-discounts', property.id] })
+  const add = useMutation({
+    mutationFn: async () => {
+      setErr('')
+      const n = Number(nights); const p = Number(percent)
+      if (!Number.isInteger(n) || n < 2 || n > 365) throw new Error('Nights must be a whole number from 2 to 365.')
+      if (!Number.isInteger(p) || p < 1 || p > 90) throw new Error('The discount must be a whole percent from 1 to 90.')
+      const { error } = await sb().from('stay_discounts').insert({ property_id: property.id, min_nights: n, percent: p })
+      if (error) throw new Error(error.code === '23505' ? 'There is already a discount for that number of nights.' : error.message)
+    },
+    onSuccess: () => { toast.success('Discount added'); refresh() }, onError: (e) => setErr(errMessage(e)),
+  })
+  const patch = useMutation({
+    mutationFn: async (v: { id: string; active?: boolean; remove?: boolean }) => {
+      const { error } = v.remove ? await sb().from('stay_discounts').delete().eq('id', v.id) : await sb().from('stay_discounts').update({ active: v.active }).eq('id', v.id)
+      if (error) throw error
+    },
+    onSuccess: refresh, onError: (e) => toast.error(errMessage(e)),
+  })
+  return (
+    <Card className="mb-4">
+      <CardHeader><CardTitle>Length-of-stay discounts</CardTitle></CardHeader>
+      <CardContent className="grid gap-3">
+        <p className="text-sm text-muted-foreground">Guests who stay longer pay less automatically, on the room charge only (not the cleaning fee). The best matching rule applies; rules do not add up.</p>
+        {rules.data?.length === 0 && <p className="text-sm text-muted-foreground">No discounts yet.</p>}
+        <ul className="divide-y text-sm">{rules.data?.map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <span className={r.active ? '' : 'text-muted-foreground line-through'}>{r.min_nights}+ nights: <b>{r.percent}% off</b></span>
+            <span className="flex gap-1"><Button size="sm" variant="outline" onClick={() => patch.mutate({ id: r.id, active: !r.active })}>{r.active ? 'Switch off' : 'Switch on'}</Button><Button size="sm" variant="ghost" className="text-danger" onClick={() => patch.mutate({ id: r.id, remove: true })}>Remove</Button></span>
+          </li>))}</ul>
+        <div className="flex flex-wrap items-end gap-2">
+          <Field label="From (nights)" htmlFor="sd-n"><Input id="sd-n" className="w-28" inputMode="numeric" value={nights} onChange={(e) => setNights(e.target.value)} /></Field>
+          <Field label="Percent off" htmlFor="sd-p"><Input id="sd-p" className="w-28" inputMode="numeric" value={percent} onChange={(e) => setPercent(e.target.value)} /></Field>
+          <Button variant="outline" loading={add.isPending} onClick={() => add.mutate()}>Add discount</Button>
+        </div>
+        {err && <p role="alert" className="text-sm text-danger">{err}</p>}
+      </CardContent>
+    </Card>
+  )
+}
+
 /* ---------------------------------- Units & rates ---------------------------------- */
 
 function UnitsSection({ property }: { property: Property }) {
@@ -241,6 +296,7 @@ function UnitsSection({ property }: { property: Property }) {
   })
   return (
     <div>
+      <StayDiscountsCard property={property} />
       <div className="mb-3 flex justify-end"><Button onClick={() => setEditing('new')}><Plus className="h-4 w-4" /> Add unit</Button></div>
       {units.isLoading && <Skeleton className="h-40" />}
       {units.error && <ErrorState error={units.error} retry={() => units.refetch()} />}

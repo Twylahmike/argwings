@@ -1619,3 +1619,37 @@ test('reschedule_booking: validated, repriced from the quote, history kept, perm
     await admin(c); await c.query(`update bookings set status='cancelled' where id=$1`, [other.id]); await as(c, 'authenticated', f.manager)
     await fails(c, `select reschedule_booking($1,$2,$3,null,true,'zombie')`, [other.id, day(d0, 50), day(d0, 52)], '23514')
   }))
+
+test('length-of-stay discounts: best rule wins, applied in the quote everywhere, scoped by room, public read of active rules only', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    const quote = async (unit, nights) => (await one(c, 'select * from quote_stay($1,$2,$3)', [unit, d0, day(d0, nights)]))
+    const base7 = await quote(f.ua, 7)
+    await as(c, 'authenticated', f.manager)
+    await c.query(`insert into stay_discounts(property_id, min_nights, percent) values ($1,7,10)`, [f.pa])
+    await c.query(`insert into stay_discounts(property_id, min_nights, percent) values ($1,14,15)`, [f.pa])
+    await c.query(`insert into stay_discounts(property_id, unit_id, min_nights, percent, active) values ($1,$2,7,50,false)`, [f.pa, f.ua])
+    await fails(c, `insert into stay_discounts(property_id, min_nights, percent) values ($1,7,12)`, [f.pa], '23505')          // duplicate rule
+    await fails(c, `insert into stay_discounts(property_id, min_nights, percent) values ($1,1,10)`, [f.pa], '23514')
+    await fails(c, `insert into stay_discounts(property_id, min_nights, percent) values ($1,7,95)`, [f.pa], '23514')
+    await fails(c, `insert into stay_discounts(property_id, min_nights, percent) values ($1,7,10)`, [f.pb], '42501')           // other property
+    await fails(c, `insert into stay_discounts(property_id, unit_id, min_nights, percent) values ($1,$2,5,10)`, [f.pa, f.ub], '42501')   // room of another property
+
+    await as(c, 'anon')
+    const q6 = await quote(f.ua, 6), q7 = await quote(f.ua, 7), q14 = await quote(f.ua, 14)
+    assert.equal(q6.nightly_total, (await one(c, 'select nightly_total from quote_stay($1,$2,$3)', [f.ua, d0, day(d0, 6)])).nightly_total)
+    assert.equal(base7.nightly_total - q7.nightly_total, Math.floor(base7.nightly_total * 10 / 100), '7 nights: 10% off the room charge')
+    assert.equal(q7.total, q7.nightly_total + q7.cleaning_fee, 'cleaning fee is not discounted')
+    assert.ok(q14.nightly_total < q7.nightly_total * 2, '14 nights uses the 15% rule, not both rules')
+    assert.equal((await one(c, 'select long_stay_percent($1,$2) p', [f.ua, 14])).p, 15)
+    assert.equal((await one(c, 'select long_stay_percent($1,$2) p', [f.ua, 3])).p, 0)
+    assert.equal((await one(c, 'select long_stay_percent($1,$2) p', [f.ub, 14])).p, 0, 'rules belong to a property')
+    assert.equal((await q(c, 'select * from stay_discounts')).length, 2, 'inactive rules are not public')
+    // the availability search and booking creation agree with the quote
+    const av = (await q(c, 'select total from get_available_units($1,$2,1,$3)', [d0, day(d0, 7), f.pa]))[0]
+    assert.equal(av.total, q7.total)
+    await admin(c)
+    const bk = await one(c, `select * from create_booking($1,$2,$3,1,'Long Stay','254712000777',null,'website','confirmed')`, [f.ua, d0, day(d0, 7)])
+    assert.equal(bk.total_amount, q7.total)
+  }))

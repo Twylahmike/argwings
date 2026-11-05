@@ -64,6 +64,11 @@ function BookPage() {
       return { unit: unit as Unit, property: prop.data as Property, quote }
     },
   })
+  const longStay = useQuery({ queryKey: ['long-stay', s.unit, s.in, s.out], enabled: valid, queryFn: async () => {
+    const n = Math.round((Date.parse(s.out) - Date.parse(s.in)) / 86_400_000)
+    const { data } = await pub().rpc('long_stay_percent', { p_unit: s.unit, p_nights: n })
+    return Number(data ?? 0)
+  } })
   const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<Values>({
     resolver: zodResolver(schema), defaultValues: { guests: s.guests, consent: false },
   })
@@ -162,6 +167,7 @@ function BookPage() {
                 <p>{formatDate(s.out)} <span className="text-muted-foreground">until {formatTime(d.property.check_out_time)}</span></p>
                 <div className="mt-3 grid gap-1 border-t pt-3">
                   <p className="flex justify-between"><span>{q.nights} night{q.nights > 1 ? 's' : ''}</span><span>{formatKES(q.nightly_total)}</span></p>
+                  {(longStay.data ?? 0) > 0 && <p className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Long-stay discount included</span><span>{longStay.data}% off</span></p>}
                   {q.cleaning_fee > 0 && <p className="flex justify-between"><span>Cleaning fee</span><span>{formatKES(q.cleaning_fee)}</span></p>}
                   {discount > 0 && <p className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Discount ({applied?.code})</span><span>-{formatKES(discount)}</span></p>}
                   <p className="flex justify-between border-t pt-2 text-base font-semibold"><span>Total</span><span>{formatKES(total)}</span></p>

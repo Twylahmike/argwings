@@ -23,6 +23,12 @@ export async function fetchPropertyBySlug(slug: string): Promise<PropertyWithUni
   return { ...(prop as Property), units: units as Unit[] }
 }
 
+/** Active length-of-stay offers for a property, best first. */
+export async function fetchStayOffers(propertyId: string): Promise<{ min_nights: number; percent: number }[]> {
+  const { data } = await pub().from('stay_discounts').select('min_nights, percent').eq('property_id', propertyId).is('unit_id', null).order('min_nights')
+  return (data ?? []) as { min_nights: number; percent: number }[]
+}
+
 export type AvailableUnit = { unit_id: string; property_id: string; nights: number; total: number }
 
 export async function fetchAvailability(checkIn: string, checkOut: string, guests: number, propertyId?: string): Promise<AvailableUnit[]> {

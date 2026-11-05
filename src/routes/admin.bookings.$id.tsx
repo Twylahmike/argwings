@@ -8,6 +8,7 @@ import { isOwner, requireRole } from '~/lib/auth'
 import { balance, fetchBooking, fetchPayments, nextActions, type NextAction } from '~/lib/bookings-api'
 import { METHOD_LABEL, SOURCE_LABEL, type BookingStatus } from '~/lib/types'
 import { formatDate, formatDateTime } from '~/lib/dates'
+import { formatKES } from '~/lib/money'
 import { formatPhoneLocal } from '~/lib/phone'
 import { errMessage } from '~/lib/utils'
 import { Button } from '~/components/ui/button'
@@ -18,6 +19,7 @@ import { Field, Textarea } from '~/components/ui/form'
 import { ErrorState, Skeleton } from '~/components/ui/misc'
 import { Money } from '~/components/booking/BookingBits'
 import { CheckInDialog, CheckOutDialog } from '~/components/booking/FrontDeskDialogs'
+import { RescheduleDialog } from '~/components/booking/RescheduleDialog'
 import { UseCreditButton } from '~/components/booking/UseCreditButton'
 import { RecordPaymentDialog } from '~/components/booking/RecordPaymentDialog'
 import { MessagesPanel } from '~/components/booking/MessagesPanel'
@@ -25,6 +27,7 @@ import { RequestPaymentDialog } from '~/components/booking/RequestPaymentDialog'
 import { useAdmin } from '~/components/layout/AdminShell'
 
 export const Route = createFileRoute('/admin/bookings/$id')({
+  validateSearch: (s: Record<string, unknown>): { move?: number } => (s.move ? { move: 1 } : {}),
   beforeLoad: ({ context }) => requireRole(context.me, ['owner', 'manager']),
   component: BookingDetail,
 })
@@ -43,6 +46,13 @@ function BookingDetail() {
   const [requesting, setRequesting] = useState(false)
   const [pending, setPending] = useState<NextAction | null>(null)
   const [desk, setDesk] = useState<'in' | 'out' | null>(null)
+  const wantsMove = Route.useSearch().move === 1
+  const [moving, setMoving] = useState(wantsMove)
+  const history = useQuery({ queryKey: ['booking-changes', id], queryFn: async () => {
+    const { data, error } = await sb().from('booking_changes').select('id, reason, old_check_in, old_check_out, new_check_in, new_check_out, old_total, new_total, created_at').eq('booking_id', id).order('created_at', { ascending: false })
+    if (error) return []
+    return data as { id: string; reason: string; old_check_in: string; old_check_out: string; new_check_in: string; new_check_out: string; old_total: number; new_total: number; created_at: string }[]
+  } })
   const [editNotes, setEditNotes] = useState(false)
 
   // Live updates: STK confirmations arrive while staff are looking at the page.
@@ -81,6 +91,7 @@ function BookingDetail() {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-wrap items-center gap-3"><h1 className="text-xl font-semibold md:text-2xl">{b.reference}</h1><StatusBadge status={b.status} /></div>
         <div className="flex flex-wrap gap-2">
+          {['pending', 'confirmed', 'checked_in'].includes(b.status) && <Button variant="outline" onClick={() => setMoving(true)}>Change dates or room</Button>}
           {nextActions(b.status).map((a) => (
             <Button key={a.to} variant={a.variant} onClick={() => (a.to === 'checked_in' ? setDesk('in') : a.to === 'checked_out' ? setDesk('out') : a.needsReason ? setPending(a) : setStatus.mutate({ to: a.to }))} loading={setStatus.isPending && setStatus.variables?.to === a.to}>{a.label}</Button>
           ))}
@@ -136,6 +147,12 @@ function BookingDetail() {
         )}
       </div>
 
+      {!!history.data?.length && (
+        <Card className="mt-4"><CardHeader><CardTitle>Changes to this booking</CardTitle></CardHeader><CardContent>
+          <ul className="divide-y text-sm">{history.data.map((h) => (
+            <li key={h.id} className="py-2"><p>{formatDate(h.old_check_in)} to {formatDate(h.old_check_out)} → <b>{formatDate(h.new_check_in)} to {formatDate(h.new_check_out)}</b>, total {formatKES(h.old_total)} → {formatKES(h.new_total)}</p><p className="text-xs text-muted-foreground">{h.reason} · {formatDateTime(h.created_at)}</p></li>))}</ul>
+        </CardContent></Card>
+      )}
       {b.status !== 'blocked' && (
         <Card className="mt-4">
           <CardHeader className="flex-row flex-wrap items-center justify-between gap-2">
@@ -184,6 +201,7 @@ function BookingDetail() {
       {isOwner(me) && <History id={id} />}
       {requesting && <RequestPaymentDialog booking={b} onClose={() => setRequesting(false)} onDone={() => { setRequesting(false); refresh() }} />}
       {recording && <RecordPaymentDialog booking={b} userId={me.id} onClose={() => setRecording(false)} onDone={() => { setRecording(false); refresh() }} />}
+      {moving && <RescheduleDialog booking={b} status={b.status} onClose={() => setMoving(false)} onDone={() => { setMoving(false); refresh(); history.refetch() }} />}
       {desk === 'in' && <CheckInDialog booking={b} onClose={() => setDesk(null)} onDone={() => { setDesk(null); refresh() }} />}
       {desk === 'out' && <CheckOutDialog booking={b} onClose={() => setDesk(null)} onDone={() => { setDesk(null); refresh() }} />}
       {pending && <StatusDialog action={pending} booking={b} busy={setStatus.isPending} onClose={() => setPending(null)} onConfirm={(reason) => setStatus.mutate({ to: pending.to, reason })} />}

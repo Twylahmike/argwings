@@ -33,7 +33,7 @@ function CalendarPage() {
   const nav = useNavigate()
   const qc = useQueryClient()
   const today = todayNairobi()
-  const [view, setView] = useState<'14' | '30'>('14')
+  const [view, setView] = useState<'7' | '14' | '30'>('14')
   const days = Number(view)
   const [start, setStart] = useState(addDays(today, -2))
   const end = addDays(start, days)
@@ -94,7 +94,7 @@ function CalendarPage() {
           <Button variant="outline" size="icon" aria-label="Next" onClick={() => setStart(addDays(start, days))}><ChevronRight className="h-5 w-5" /></Button>
           <span className="ml-2 hidden text-sm text-muted-foreground md:inline">{label}</span>
         </div>
-        <Tabs label="View length" value={view} onChange={setView} tabs={[{ value: '14', label: '14 days' }, { value: '30', label: '30 days' }]} />
+        <Tabs label="View length" value={view} onChange={setView} tabs={[{ value: '7', label: 'Week' }, { value: '14', label: '14 days' }, { value: '30', label: 'Month' }]} />
       </div>
       <Legend />
       {(units.isLoading || data.isLoading) && <Skeleton className="h-80" />}
@@ -190,6 +190,7 @@ function BookingDrawer({ b, onClose, onChanged }: { b: BookingRow; onClose: () =
             </div>
           )}
           {b.status !== 'blocked' && <Button variant="ghost" asChild><Link to="/admin/bookings/$id" params={{ id: b.id }}><ExternalLink className="h-4 w-4" /> Open full booking</Link></Button>}
+          {['pending', 'confirmed', 'checked_in'].includes(b.status) && <Button variant="outline" asChild><Link to="/admin/bookings/$id" params={{ id: b.id }} search={{ move: 1 }}>Change dates or room</Link></Button>}
         </div>
       </SheetContent>
     </Dialog>

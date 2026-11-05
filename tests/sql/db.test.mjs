@@ -1561,3 +1561,61 @@ test('regression: message_log rows in every status insert and update without err
     await c.query(`insert into payments(booking_id,kind,method,status,amount) values ($1,'deposit','cash','pending',100)`, [b.id])
     await c.query(`insert into payments(booking_id,kind,method,status,amount,confirmed_at) values ($1,'deposit','cash','succeeded',100,now())`, [b.id])
   }))
+
+test('reschedule_booking: validated, repriced from the quote, history kept, permission and conflicts enforced', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const today = (await one(c, 'select nairobi_today()::text d')).d
+    const d0 = day(today, 30)
+    const ua2 = (await one(c, `insert into units(property_id,name,base_rate,max_guests,min_nights) values ($1,'A2',7000,2,1) returning id`, [f.pa])).id
+    const b = await booking(c, f, { from: d0, to: day(d0, 2), status: 'confirmed', total: 10000, deposit: 5000 })
+    await c.query(`update bookings set nightly_total=9500, cleaning_fee=500, total_amount=10000, amount_paid=0 where id=$1`, [b.id])
+    const other = await booking(c, f, { from: day(d0, 5), to: day(d0, 7), status: 'confirmed' })
+    await as(c, 'authenticated', f.manager)
+
+    // preview does not change anything
+    const pv = (await one(c, `select reschedule_booking($1,$2,$3,null,true,null,true) r`, [b.id, day(d0, 10), day(d0, 13)])).r
+    assert.equal(pv.nights, 3)
+    assert.equal(pv.old_total, 10000)
+    assert.equal(pv.new_total - pv.old_total, pv.difference)
+    assert.equal((await one(c, 'select check_in::text d from bookings where id=$1', [b.id])).d, d0)
+
+    // reason is required to save; conflicts name the booking in the way
+    await fails(c, `select reschedule_booking($1,$2,$3,null,true,null)`, [b.id, day(d0, 10), day(d0, 13)], '23514')
+    const e = await fails(c, `select reschedule_booking($1,$2,$3,null,true,'Guest asked')`, [b.id, day(d0, 4), day(d0, 6)], '23514')
+    assert.match(e.message, new RegExp(other.reference))
+    await fails(c, `select reschedule_booking($1,$2,$3,null,true,'x y z')`, [b.id, d0, d0], '23514')                              // check-out not after check-in
+    await fails(c, `select reschedule_booking($1,$2,$3,null,true,'past')`, [b.id, day(today, -2), day(today, 1)], '23514')
+    await fails(c, `select reschedule_booking($1,$2,$3,$4,true,'other site')`, [b.id, day(d0, 10), day(d0, 12), f.ub], '23514')       // room of another property
+    await fails(c, `select reschedule_booking($1,$2,$3,null,true,'same')`, [b.id, d0, day(d0, 2)], '23514')                           // nothing changes
+
+    // a real move to a dearer room: repriced from the quote, history row written
+    const r = (await one(c, `select reschedule_booking($1,$2,$3,$4,true,'Upgrade to A2') r`, [b.id, day(d0, 10), day(d0, 12), ua2])).r
+    const quote = await one(c, 'select total from quote_stay($1,$2,$3)', [ua2, day(d0, 10), day(d0, 12)])
+    const after = await one(c, 'select check_in::text ci, unit_id, total_amount, deposit_required from bookings where id=$1', [b.id])
+    assert.equal(after.ci, day(d0, 10)); assert.equal(after.unit_id, ua2); assert.equal(after.total_amount, quote.total)
+    assert.equal(r.new_total, quote.total)
+    const hist = await q(c, 'select * from booking_changes where booking_id=$1', [b.id])
+    assert.equal(hist.length, 1); assert.equal(hist[0].reason, 'Upgrade to A2'); assert.equal(hist[0].old_total, 10000)
+    await fails(c, `update booking_changes set reason='edited' where id=$1`, [hist[0].id], '42501')
+    await fails(c, `delete from booking_changes`, [], '42501')
+
+    // moving without repricing keeps the money as agreed
+    const keep = (await one(c, `select reschedule_booking($1,$2,$3,null,false,'Goodwill move, same price') r`, [b.id, day(d0, 20), day(d0, 22)])).r
+    assert.equal(keep.difference, 0)
+
+    // charges survive a reprice
+    await c.query(`select add_booking_charge($1,'Extra bed',700)`, [b.id])
+    const rep = (await one(c, `select reschedule_booking($1,$2,$3,null,true,'Back to base') r`, [b.id, day(d0, 30), day(d0, 32)])).r
+    const q2 = await one(c, 'select total from quote_stay($1,$2,$3)', [ua2, day(d0, 30), day(d0, 32)])
+    assert.equal(rep.new_total, q2.total + 700)
+
+    // permission and scope
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, `select reschedule_booking($1,$2,$3,null,true,'cleaner')`, [b.id, day(d0, 40), day(d0, 42)], '42501')
+    await admin(c); const mgrB = await user(c, 'MgrB3', 'manager', [f.pb]); await as(c, 'authenticated', mgrB)
+    await fails(c, `select reschedule_booking($1,$2,$3,null,true,'wrong site')`, [b.id, day(d0, 40), day(d0, 42)], '42501')
+    // cancelled bookings cannot be moved
+    await admin(c); await c.query(`update bookings set status='cancelled' where id=$1`, [other.id]); await as(c, 'authenticated', f.manager)
+    await fails(c, `select reschedule_booking($1,$2,$3,null,true,'zombie')`, [other.id, day(d0, 50), day(d0, 52)], '23514')
+  }))

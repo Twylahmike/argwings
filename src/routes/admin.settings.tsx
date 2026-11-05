@@ -24,7 +24,7 @@ export const Route = createFileRoute('/admin/settings')({
 })
 
 type Vals = Record<string, string>
-const KEYS = ['business_name', 'brand_color', 'logo_url', 'support_whatsapp', 'owner_notify_phone', 'mpesa_paybill_display', 'mpesa_manual_instructions', 'deposit_percent', 'hold_minutes', 'booking_mode', 'request_hold_hours',
+const KEYS = ['business_name', 'brand_color', 'logo_url', 'support_whatsapp', 'owner_notify_phone', 'mpesa_paybill_display', 'mpesa_manual_instructions', 'deposit_percent', 'hold_minutes', 'booking_mode', 'request_hold_hours', 'business_email', 'business_address', 'currency', 'timezone', 'tax_percent', 'maintenance_mode',
   'default_check_in_time', 'default_check_out_time', 'cancellation_policy', 'reminder_days_before', 'balance_reminder_days_before'] as const
 
 function SettingsPage() {
@@ -39,6 +39,33 @@ function SettingsPage() {
       {tab === 'audit' && <Audit />}
       {tab === 'export' && <Export />}
     </div>
+  )
+}
+
+const METHOD_CHOICES: [string, string][] = [['mpesa_manual', 'M-Pesa (manual entry)'], ['cash', 'Cash'], ['bank', 'Bank transfer'], ['card', 'Card'], ['other', 'Other']]
+/** Which payment methods staff can pick when recording a payment. M-Pesa STK push is controlled by the payment provider settings. */
+function PaymentMethodsCard() {
+  const qc = useQueryClient()
+  const q = useQuery({ queryKey: ['enabled-methods'], queryFn: async () => {
+    const { data } = await sb().from('settings').select('value').eq('key', 'enabled_payment_methods').maybeSingle()
+    return Array.isArray(data?.value) ? (data!.value as string[]) : METHOD_CHOICES.map(([k]) => k)
+  } })
+  const save = useMutation({
+    mutationFn: async (list: string[]) => {
+      if (list.length === 0) throw new Error('Keep at least one payment method.')
+      const { error } = await sb().from('settings').upsert({ key: 'enabled_payment_methods', value: list, updated_at: new Date().toISOString() })
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success('Payment methods saved'); qc.invalidateQueries({ queryKey: ['enabled-methods'] }) },
+    onError: (e) => toast.error(errMessage(e)),
+  })
+  const on = q.data ?? []
+  return (
+    <Card><CardHeader><CardTitle>Payment methods for recording payments</CardTitle></CardHeader><CardContent className="grid gap-2 text-sm">
+      {METHOD_CHOICES.map(([k, l]) => (
+        <label key={k} className="flex items-center gap-2"><input type="checkbox" checked={on.includes(k)} onChange={(e) => save.mutate(e.target.checked ? [...on, k] : on.filter((x) => x !== k))} /> {l}</label>))}
+      <p className="text-xs text-muted-foreground">Saved as soon as you tick a box. Manual M-Pesa, bank and card entries by managers wait for the owner to verify them.</p>
+    </CardContent></Card>
   )
 }
 
@@ -74,7 +101,15 @@ function Business() {
           const [lo, hi] = k === 'deposit_percent' ? [0, 100] : k === 'hold_minutes' ? [1, 1440] : k === 'request_hold_hours' ? [1, 168] : [0, 30]
           if (!Number.isFinite(n) || raw === '' || n < lo || n > hi || !Number.isInteger(n)) errs[k] = `Enter a whole number from ${lo} to ${hi}.`
           val = n
-        } else if (k === 'business_name' && !raw) errs[k] = 'Enter your business name.'
+        } else if (k === 'tax_percent') {
+          const n = Number(raw || 0)
+          if (!Number.isFinite(n) || n < 0 || n > 50) errs[k] = 'Enter a percentage from 0 to 50.'
+          val = n
+        } else if (k === 'maintenance_mode') val = raw === 'true'
+        else if (k === 'business_email' && raw && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(raw)) errs[k] = 'Enter a valid email address.'
+        else if (k === 'currency') val = (raw || 'KES').toUpperCase().slice(0, 3)
+        else if (k === 'timezone') val = raw || 'Africa/Nairobi'
+        else if (k === 'business_name' && !raw) errs[k] = 'Enter your business name.'
         else if (k === 'booking_mode') val = raw === 'request' ? 'request' : 'instant'
         else if (k === 'brand_color' && raw && !HEX_RE.test(raw)) errs[k] = 'Use a colour like #0f766e.'
         rows.push({ key: k, value: val, updated_at: new Date().toISOString() })
@@ -119,6 +154,15 @@ function Business() {
         {f('support_whatsapp', 'Support WhatsApp', { inputMode: 'tel', hint: 'Shown to guests. Also the fallback for "Book on WhatsApp".' })}
         {f('owner_notify_phone', 'Owner alert number', { inputMode: 'tel', hint: 'Gets WhatsApp alerts when a payment needs review.' })}
       </CardContent></Card>
+      <Card><CardHeader><CardTitle>Business details</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
+        {f('business_email', 'Business email', { type: 'email', hint: 'Shown on the website footer when no email is set in Website text.' })}
+        {f('business_address', 'Physical address', { hint: 'Shown on the website when no location is set in Website text.' })}
+        {f('currency', 'Currency code', { hint: 'Three letters, for example KES. Amounts are shown in Kenya shillings.' })}
+        <Field label="Time zone" htmlFor="s-timezone" hint="Reminders and daily reports follow this."><Select id="s-timezone" value={v.timezone || 'Africa/Nairobi'} onChange={set('timezone')}><option value="Africa/Nairobi">Africa/Nairobi (EAT)</option><option value="Africa/Kampala">Africa/Kampala</option><option value="Africa/Dar_es_Salaam">Africa/Dar es Salaam</option></Select></Field>
+        {f('tax_percent', 'Tax (%)', { inputMode: 'numeric', hint: 'Shown on receipts when above 0. Prices on the website are tax-inclusive.' })}
+        <label className="flex items-start gap-2 self-end pb-2 text-sm"><input className="mt-1" type="checkbox" checked={v.maintenance_mode === 'true'} onChange={(e) => setV((x) => ({ ...x, maintenance_mode: e.target.checked ? 'true' : 'false' }))} /> Website maintenance mode: public pages show a “back soon” notice. Guests with a booking link and staff can still sign in.</label>
+      </CardContent></Card>
+      <PaymentMethodsCard />
       <Card><CardHeader><CardTitle>Booking rules</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
         {f('deposit_percent', 'Deposit (%)', { inputMode: 'numeric', hint: 'Rounded up to the next KES 10.' })}
         {f('hold_minutes', 'Hold time (minutes)', { inputMode: 'numeric', hint: 'How long dates are held while a guest pays.' })}

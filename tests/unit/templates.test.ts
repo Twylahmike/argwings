@@ -71,3 +71,17 @@ describe('Book on WhatsApp message', () => {
     expect(m).not.toContain('Quoted price')
   })
 })
+
+import { applyOverride } from '../../supabase/functions/_shared/templates'
+describe('check-out reminder and editable templates', () => {
+  it('checkout_reminder names the check-out time and mentions a balance only when owed', () => {
+    expect(renderTemplate('checkout_reminder', ctx).text).toContain('by 10:00')
+    expect(renderTemplate('checkout_reminder', ctx).text).toContain('KES 7,750')
+    expect(renderTemplate('checkout_reminder', { ...ctx, balance: 0 }).text).not.toContain('Balance due')
+  })
+  it('applyOverride fills placeholders, uses the first name, and never leaks unknown placeholders', () => {
+    const t = applyOverride('Hi {{guest}}, {{ property }} ref {{reference}} from {{check_in}}. {{nonsense}}Pay {{balance}}.', ctx)
+    expect(t).toBe('Hi Wanjiru, Kilimani Nest ref BNB-2611-0007 from Fri 6 Nov 2026. Pay KES 7,750.')
+    expect(t).not.toContain('{{')
+  })
+})

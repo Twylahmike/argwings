@@ -2,7 +2,7 @@
 // Plain TS (no Deno APIs) so Vitest can import it.
 import { formatDate, formatKES, formatTime } from './format.ts'
 
-export type TemplateName = 'booking_confirmed' | 'payment_receipt' | 'balance_reminder' | 'checkin_reminder' | 'thank_you' | 'custom'
+export type TemplateName = 'booking_confirmed' | 'payment_receipt' | 'balance_reminder' | 'checkin_reminder' | 'checkout_reminder' | 'thank_you' | 'custom'
 
 export type TemplateContext = {
   business: string
@@ -75,6 +75,16 @@ export function renderTemplate(name: Exclude<TemplateName, 'custom'>, c: Templat
         ].filter(Boolean).join('\n'),
         params: [first(c.guestName), c.property, formatDate(c.checkIn), formatTime(c.checkInTime) || '14:00', c.link],
       }
+    case 'checkout_reminder':
+      return {
+        text: [
+          `Hi ${first(c.guestName)}, a reminder that check-out at ${c.property} is today by ${formatTime(c.checkOutTime) || '11:00'}.`,
+          c.balance > 0 ? `Balance due: ${formatKES(c.balance)}. Pay here: ${c.link}` : '',
+          c.contactPhone ? `Need a little more time? Call ${c.contactPhone}.` : '',
+          `Thank you for staying with us. — ${c.business}`,
+        ].filter(Boolean).join('\n'),
+        params: [first(c.guestName), c.property, formatTime(c.checkOutTime) || '11:00'],
+      }
     case 'thank_you':
       return {
         text: [
@@ -85,4 +95,15 @@ export function renderTemplate(name: Exclude<TemplateName, 'custom'>, c: Templat
         params: [first(c.guestName), c.property],
       }
   }
+}
+
+/** Replace {{placeholders}} in an owner-edited template. Unknown placeholders are left out, never shown raw. */
+export function applyOverride(body: string, c: TemplateContext): string {
+  const v: Record<string, string> = {
+    guest: first(c.guestName), business: c.business, reference: c.reference, link: c.link, property: c.property, unit: c.unit,
+    address: c.address ?? '', check_in: formatDate(c.checkIn), check_out: formatDate(c.checkOut), nights: String(c.nights),
+    check_in_time: formatTime(c.checkInTime) || '14:00', check_out_time: formatTime(c.checkOutTime) || '11:00',
+    total: formatKES(c.total), paid: formatKES(c.paid), balance: formatKES(c.balance), amount: formatKES(c.amount ?? 0), phone: c.contactPhone ?? '',
+  }
+  return body.replace(/\{\{\s*([a-z_]+)\s*\}\}/gi, (_, k: string) => v[k.toLowerCase()] ?? '').replace(/[ \t]+\n/g, '\n').trim()
 }

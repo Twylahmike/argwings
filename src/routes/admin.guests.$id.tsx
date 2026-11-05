@@ -42,14 +42,14 @@ function GuestPage() {
     queryKey: ['guest-bookings', id, scopeIds],
     queryFn: async () => (await fetchBookings({ propertyIds: scopeIds })).filter((b) => b.guest_id === id),
   })
-  const [form, setForm] = useState<{ full_name: string; email: string; id_number: string; notes: string; vip: boolean; flagged: boolean; flag_reason: string } | null>(null)
+  const [form, setForm] = useState<{ full_name: string; email: string; id_number: string; notes: string; vip: boolean; flagged: boolean; flag_reason: string; comms_opt_out: boolean } | null>(null)
   const g = guest.data
-  const f = form ?? (g ? { full_name: g.full_name, email: g.email ?? '', id_number: g.id_number ?? '', notes: g.notes ?? '', vip: g.vip, flagged: g.flagged, flag_reason: g.flag_reason ?? '' } : null)
+  const f = form ?? (g ? { full_name: g.full_name, email: g.email ?? '', id_number: g.id_number ?? '', notes: g.notes ?? '', vip: g.vip, flagged: g.flagged, flag_reason: g.flag_reason ?? '', comms_opt_out: g.comms_opt_out } : null)
 
   const save = useMutation({
     mutationFn: async () => {
       if (f!.flagged && f!.flag_reason.trim().length < 3) throw new Error('Add a short reason for the flag.')
-      const { error } = await sb().from('guests').update({ full_name: f!.full_name.trim(), email: f!.email.trim() || null, id_number: f!.id_number.trim() || null, notes: f!.notes.trim() || null, vip: f!.vip, flagged: f!.flagged, flag_reason: f!.flagged ? f!.flag_reason.trim() : null }).eq('id', id)
+      const { error } = await sb().from('guests').update({ full_name: f!.full_name.trim(), email: f!.email.trim() || null, id_number: f!.id_number.trim() || null, notes: f!.notes.trim() || null, vip: f!.vip, flagged: f!.flagged, flag_reason: f!.flagged ? f!.flag_reason.trim() : null, comms_opt_out: f!.comms_opt_out }).eq('id', id)
       if (error) throw error
     },
     onSuccess: () => { toast.success('Saved'); setForm(null); qc.invalidateQueries({ queryKey: ['guest', id] }); qc.invalidateQueries({ queryKey: ['guests'] }) },
@@ -90,6 +90,7 @@ function GuestPage() {
               <label className="flex items-center gap-2"><input type="checkbox" checked={f!.vip} onChange={(e) => setForm({ ...f!, vip: e.target.checked })} /> VIP guest</label>
               <label className="flex items-center gap-2"><input type="checkbox" checked={f!.flagged} onChange={(e) => setForm({ ...f!, flagged: e.target.checked })} /> Flag (think twice before hosting again)</label>
             </div>
+            <label className="flex items-start gap-2 text-sm"><input className="mt-1" type="checkbox" checked={f!.comms_opt_out} onChange={(e) => setForm({ ...f!, comms_opt_out: e.target.checked })} /> Do not send reminders or thank-you messages (confirmations and receipts are still sent)</label>
             {f!.flagged && <Field label="Reason for the flag" htmlFor="g-flag" hint="Staff only. Required."><Input id="g-flag" maxLength={300} value={f!.flag_reason} onChange={(e) => setForm({ ...f!, flag_reason: e.target.value })} /></Field>}
             <div className="flex flex-wrap gap-2">
               <Button disabled={!form || !f!.full_name.trim()} loading={save.isPending} onClick={() => save.mutate()}>Save</Button>

@@ -1,7 +1,7 @@
 // Builds, sends and logs WhatsApp messages for a booking. Used by payment callbacks, reminders and send-whatsapp.
 // Everything here swallows errors: messaging must never break a booking or payment.
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
-import { renderTemplate, type TemplateContext, type TemplateName } from './templates.ts'
+import { applyOverride, renderTemplate, type TemplateContext, type TemplateName } from './templates.ts'
 import { sendWhatsApp } from './whatsapp.ts'
 import type { Logger } from './log.ts'
 
@@ -47,7 +47,18 @@ export async function sendBookingTemplate(
   try {
     const ctx = await loadBookingContext(db, bookingId)
     if (!ctx) return null
-    const { text, params } = renderTemplate(template, { ...ctx, ...extra })
+    const full = { ...ctx, ...extra }
+    // Owner-edited wording and on/off switch (table may not exist yet on an older database: then the built-in text is used).
+    const { data: custom } = await db.from('message_templates').select('body, enabled').eq('key', template).maybeSingle()
+    const built = renderTemplate(template, full)
+    const text = custom?.body ? applyOverride(custom.body as string, full) : built.text
+    const params = custom?.body ? undefined : built.params
+    if (custom && custom.enabled === false) return { status: 'skipped', logId: null, text }
+    // Guests who opted out still get confirmations and receipts, but not reminders or thank-yous.
+    if (!['booking_confirmed', 'payment_receipt'].includes(template) && ctx.guestId) {
+      const { data: g } = await db.from('guests').select('comms_opt_out').eq('id', ctx.guestId).maybeSingle()
+      if (g?.comms_opt_out === true) return { status: 'skipped', logId: null, text }
+    }
     return await deliver(db, log, { bookingId, guestId: ctx.guestId, propertyId: ctx.propertyId, to: ctx.phone, template, text, params })
   } catch (e) {
     log.error('sendBookingTemplate failed', { template, message: e instanceof Error ? e.message : String(e) })
@@ -57,9 +68,10 @@ export async function sendBookingTemplate(
 
 export async function deliver(
   db: SupabaseClient, log: Logger,
-  m: { bookingId: string | null; guestId: string | null; propertyId: string | null; to: string; template: TemplateName; text: string; params?: string[] },
+  m: { bookingId: string | null; guestId: string | null; propertyId: string | null; to: string; template: TemplateName; text: string; params?: string[]; existingLogId?: string },
 ): Promise<Outcome> {
-  const { data: row } = await db.from('message_log').insert({
+  // A retry updates the original log row instead of writing a duplicate.
+  const { data: row } = m.existingLogId ? { data: { id: m.existingLogId } } : await db.from('message_log').insert({
     booking_id: m.bookingId, guest_id: m.guestId, property_id: m.propertyId, template: m.template, to_phone: m.to, body: m.text, status: 'queued',
   }).select('id').single()
   const logId = (row?.id as string | undefined) ?? null

@@ -21,6 +21,8 @@ import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcem
 import { Route as AdminBlockedRouteImport } from './routes/admin.blocked'
 import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
 import { Route as AdminChangePasswordRouteImport } from './routes/admin.change-password'
+import { Route as AdminCommunicationsRouteImport } from './routes/admin.communications'
+import { Route as AdminContactsRouteImport } from './routes/admin.contacts'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
 import { Route as AdminFrontdeskRouteImport } from './routes/admin.frontdesk'
 import { Route as AdminGalleryRouteImport } from './routes/admin.gallery'
@@ -111,6 +113,16 @@ const AdminCalendarRoute = AdminCalendarRouteImport.update({
 const AdminChangePasswordRoute = AdminChangePasswordRouteImport.update({
   id: '/change-password',
   path: '/change-password',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminCommunicationsRoute = AdminCommunicationsRouteImport.update({
+  id: '/communications',
+  path: '/communications',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminContactsRoute = AdminContactsRouteImport.update({
+  id: '/contacts',
+  path: '/contacts',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminFinanceRoute = AdminFinanceRouteImport.update({
@@ -281,6 +293,8 @@ export interface FileRoutesByFullPath {
   '/admin/blocked': typeof AdminBlockedRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
+  '/admin/communications': typeof AdminCommunicationsRoute
+  '/admin/contacts': typeof AdminContactsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/gallery': typeof AdminGalleryRoute
@@ -325,6 +339,8 @@ export interface FileRoutesByTo {
   '/admin/blocked': typeof AdminBlockedRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
+  '/admin/communications': typeof AdminCommunicationsRoute
+  '/admin/contacts': typeof AdminContactsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/gallery': typeof AdminGalleryRoute
@@ -371,6 +387,8 @@ export interface FileRoutesById {
   '/admin/blocked': typeof AdminBlockedRoute
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
+  '/admin/communications': typeof AdminCommunicationsRoute
+  '/admin/contacts': typeof AdminContactsRoute
   '/admin/finance': typeof AdminFinanceRoute
   '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/gallery': typeof AdminGalleryRoute
@@ -418,6 +436,8 @@ export interface FileRouteTypes {
     | '/admin/blocked'
     | '/admin/calendar'
     | '/admin/change-password'
+    | '/admin/communications'
+    | '/admin/contacts'
     | '/admin/finance'
     | '/admin/frontdesk'
     | '/admin/gallery'
@@ -462,6 +482,8 @@ export interface FileRouteTypes {
     | '/admin/blocked'
     | '/admin/calendar'
     | '/admin/change-password'
+    | '/admin/communications'
+    | '/admin/contacts'
     | '/admin/finance'
     | '/admin/frontdesk'
     | '/admin/gallery'
@@ -507,6 +529,8 @@ export interface FileRouteTypes {
     | '/admin/blocked'
     | '/admin/calendar'
     | '/admin/change-password'
+    | '/admin/communications'
+    | '/admin/contacts'
     | '/admin/finance'
     | '/admin/frontdesk'
     | '/admin/gallery'
@@ -639,6 +663,20 @@ declare module '@tanstack/react-router' {
       path: '/change-password'
       fullPath: '/admin/change-password'
       preLoaderRoute: typeof AdminChangePasswordRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/communications': {
+      id: '/admin/communications'
+      path: '/communications'
+      fullPath: '/admin/communications'
+      preLoaderRoute: typeof AdminCommunicationsRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/contacts': {
+      id: '/admin/contacts'
+      path: '/contacts'
+      fullPath: '/admin/contacts'
+      preLoaderRoute: typeof AdminContactsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/finance': {
@@ -866,6 +904,8 @@ interface AdminRouteChildren {
   AdminBlockedRoute: typeof AdminBlockedRoute
   AdminCalendarRoute: typeof AdminCalendarRoute
   AdminChangePasswordRoute: typeof AdminChangePasswordRoute
+  AdminCommunicationsRoute: typeof AdminCommunicationsRoute
+  AdminContactsRoute: typeof AdminContactsRoute
   AdminFinanceRoute: typeof AdminFinanceRoute
   AdminFrontdeskRoute: typeof AdminFrontdeskRoute
   AdminGalleryRoute: typeof AdminGalleryRoute
@@ -901,6 +941,8 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminBlockedRoute: AdminBlockedRoute,
   AdminCalendarRoute: AdminCalendarRoute,
   AdminChangePasswordRoute: AdminChangePasswordRoute,
+  AdminCommunicationsRoute: AdminCommunicationsRoute,
+  AdminContactsRoute: AdminContactsRoute,
   AdminFinanceRoute: AdminFinanceRoute,
   AdminFrontdeskRoute: AdminFrontdeskRoute,
   AdminGalleryRoute: AdminGalleryRoute,

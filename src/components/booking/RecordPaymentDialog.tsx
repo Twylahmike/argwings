@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation } from '@tanstack/react-query'
+import { useMutation, useQuery } from '@tanstack/react-query'
 import { toast } from 'sonner'
 import { sb } from '~/lib/supabase'
 import { formatKES, parseKES } from '~/lib/money'
@@ -10,7 +10,7 @@ import { Dialog, DialogContent } from '~/components/ui/dialog'
 import { Field, Input, Select } from '~/components/ui/form'
 import type { BookingRow } from '~/lib/bookings-api'
 
-const METHODS: PaymentMethod[] = ['mpesa_manual', 'cash', 'bank', 'other']
+const METHODS: PaymentMethod[] = ['mpesa_manual', 'cash', 'bank', 'card', 'other']
 const KINDS: { value: PaymentKind; label: string }[] = [
   { value: 'deposit', label: 'Deposit' }, { value: 'balance', label: 'Balance' }, { value: 'full', label: 'Full payment' },
   { value: 'adjustment', label: 'Adjustment (credit)' }, { value: 'refund', label: 'Refund (money paid back)' },
@@ -19,6 +19,11 @@ const KINDS: { value: PaymentKind; label: string }[] = [
 /** Records money received (or refunded) outside the STK flow. The database trigger updates amount_paid and confirms the booking. */
 export function RecordPaymentDialog({ booking, userId, onClose, onDone }: { booking: BookingRow; userId: string; onClose: () => void; onDone: () => void }) {
   const owing = Math.max(0, booking.total_amount - booking.amount_paid)
+  const enabled = useQuery({ queryKey: ['enabled-methods'], queryFn: async () => {
+    const { data } = await sb().from('settings').select('value').eq('key', 'enabled_payment_methods').maybeSingle()
+    return Array.isArray(data?.value) ? (data!.value as string[]) : null
+  } })
+  const methods = METHODS.filter((m) => !enabled.data || enabled.data.includes(m))
   const [kind, setKind] = useState<PaymentKind>(booking.amount_paid >= booking.deposit_required ? 'balance' : 'deposit')
   const [method, setMethod] = useState<PaymentMethod>('mpesa_manual')
   const [amount, setAmount] = useState(String(owing || ''))
@@ -48,7 +53,7 @@ export function RecordPaymentDialog({ booking, userId, onClose, onDone }: { book
       <DialogContent title="Record a payment" description={`Balance now: ${formatKES(owing)}. Use this for cash, bank transfers or M-Pesa received outside the app.`}>
         <div className="grid gap-4">
           <Field label="Type" htmlFor="rp-kind"><Select id="rp-kind" value={kind} onChange={(e) => setKind(e.target.value as PaymentKind)}>{KINDS.map((k) => <option key={k.value} value={k.value}>{k.label}</option>)}</Select></Field>
-          <Field label="Paid by" htmlFor="rp-method"><Select id="rp-method" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>{METHODS.map((m) => <option key={m} value={m}>{METHOD_LABEL[m]}</option>)}</Select></Field>
+          <Field label="Paid by" htmlFor="rp-method"><Select id="rp-method" value={method} onChange={(e) => setMethod(e.target.value as PaymentMethod)}>{methods.map((m) => <option key={m} value={m}>{METHOD_LABEL[m]}</option>)}</Select></Field>
           <Field label="Amount (KES)" htmlFor="rp-amount"><Input id="rp-amount" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
           {(method === 'mpesa_manual' || method === 'bank') && (
             <Field label={method === 'bank' ? 'Bank reference' : 'M-Pesa code'} htmlFor="rp-ref" hint="Each code can only be recorded once.">

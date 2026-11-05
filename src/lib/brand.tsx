@@ -6,6 +6,8 @@ import { DEFAULT_SITE_CONTENT, sanitizeSiteContent, type SiteContent } from './s
 export type ManagedPhoto = { src: string; alt: string; caption: string; group: string; kind: 'image' | 'video' }
 export type PublicBanner = { id: string; src: string; title: string; subtitle: string; href: string; label: string }
 
+export type PublicContact = { id: string; label: string; kind: string; phone: string; note: string }
+
 export type Brand = {
   businessName: string
   logoUrl: string
@@ -26,6 +28,12 @@ export type Brand = {
   gallery: ManagedPhoto[]
   heroBanners: PublicBanner[]
   promoBanners: PublicBanner[]
+  contacts: PublicContact[]
+  businessEmail: string
+  businessAddress: string
+  currency: string
+  /** When true the public pages show a "back soon" notice (guests with a booking link still reach their booking). */
+  maintenanceMode: boolean
 }
 
 export const DEFAULT_BRAND: Brand = {
@@ -44,6 +52,11 @@ export const DEFAULT_BRAND: Brand = {
   gallery: [],
   heroBanners: [],
   promoBanners: [],
+  contacts: [],
+  businessEmail: '',
+  businessAddress: '',
+  currency: 'KES',
+  maintenanceMode: false,
 }
 
 type CatRow = { id: string; name: string; sort: number }
@@ -70,7 +83,7 @@ function m_content(rows: { key: string; value: unknown }[] | null): unknown {
 export async function fetchBrand(): Promise<Brand> {
   if (!isSupabaseConfigured) return DEFAULT_BRAND
   try {
-    const [{ data }, props, anns, revs, gcats, gitems, banners] = await Promise.all([
+    const [{ data }, props, anns, revs, gcats, gitems, banners, contacts] = await Promise.all([
       pub().from('settings').select('key, value'),
       pub().from('properties').select('id, name, slug').eq('active', true).order('sort').order('name'),
       pub().from('announcements').select('id, text, link, variant').order('created_at', { ascending: false }).limit(3),
@@ -78,6 +91,7 @@ export async function fetchBrand(): Promise<Brand> {
       pub().from('gallery_categories').select('id, name, sort').order('sort').order('name'),
       pub().from('gallery_items').select('category_id, url, kind, alt_text, caption, sort').order('sort').order('created_at'),
       pub().from('homepage_banners').select('id, placement, title, subtitle, image_url, link_url, link_label, sort').order('sort').order('created_at'),
+      pub().from('contact_numbers').select('id, label, kind, phone, note').order('sort').order('label'),
     ])
     const content = sanitizeSiteContent(m_content(data))
     const m = Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value]))
@@ -101,6 +115,11 @@ export async function fetchBrand(): Promise<Brand> {
         announcements: anns.data?.length ? anns.data.map((a) => ({ id: a.id as string, text: a.text as string, href: (a.link as string | null) ?? undefined, variant: a.variant as 'info' | 'promo' })) : content.announcements,
         reviews: revs.data?.length ? revs.data.map((r) => ({ id: r.id as string, guest: r.guest_name as string, stay: (r.stay_label as string | null) ?? undefined, rating: r.rating as 1 | 2 | 3 | 4 | 5, quote: r.body as string, response: (r.response as string | null) ?? undefined })) : content.reviews,
       },
+      contacts: ((contacts.data ?? []) as { id: string; label: string; kind: string; phone: string; note: string | null }[]).map((c) => ({ ...c, note: c.note ?? '' })),
+      businessEmail: str('business_email', ''),
+      businessAddress: str('business_address', ''),
+      currency: str('currency', 'KES'),
+      maintenanceMode: m.maintenance_mode === true,
       gallery: managedGallery(gcats.data, gitems.data),
       ...splitBanners(banners.data),
       spaces: ((props.data ?? []) as { id: string; name: string; slug: string }[]).slice(0, 6),

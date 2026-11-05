@@ -1,5 +1,5 @@
 import { Link } from '@tanstack/react-router'
-import { Mail, MapPin, MessageCircle } from 'lucide-react'
+import { Mail, MapPin, MessageCircle, Phone } from 'lucide-react'
 import { Wordmark } from '~/components/layout/Wordmark'
 import { InstallAppButton } from './InstallAppButton'
 import { useBrand } from '~/lib/brand'
@@ -56,7 +56,9 @@ export function SiteFooter() {
           <ul className="space-y-3 text-sm opacity-80">
             {c.location && <li className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-brand-glow" aria-hidden /> {c.location}</li>}
             {waHref && <li className="flex items-center gap-2"><MessageCircle className="animate-pulse-dot h-4 w-4 shrink-0 text-brand-glow" aria-hidden /><a href={waHref} target="_blank" rel="noreferrer" className="hover:text-brand-glow">{shown ? `${shown} (WhatsApp)` : 'Chat on WhatsApp'}</a></li>}
-            {c.contactEmail && <li className="flex items-center gap-2"><Mail className="h-4 w-4 shrink-0 text-brand-glow" aria-hidden /><a href={`mailto:${c.contactEmail}`} className="break-all hover:text-brand-glow">{c.contactEmail}</a></li>}
+            {brand.contacts.filter((x) => x.kind !== 'whatsapp').map((x) => <li key={x.id} className="flex items-center gap-2"><Phone className="h-4 w-4 shrink-0 text-brand-glow" aria-hidden /><a href={`tel:+${x.phone}`} className="hover:text-brand-glow">{x.label}: {formatPhoneLocal(x.phone)}</a>{x.note && <span className="text-xs opacity-70">{x.note}</span>}</li>)}
+            {!c.location && brand.businessAddress && <li className="flex items-center gap-2"><MapPin className="h-4 w-4 shrink-0 text-brand-glow" aria-hidden /> {brand.businessAddress}</li>}
+            {(c.contactEmail || brand.businessEmail) && <li className="flex items-center gap-2"><Mail className="h-4 w-4 shrink-0 text-brand-glow" aria-hidden /><a href={`mailto:${c.contactEmail || brand.businessEmail}`} className="break-all hover:text-brand-glow">{c.contactEmail || brand.businessEmail}</a></li>}
           </ul>
         </div>
       </div>

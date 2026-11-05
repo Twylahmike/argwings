@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3, BedDouble, Brush, Building2, CalendarCheck, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
   Settings, Star, UserCog, Users, Wallet, type LucideIcon,
-  Ban, Crown, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
+  Ban, Crown, Phone, Send, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
 import { canManage, isOwner, type Me } from '~/lib/auth'
@@ -54,6 +54,8 @@ const NAV: NavItem[] = [
   { to: '/admin/promotions', label: 'Promotions', icon: Tag, show: canManage, group: 'Business' },
   { to: '/admin/finance', label: 'Finance', icon: Wallet, show: canManage, group: 'Business' },
   { to: '/admin/reports', label: 'Reports', icon: BarChart3, show: canManage, group: 'Business' },
+  { to: '/admin/communications', label: 'Guest communications', icon: Send, show: canManage, group: 'Business' },
+  { to: '/admin/contacts', label: 'Contact numbers', icon: Phone, show: canManage, group: 'System' },
   { to: '/admin/messages', label: 'Messages', icon: MessageCircle, show: canManage, group: 'Business' },
   { to: '/admin/staff', label: 'Staff', icon: UserCog, show: isOwner, group: 'System' },
   { to: '/admin/settings', label: 'Settings', icon: Settings, show: isOwner, group: 'System' },

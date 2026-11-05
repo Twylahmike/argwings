@@ -2,7 +2,7 @@ export type AppRole = 'owner' | 'manager' | 'cleaner'
 export type BookingStatus = 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'expired' | 'no_show' | 'blocked'
 export type BookingSource = 'website' | 'whatsapp' | 'walk_in' | 'phone' | 'manual'
 export type PaymentKind = 'deposit' | 'balance' | 'full' | 'refund' | 'adjustment'
-export type PaymentMethod = 'mpesa_stk' | 'mpesa_manual' | 'cash' | 'bank' | 'other'
+export type PaymentMethod = 'mpesa_stk' | 'mpesa_manual' | 'cash' | 'bank' | 'card' | 'other'
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'cancelled'
 export type TaskStatus = 'dirty' | 'in_progress' | 'clean' | 'inspected'
 
@@ -26,7 +26,7 @@ export type RateOverrideRow = { id: string; unit_id: string; label: string | nul
 export type Guest = {
   id: string; full_name: string; phone: string; email: string | null; id_number: string | null
   notes: string | null; anonymised_at: string | null; created_at: string
-  vip: boolean; flagged: boolean; flag_reason: string | null
+  vip: boolean; flagged: boolean; flag_reason: string | null; comms_opt_out: boolean
 }
 export type Booking = {
   id: string; reference: string; public_token: string; property_id: string; unit_id: string; guest_id: string | null
@@ -81,7 +81,7 @@ export const SOURCE_LABEL: Record<BookingSource, string> = {
   website: 'Website', whatsapp: 'WhatsApp', walk_in: 'Walk-in', phone: 'Phone', manual: 'Manual',
 }
 export const METHOD_LABEL: Record<PaymentMethod, string> = {
-  mpesa_stk: 'M-Pesa (STK)', mpesa_manual: 'M-Pesa (manual)', cash: 'Cash', bank: 'Bank', other: 'Other',
+  mpesa_stk: 'M-Pesa (STK)', mpesa_manual: 'M-Pesa (manual)', cash: 'Cash', bank: 'Bank', card: 'Card', other: 'Other',
 }
 export const EXPENSE_CATEGORIES = ['utilities', 'cleaning', 'repairs', 'staff', 'internet', 'supplies', 'marketing', 'other'] as const
 /** Statuses that occupy a unit (mirror of the exclusion constraint). */

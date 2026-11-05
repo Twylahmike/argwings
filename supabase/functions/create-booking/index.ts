@@ -25,6 +25,8 @@ const Body = z.object({
   // Member offers. Only honoured for a signed-in, verified customer; the database re-checks every rule.
   reward_id: z.string().uuid().optional(),
   offer_id: z.string().uuid().optional(),
+  // Loyalty points to spend (members only; the database checks the balance, the cap and whether spending is switched on).
+  points: z.number().int().min(0).max(1_000_000).optional(),
 })
 
 Deno.serve(serve('create-booking', async (req, log) => {
@@ -56,7 +58,7 @@ Deno.serve(serve('create-booking', async (req, log) => {
       if (cp?.status === 'active') memberId = cp.user_id as string
     }
   }
-  if ((b.reward_id || b.offer_id) && !memberId) throw new HttpError(401, 'sign_in_required', 'Please sign in to your member account to use an offer.')
+  if ((b.reward_id || b.offer_id || b.points) && !memberId) throw new HttpError(401, 'sign_in_required', 'Please sign in to your member account to use an offer or points.')
   if (!memberId) {
     const { data: gc } = await db.from('settings').select('value').eq('key', 'guest_checkout_enabled').maybeSingle()
     if (gc?.value === false) throw new HttpError(403, 'account_required', 'Please sign in or create a free account to book.')
@@ -67,7 +69,7 @@ Deno.serve(serve('create-booking', async (req, log) => {
     p_guest_name: b.name, p_guest_phone: phone.phone, p_guest_email: b.email || null, p_source: b.source,
   }
   const { data, error } = memberId
-    ? await db.rpc('create_booking_member', { ...base, p_user: memberId, p_code: b.discount_code || null, p_reward: b.reward_id ?? null, p_offer: b.offer_id ?? null })
+    ? await db.rpc('create_booking_member', { ...base, p_user: memberId, p_code: b.discount_code || null, p_reward: b.reward_id ?? null, p_offer: b.offer_id ?? null, p_points: b.points ?? 0 })
     : b.discount_code
       ? await db.rpc('create_booking_with_code', { ...base, p_code: b.discount_code })
       : await db.rpc('create_booking', { ...base, p_mode: 'hold' })

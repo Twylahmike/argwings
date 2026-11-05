@@ -15,6 +15,7 @@ export type Customer = {
   member_since: string
   tier: CustomerTier
   points: number
+  points_redeem?: { enabled: boolean; kes_per_point: number; max_percent: number }
   completed_stays: number
   total_spend: number
   next_tier: { key: string; name: string; stays_needed: number; spend_needed: number } | null
@@ -36,6 +37,8 @@ export type OpenOffer = {
   id: string; name: string; description: string | null; terms: string | null; kind: 'percent' | 'fixed'; value: number
   max_discount: number | null; min_total: number; valid_to: string | null; min_tier: string | null; used: number
 }
+
+export type StayPoints = { enabled: boolean; balance?: number; kes_per_point?: number; max_percent?: number; max_points?: number; max_discount?: number }
 
 export type StayOffer = {
   reward_id: string | null; offer_id: string; name: string; audience: string; ok: boolean; message: string; amount: number

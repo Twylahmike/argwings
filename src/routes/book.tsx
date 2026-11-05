@@ -15,7 +15,7 @@ import { formatDate, formatTime } from '~/lib/dates'
 import { useBrand } from '~/lib/brand'
 import { DATES_TAKEN_MESSAGE, isDatesTaken } from '~/lib/utils'
 import type { Property, Unit } from '~/lib/types'
-import { fetchCustomer, hasStoredSession, rpc, type StayOffer } from '~/lib/customer'
+import { fetchCustomer, hasStoredSession, rpc, type StayOffer, type StayPoints } from '~/lib/customer'
 import { PublicLayout } from '~/components/layout/PublicLayout'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
@@ -87,6 +87,13 @@ function BookPage() {
     enabled: valid && !!member && brand.bookingMode !== 'request',
     queryFn: () => rpc<StayOffer[]>('my_offers_for_stay', { p_unit: s.unit, p_in: s.in, p_out: s.out }),
   })
+  const [usePoints, setUsePoints] = useState(false)
+  const [pointsInput, setPointsInput] = useState('')
+  const pts = useQuery({
+    queryKey: ['stay-points', s.unit, s.in, s.out, member?.user_id],
+    enabled: valid && !!member && brand.bookingMode !== 'request',
+    queryFn: () => rpc<StayPoints>('points_for_stay', { p_unit: s.unit, p_in: s.in, p_out: s.out, p_other_discount: 0 }),
+  })
   const usable = (offers.data ?? []).filter((o) => o.ok)
   const key = (o: StayOffer) => o.reward_id ?? o.offer_id
   // Default to the best usable offer unless the member picked another (or picked none: offerId === '').
@@ -123,7 +130,7 @@ function BookPage() {
     try {
       const res = await callFunction<{ booking: { public_token: string; deposit_required: number } }>('create-booking', {
         unit_id: s.unit, check_in: s.in, check_out: s.out, guests: v.guests, name: v.name, phone: p.phone, email: v.email || undefined, source: 'website', consent: true, discount_code: applied?.code,
-        reward_id: chosen?.reward_id ?? undefined, offer_id: chosen && !chosen.reward_id ? chosen.offer_id : undefined,
+        reward_id: chosen?.reward_id ?? undefined, offer_id: chosen && !chosen.reward_id ? chosen.offer_id : undefined, points: spend > 0 ? spend : undefined,
       }, { auth: !!member })
       // The payment itself is started (and followed live) on the booking page, so a refresh never loses it.
       nav({ to: '/booking/$token', params: { token: res.booking.public_token }, search: { start: p.phone } })
@@ -137,7 +144,13 @@ function BookPage() {
   const d = info.data
   const q = d?.quote
   const offerAmount = chosen ? chosen.amount : 0
-  const discount = (applied?.amount ?? 0) + offerAmount
+  const ptsInfo = pts.data?.enabled && (pts.data.balance ?? 0) > 0 ? pts.data : null
+  // The most points the member may spend on this stay once the other discounts are counted (the server checks again).
+  const otherDiscount = (applied?.amount ?? 0) + offerAmount
+  const maxPoints = ptsInfo && q ? Math.max(0, Math.min(ptsInfo.balance!, Math.floor(Math.max(0, q.nightly_total - otherDiscount) * (ptsInfo.max_percent! / 100) / ptsInfo.kes_per_point!))) : 0
+  const spend = usePoints ? Math.min(maxPoints, Math.max(0, Math.floor(Number(pointsInput) || 0))) : 0
+  const pointsAmount = ptsInfo ? spend * ptsInfo.kes_per_point! : 0
+  const discount = otherDiscount + pointsAmount
   const total = q ? Math.max(0, q.total - discount) : 0
   const deposit = q ? calcDeposit(total, brand.depositPercent) : 0
 
@@ -187,6 +200,13 @@ function BookPage() {
                   <p className="text-xs text-muted-foreground">A member offer and a discount code are not combined. The discount is checked again when you book.</p>
                 </fieldset>
               )}
+              {member && ptsInfo && maxPoints > 0 && (
+                <fieldset className="grid gap-2 rounded-lg border p-3 text-sm">
+                  <legend className="px-1 font-medium">Use my points</legend>
+                  <label className="flex items-center gap-3"><input type="checkbox" className="h-5 w-5" checked={usePoints} onChange={(e) => { setUsePoints(e.target.checked); if (e.target.checked && !pointsInput) setPointsInput(String(maxPoints)) }} /> Take money off with my points (you have {ptsInfo.balance!.toLocaleString('en-KE')}, each worth {formatKES(ptsInfo.kes_per_point)})</label>
+                  {usePoints && <div className="flex items-center gap-3 pl-8"><Input aria-label="Points to use" className="w-32" inputMode="numeric" value={pointsInput} onChange={(e) => setPointsInput(e.target.value)} /><span className="text-muted-foreground">up to {maxPoints.toLocaleString('en-KE')} points ({formatKES(maxPoints * ptsInfo.kes_per_point!)}) on this stay · saves {formatKES(pointsAmount)}</span></div>}
+                </fieldset>
+              )}
               <div className="rounded-lg border bg-muted/40 p-3 text-sm">
                 <label className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" {...register('consent')} />
                   <span>I agree that {brand.businessName} may use my name, phone number and email to manage this booking and send me confirmations and reminders (WhatsApp/SMS). We keep only what we need and never sell your data.{brand.pages.some((x) => x.slug === 'privacy') && <> <Link to="/p/$slug" params={{ slug: 'privacy' }} target="_blank" className="underline">Read our privacy notice</Link>.</>}</span></label>
@@ -216,7 +236,7 @@ function BookPage() {
                   <p className="flex justify-between"><span>{q.nights} night{q.nights > 1 ? 's' : ''}</span><span>{formatKES(q.nightly_total)}</span></p>
                   {(longStay.data ?? 0) > 0 && <p className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Long-stay discount included</span><span>{longStay.data}% off</span></p>}
                   {q.cleaning_fee > 0 && <p className="flex justify-between"><span>Cleaning fee</span><span>{formatKES(q.cleaning_fee)}</span></p>}
-                  {discount > 0 && <p className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Discount ({applied?.code ?? chosen?.name})</span><span>-{formatKES(discount)}</span></p>}
+                  {discount > 0 && <p className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Discount ({[applied?.code ?? chosen?.name, spend > 0 ? `${spend} points` : null].filter(Boolean).join(' + ')})</span><span>-{formatKES(discount)}</span></p>}
                   <p className="flex justify-between border-t pt-2 text-base font-semibold"><span>Total</span><span>{formatKES(total)}</span></p>
                   {brand.bookingMode !== 'request' && <p className="flex justify-between font-medium text-brand"><span>Deposit due now ({brand.depositPercent}%)</span><span>{formatKES(deposit)}</span></p>}
                   {brand.bookingMode !== 'request' && <p className="flex justify-between text-muted-foreground"><span>Balance before check-in</span><span>{formatKES(total - deposit)}</span></p>}

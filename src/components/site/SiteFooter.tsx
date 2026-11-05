@@ -50,6 +50,7 @@ export function SiteFooter() {
             <li className="flex h-9 items-center">Direct Booking &middot; No Fees</li>
             <li><Link to="/search" className="inline-flex h-9 items-center hover:text-brand-glow">Check availability</Link></li>
             <li><InstallAppButton /></li>
+            <li><Link to="/install" className="hover:underline">Get the app</Link></li>
           </ul>
         </div>
         <div>

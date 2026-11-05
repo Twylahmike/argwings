@@ -21,6 +21,7 @@ import { Route as AdminAnnouncementsRouteImport } from './routes/admin.announcem
 import { Route as AdminCalendarRouteImport } from './routes/admin.calendar'
 import { Route as AdminChangePasswordRouteImport } from './routes/admin.change-password'
 import { Route as AdminFinanceRouteImport } from './routes/admin.finance'
+import { Route as AdminFrontdeskRouteImport } from './routes/admin.frontdesk'
 import { Route as AdminHousekeepingRouteImport } from './routes/admin.housekeeping'
 import { Route as AdminInquiriesRouteImport } from './routes/admin.inquiries'
 import { Route as AdminMessagesRouteImport } from './routes/admin.messages'
@@ -104,6 +105,11 @@ const AdminChangePasswordRoute = AdminChangePasswordRouteImport.update({
 const AdminFinanceRoute = AdminFinanceRouteImport.update({
   id: '/finance',
   path: '/finance',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminFrontdeskRoute = AdminFrontdeskRouteImport.update({
+  id: '/frontdesk',
+  path: '/frontdesk',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminHousekeepingRoute = AdminHousekeepingRouteImport.update({
@@ -239,6 +245,7 @@ export interface FileRoutesByFullPath {
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
+  '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/messages': typeof AdminMessagesRoute
@@ -276,6 +283,7 @@ export interface FileRoutesByTo {
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
+  '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/messages': typeof AdminMessagesRoute
@@ -315,6 +323,7 @@ export interface FileRoutesById {
   '/admin/calendar': typeof AdminCalendarRoute
   '/admin/change-password': typeof AdminChangePasswordRoute
   '/admin/finance': typeof AdminFinanceRoute
+  '/admin/frontdesk': typeof AdminFrontdeskRoute
   '/admin/housekeeping': typeof AdminHousekeepingRoute
   '/admin/inquiries': typeof AdminInquiriesRoute
   '/admin/messages': typeof AdminMessagesRoute
@@ -355,6 +364,7 @@ export interface FileRouteTypes {
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
+    | '/admin/frontdesk'
     | '/admin/housekeeping'
     | '/admin/inquiries'
     | '/admin/messages'
@@ -392,6 +402,7 @@ export interface FileRouteTypes {
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
+    | '/admin/frontdesk'
     | '/admin/housekeeping'
     | '/admin/inquiries'
     | '/admin/messages'
@@ -430,6 +441,7 @@ export interface FileRouteTypes {
     | '/admin/calendar'
     | '/admin/change-password'
     | '/admin/finance'
+    | '/admin/frontdesk'
     | '/admin/housekeeping'
     | '/admin/inquiries'
     | '/admin/messages'
@@ -555,6 +567,13 @@ declare module '@tanstack/react-router' {
       path: '/finance'
       fullPath: '/admin/finance'
       preLoaderRoute: typeof AdminFinanceRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/frontdesk': {
+      id: '/admin/frontdesk'
+      path: '/frontdesk'
+      fullPath: '/admin/frontdesk'
+      preLoaderRoute: typeof AdminFrontdeskRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/housekeeping': {
@@ -733,6 +752,7 @@ interface AdminRouteChildren {
   AdminCalendarRoute: typeof AdminCalendarRoute
   AdminChangePasswordRoute: typeof AdminChangePasswordRoute
   AdminFinanceRoute: typeof AdminFinanceRoute
+  AdminFrontdeskRoute: typeof AdminFrontdeskRoute
   AdminHousekeepingRoute: typeof AdminHousekeepingRoute
   AdminInquiriesRoute: typeof AdminInquiriesRoute
   AdminMessagesRoute: typeof AdminMessagesRoute
@@ -761,6 +781,7 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminCalendarRoute: AdminCalendarRoute,
   AdminChangePasswordRoute: AdminChangePasswordRoute,
   AdminFinanceRoute: AdminFinanceRoute,
+  AdminFrontdeskRoute: AdminFrontdeskRoute,
   AdminHousekeepingRoute: AdminHousekeepingRoute,
   AdminInquiriesRoute: AdminInquiriesRoute,
   AdminMessagesRoute: AdminMessagesRoute,

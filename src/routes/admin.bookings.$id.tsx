@@ -17,6 +17,7 @@ import { Dialog, DialogContent } from '~/components/ui/dialog'
 import { Field, Textarea } from '~/components/ui/form'
 import { ErrorState, Skeleton } from '~/components/ui/misc'
 import { Money } from '~/components/booking/BookingBits'
+import { CheckInDialog, CheckOutDialog } from '~/components/booking/FrontDeskDialogs'
 import { UseCreditButton } from '~/components/booking/UseCreditButton'
 import { RecordPaymentDialog } from '~/components/booking/RecordPaymentDialog'
 import { MessagesPanel } from '~/components/booking/MessagesPanel'
@@ -41,6 +42,7 @@ function BookingDetail() {
   const [recording, setRecording] = useState(false)
   const [requesting, setRequesting] = useState(false)
   const [pending, setPending] = useState<NextAction | null>(null)
+  const [desk, setDesk] = useState<'in' | 'out' | null>(null)
   const [editNotes, setEditNotes] = useState(false)
 
   // Live updates: STK confirmations arrive while staff are looking at the page.
@@ -80,7 +82,7 @@ function BookingDetail() {
         <div className="flex flex-wrap items-center gap-3"><h1 className="text-xl font-semibold md:text-2xl">{b.reference}</h1><StatusBadge status={b.status} /></div>
         <div className="flex flex-wrap gap-2">
           {nextActions(b.status).map((a) => (
-            <Button key={a.to} variant={a.variant} onClick={() => (a.needsReason || a.to === 'checked_in' || a.to === 'checked_out' ? setPending(a) : setStatus.mutate({ to: a.to }))} loading={setStatus.isPending && setStatus.variables?.to === a.to}>{a.label}</Button>
+            <Button key={a.to} variant={a.variant} onClick={() => (a.to === 'checked_in' ? setDesk('in') : a.to === 'checked_out' ? setDesk('out') : a.needsReason ? setPending(a) : setStatus.mutate({ to: a.to }))} loading={setStatus.isPending && setStatus.variables?.to === a.to}>{a.label}</Button>
           ))}
         </div>
       </div>
@@ -182,6 +184,8 @@ function BookingDetail() {
       {isOwner(me) && <History id={id} />}
       {requesting && <RequestPaymentDialog booking={b} onClose={() => setRequesting(false)} onDone={() => { setRequesting(false); refresh() }} />}
       {recording && <RecordPaymentDialog booking={b} userId={me.id} onClose={() => setRecording(false)} onDone={() => { setRecording(false); refresh() }} />}
+      {desk === 'in' && <CheckInDialog booking={b} onClose={() => setDesk(null)} onDone={() => { setDesk(null); refresh() }} />}
+      {desk === 'out' && <CheckOutDialog booking={b} onClose={() => setDesk(null)} onDone={() => { setDesk(null); refresh() }} />}
       {pending && <StatusDialog action={pending} booking={b} busy={setStatus.isPending} onClose={() => setPending(null)} onConfirm={(reason) => setStatus.mutate({ to: pending.to, reason })} />}
       {editNotes && <NotesDialog id={id} initial={b.notes ?? ''} onClose={() => setEditNotes(false)} onDone={() => { setEditNotes(false); refresh() }} />}
     </div>

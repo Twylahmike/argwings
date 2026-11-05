@@ -964,3 +964,68 @@ test('guest flags need a reason', async () =>
     await c.query(`update guests set flagged=true, flag_reason='Damaged furniture' where id=$1`, [b.guest_id])
     await c.query(`update guests set vip=true where id=$1`, [b.guest_id])
   }))
+
+test('check-in / check-out: deposit, readiness, early approval, room change, charges, balance, housekeeping task', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const today = (await one(c, 'select nairobi_today()::text d')).d
+    const mkPaid = async (from, to, paid) => {
+      const b = await booking(c, f, { from, to, status: 'confirmed', total: 10000, deposit: 5000 })
+      if (paid) await c.query(`insert into payments(booking_id,kind,method,status,amount,confirmed_at) values ($1,'deposit','cash','succeeded',$2,now())`, [b.id, paid])
+      return b
+    }
+    const b1 = await mkPaid(today, day(today, 2), 0)
+    await as(c, 'authenticated', f.manager)
+    await fails(c, 'select check_in_booking($1)', [b1.id], '23514')                       // deposit missing
+    await admin(c)
+    await c.query(`insert into payments(booking_id,kind,method,status,amount,confirmed_at) values ($1,'deposit','cash','succeeded',5000,now())`, [b1.id])
+    // a dirty room blocks arrival
+    await c.query(`insert into housekeeping_tasks(property_id, unit_id, status) values ($1,$2,'dirty')`, [f.pa, f.ua])
+    await as(c, 'authenticated', f.manager)
+    const e1 = await fails(c, 'select check_in_booking($1)', [b1.id], '23514'); assert.match(e1.message, /cleaning/)
+    await admin(c); await c.query(`update housekeeping_tasks set status='inspected' where unit_id=$1`, [f.ua])
+    await as(c, 'authenticated', f.manager)
+    const r = await one(c, `select * from check_in_booking($1, null, 2, true, 'Checked national ID at desk', 'Late dinner', null)`, [b1.id])
+    assert.equal(r.early, false); assert.equal(r.id_verified, true); assert.equal(r.guests, 2)
+    assert.equal((await one(c, 'select status from bookings where id=$1', [b1.id])).status, 'checked_in')
+    await fails(c, 'select check_in_booking($1)', [b1.id], '23514')                        // not confirmed any more
+
+    // charges move the total; voiding takes it back
+    const ch = await one(c, `select * from add_booking_charge($1,'Extra bed',1500)`, [b1.id])
+    assert.equal((await one(c, 'select total_amount from bookings where id=$1', [b1.id])).total_amount, 11500)
+    await fails(c, 'select add_booking_charge($1,$2,0)', [b1.id, 'Zero'], '23514')
+    await c.query('select void_booking_charge($1,$2)', [ch.id, 'Added by mistake'])
+    assert.equal((await one(c, 'select total_amount from bookings where id=$1', [b1.id])).total_amount, 10000)
+    await c.query('select void_booking_charge($1,$2)', [ch.id, 'again'])                    // idempotent
+    assert.equal((await one(c, 'select total_amount from bookings where id=$1', [b1.id])).total_amount, 10000)
+
+    // check-out refuses an unpaid balance unless accepted; creates the housekeeping task
+    const e2 = await fails(c, 'select check_out_booking($1)', [b1.id], '23514'); assert.match(e2.message, /owes KES 5000/)
+    const co = await one(c, `select * from check_out_booking($1,'Left early',0,true)`, [b1.id])
+    assert.equal(co.balance_left, 5000)
+    assert.equal((await one(c, 'select status from bookings where id=$1', [b1.id])).status, 'checked_out')
+    await admin(c)
+    assert.equal((await one(c, `select count(*)::int n from housekeeping_tasks where booking_id=$1 and status='dirty'`, [b1.id])).n, 1, 'cleaning task created')
+
+    // early arrival needs approval; room change is validated
+    await as(c, 'authenticated', f.manager)
+    const later = day(today, 5)
+    await admin(c); const b2 = await mkPaid(later, day(later, 2), 5000); await as(c, 'authenticated', f.manager)
+    const e3 = await fails(c, 'select check_in_booking($1)', [b2.id], '23514'); assert.match(e3.message, /early/i)
+    await fails(c, 'select check_in_booking($1,$2,null,false,null,null,null,true)', [b2.id, f.ub], '23514')   // other property's room
+    await admin(c); await c.query(`update housekeeping_tasks set status='inspected' where unit_id=$1`, [f.ua]); await as(c, 'authenticated', f.manager)
+    const early = await one(c, 'select * from check_in_booking($1,null,null,false,null,null,null,true)', [b2.id])
+    assert.equal(early.early, true)
+
+    // screen data
+    const scr = (await one(c, 'select arrivals_departures($1) s', [today])).s
+    assert.ok(Array.isArray(scr.arrivals) && Array.isArray(scr.in_house))
+    assert.ok(scr.in_house.some((x) => x.id === b2.id))
+
+    // other property's manager and cleaners are shut out
+    await admin(c); const mgrB = await user(c, 'MgrB2', 'manager', [f.pb]); await as(c, 'authenticated', mgrB)
+    await fails(c, 'select check_out_booking($1)', [b2.id], '42501')
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, 'select check_out_booking($1)', [b2.id], '42501')
+    assert.equal((await q(c, 'select * from checkin_records')).length, 0)
+  }))

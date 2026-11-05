@@ -9,18 +9,19 @@
 
 /* Brand tokens: change these (and the logo in components/layout/Wordmark.tsx) to re-skin the whole app. */
 :root {
-  --brand: 164 61% 24%;
-  --brand-foreground: 0 0% 100%;
-  --background: 40 20% 98%;
-  --foreground: 200 15% 12%;
-  --card: 0 0% 100%;
-  --muted: 40 12% 94%;
-  --muted-foreground: 200 8% 38%;
-  --border: 40 10% 86%;
-  --ring: 164 61% 30%;
+  /* RG Wings palette: charcoal and warm ivory, metallic gold accent, champagne and warm greys. */
+  --brand: 37 72% 32%;
+  --brand-foreground: 40 40% 97%;
+  --background: 40 33% 97%;
+  --foreground: 30 8% 12%;
+  --card: 40 40% 99%;
+  --muted: 38 28% 92%;
+  --muted-foreground: 30 6% 36%;
+  --border: 38 16% 85%;
+  --ring: 37 72% 38%;
   --danger: 0 72% 42%;
-  --ink: 200 18% 9%;
-  --ink-foreground: 40 15% 94%;
+  --ink: 30 8% 9%;
+  --ink-foreground: 40 25% 94%;
   --olive: 91 14% 38%;
   --radius: 0.75rem;
   --st-pending: 38 92% 44%;
@@ -33,18 +34,18 @@
   --st-no_show: 18 70% 42%;
 }
 :root[data-theme='dark'] {
-  --brand: 160 55% 48%;
-  --brand-foreground: 200 20% 8%;
-  --background: 200 18% 8%;
-  --foreground: 40 15% 94%;
-  --card: 200 16% 11%;
-  --muted: 200 14% 15%;
-  --muted-foreground: 200 8% 66%;
-  --border: 200 12% 22%;
-  --ring: 160 55% 55%;
+  --brand: 41 68% 56%;
+  --brand-foreground: 30 10% 8%;
+  --background: 30 8% 8%;
+  --foreground: 40 25% 94%;
+  --card: 30 7% 11%;
+  --muted: 30 6% 15%;
+  --muted-foreground: 35 8% 68%;
+  --border: 30 6% 22%;
+  --ring: 41 68% 60%;
   --danger: 0 80% 62%;
-  --ink: 200 20% 5%;
-  --ink-foreground: 40 15% 94%;
+  --ink: 30 10% 5%;
+  --ink-foreground: 40 25% 94%;
   --olive: 91 14% 46%;
   --st-pending: 38 92% 58%;
   --st-confirmed: 152 55% 50%;
@@ -178,3 +179,10 @@ h1, h2, h3 { text-wrap: balance; }
 @keyframes ripple { 0% { transform: scale(0); opacity: 0.5; } 100% { transform: scale(4); opacity: 0; } }
 @keyframes pulse-dot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.2); } }
 .animate-pulse-dot { animation: pulse-dot 1.5s ease-in-out infinite; }
+
+/* Printing reports: show only the report area. */
+@media print {
+  body * { visibility: hidden; }
+  .print-area, .print-area * { visibility: visible; }
+  .print-area { position: absolute; left: 0; top: 0; width: 100%; background: #fff; color: #000; }
+}

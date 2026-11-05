@@ -13,6 +13,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { ErrorState, PageHeader, Skeleton, Stat } from '~/components/ui/misc'
 import { BookingLink, Money } from '~/components/booking/BookingBits'
 import { useAdmin } from '~/components/layout/AdminShell'
+import { Performance } from '~/components/dashboard/Performance'
+import { Attention } from '~/components/dashboard/Attention'
 import { GettingStarted } from '~/components/layout/GettingStarted'
 
 export const Route = createFileRoute('/admin/')({
@@ -83,6 +85,8 @@ function Dashboard() {
             <Stat label="Revenue this month" value={formatKES(d.revenue)} /><Stat label="Outstanding balances" value={formatKES(d.owing.reduce((s, b) => s + balance(b), 0))} hint={`${d.owing.length} booking${d.owing.length === 1 ? '' : 's'}`} tone={d.owing.length ? 'warn' : undefined} />
             <Stat label="Pending holds" value={d.holds} />
           </div>
+          <Attention scopeIds={scopeIds} />
+          <Performance propertyId={propertyId} />
           <OccupancyStrip bookings={total} units={d.unitCount} from={today} />
           <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
             <ListCard title="Arriving today" rows={arrivals} empty="No arrivals today." extra={(b) => <><StatusBadge status={b.status} /> {balance(b) > 0 && <span className="text-xs text-amber-700 dark:text-amber-400">owes {formatKES(balance(b))}</span>}</>} />

@@ -58,6 +58,8 @@ function StaffPage() {
   const { me } = useAdmin()
   const qc = useQueryClient()
   const staff = useQuery({ queryKey: ['staff'], queryFn: loadStaff })
+  const trq = useQuery({ queryKey: ['team-roles-names'], queryFn: async () => (await sb().from('team_roles').select('id, name')).data ?? [] })
+  const teamNames = new Map((trq.data ?? []).map((r) => [r.id as string, r.name as string]))
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<StaffRow | null>(null)
   const propsList = me.properties
@@ -71,7 +73,7 @@ function StaffPage() {
 
   return (
     <div>
-      <PageHeader title="Staff" description="Create accounts, set roles and choose which properties each person can work in."
+      <PageHeader title="Users" description="Create accounts, set roles and choose which properties each person can work in."
         actions={<Button onClick={() => setCreating(true)}><Plus className="h-4 w-4" /> Add staff</Button>} />
       {staff.isLoading && <Skeleton className="h-48" />}
       {staff.error && <ErrorState error={staff.error} retry={() => staff.refetch()} />}
@@ -83,7 +85,7 @@ function StaffPage() {
             {staff.data.map((s) => (
               <tr key={s.id}>
                 <td className={td}><p className="font-medium">{s.full_name}</p>{s.phone && <p className="text-xs text-muted-foreground">{s.phone}</p>}</td>
-                <td className={td}><span className="capitalize">{s.roles.join(', ') || 'none'}</span></td>
+                <td className={td}><span>{teamNames.get(s.team_role_id ?? '') ?? <span className="capitalize">{s.roles.join(', ') || 'none'}</span>}</span></td>
                 <td className={td}>{s.roles.includes('owner') ? 'All' : s.propertyIds.map(nameOf).join(', ') || <span className="text-muted-foreground">None</span>}</td>
                 <td className={td}>{s.lastActivity ? formatDateTime(s.lastActivity) : <span className="text-muted-foreground">No activity</span>}</td>
                 <td className={td}>{s.active ? <Badge className="border-emerald-600/40 text-emerald-700 dark:text-emerald-400">Active</Badge> : <Badge className="text-muted-foreground">Deactivated</Badge>}</td>
@@ -166,7 +168,17 @@ function CreateStaff({ open, onClose, onDone }: { open: boolean; onClose: () => 
 }
 
 function EditStaff({ row, onClose, onDone }: { row: StaffRow; onClose: () => void; onDone: () => void }) {
-  const [role, setRole] = useState<AppRole>(row.roles[0] ?? 'cleaner')
+  const { me } = useAdmin()
+  const roles = useQuery({ queryKey: ['team-roles'], queryFn: async () => {
+    const { data, error } = await sb().from('team_roles').select('id, name, base_role, default_for').order('name')
+    if (error) throw error
+    return data as { id: string; name: string; base_role: AppRole; default_for: AppRole | null }[]
+  } })
+  const base = row.roles[0] ?? 'cleaner'
+  const initial = row.team_role_id ?? roles.data?.find((r) => r.default_for === base)?.id ?? ''
+  const [picked, setPicked] = useState<string | null>(null)
+  const teamRole = picked ?? initial
+  const baseRole = roles.data?.find((r) => r.id === teamRole)?.base_role ?? base
   const [props, setProps] = useState<string[]>(row.propertyIds)
   const [pw, setPw] = useState('')
   const [busy, setBusy] = useState(false)
@@ -174,13 +186,13 @@ function EditStaff({ row, onClose, onDone }: { row: StaffRow; onClose: () => voi
     setBusy(true)
     try {
       const client = sb()
-      const a = await client.from('user_roles').delete().eq('user_id', row.id)
-      if (a.error) throw a.error
-      const b = await client.from('user_roles').insert({ user_id: row.id, role })
-      if (b.error) throw b.error
+      if (teamRole && teamRole !== initial) {
+        const r = await client.rpc('assign_team_role', { p_user: row.id, p_role: teamRole })
+        if (r.error) throw r.error
+      }
       const c = await client.from('staff_properties').delete().eq('user_id', row.id)
       if (c.error) throw c.error
-      if (role !== 'owner' && props.length) {
+      if (baseRole !== 'owner' && props.length) {
         const d = await client.from('staff_properties').insert(props.map((property_id) => ({ user_id: row.id, property_id })))
         if (d.error) throw d.error
       }
@@ -193,12 +205,13 @@ function EditStaff({ row, onClose, onDone }: { row: StaffRow; onClose: () => voi
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent title={`Edit ${row.full_name}`}>
         <div className="grid gap-4">
-          <Field label="Role" htmlFor="es-role">
-            <Select id="es-role" value={role} onChange={(e) => setRole(e.target.value as AppRole)}>
-              <option value="cleaner">Cleaner</option><option value="manager">Manager</option><option value="owner">Owner</option>
+          <Field label="Team role" htmlFor="es-role" hint={row.id === me.id ? 'You cannot change your own role.' : 'Sets exactly what this person can do. See Team roles for the details.'}>
+            <Select id="es-role" value={teamRole} disabled={row.id === me.id || roles.isLoading} onChange={(e) => setPicked(e.target.value)}>
+              {roles.data?.map((r) => <option key={r.id} value={r.id}>{r.name}</option>)}
             </Select>
           </Field>
-          {role !== 'owner' && <PropertyChecks value={props} onChange={setProps} />}
+          {baseRole !== 'owner' && <PropertyChecks value={props} onChange={setProps} />}
+          {baseRole !== 'owner' && row.id !== me.id && <OverridesEditor userId={row.id} />}
           <Field label="Reset password (optional)" htmlFor="es-pw" hint="They will be asked to choose a new one at next sign in.">
             <div className="flex gap-2"><KeyRound className="mt-3 h-4 w-4 text-muted-foreground" aria-hidden /><Input id="es-pw" type="text" autoComplete="off" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Leave blank to keep" /></div>
           </Field>
@@ -206,5 +219,45 @@ function EditStaff({ row, onClose, onDone }: { row: StaffRow; onClose: () => voi
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** Exceptions for one person: allow an extra permission or block one, on top of their team role. Saved immediately. */
+function OverridesEditor({ userId }: { userId: string }) {
+  const qc = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const data = useQuery({ queryKey: ['overrides', userId], enabled: open, queryFn: async () => {
+    const [c, o] = await Promise.all([
+      sb().from('permissions_catalog').select('key, module, label').order('sort'),
+      sb().from('user_permission_overrides').select('permission_key, granted').eq('user_id', userId),
+    ])
+    if (c.error) throw c.error
+    return { catalog: c.data as { key: string; module: string; label: string }[], state: new Map((o.data ?? []).map((x) => [x.permission_key as string, x.granted as boolean])) }
+  } })
+  const set = useMutation({
+    mutationFn: async (v: { key: string; state: 'grant' | 'deny' | 'inherit' }) => { const { error } = await sb().rpc('set_user_permission', { p_user: userId, p_perm: v.key, p_state: v.state }); if (error) throw error },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['overrides', userId] }); toast.success('Saved') },
+    onError: (e) => toast.error(errMessage(e)),
+  })
+  return (
+    <div className="rounded-lg border p-3">
+      <button type="button" className="text-sm font-medium text-brand hover:underline" aria-expanded={open} onClick={() => setOpen((o) => !o)}>{open ? 'Hide' : 'Show'} exceptions for this person</button>
+      {open && (
+        <div className="mt-3 grid gap-2">
+          <p className="text-xs text-muted-foreground">Normally a person gets exactly what their team role allows. Use this only for a one-off: allow one extra thing, or block one. Changes save at once.</p>
+          {data.isLoading && <Skeleton className="h-16" />}
+          {data.data?.catalog.map((p) => {
+            const st = data.data.state.get(p.key)
+            return (
+              <label key={p.key} className="flex items-center justify-between gap-3 text-sm">
+                <span>{p.label} <span className="text-xs text-muted-foreground">({p.module})</span></span>
+                <Select aria-label={p.label} className="h-9 w-36" value={st === undefined ? 'inherit' : st ? 'grant' : 'deny'} onChange={(e) => set.mutate({ key: p.key, state: e.target.value as 'grant' | 'deny' | 'inherit' })}>
+                  <option value="inherit">Role default</option><option value="grant">Allow</option><option value="deny">Block</option>
+                </Select>
+              </label>)
+          })}
+        </div>
+      )}
+    </div>
   )
 }

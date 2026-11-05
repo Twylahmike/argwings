@@ -2,7 +2,7 @@ export type AppRole = 'owner' | 'manager' | 'cleaner'
 export type BookingStatus = 'pending' | 'confirmed' | 'checked_in' | 'checked_out' | 'cancelled' | 'expired' | 'no_show' | 'blocked'
 export type BookingSource = 'website' | 'whatsapp' | 'walk_in' | 'phone' | 'manual'
 export type PaymentKind = 'deposit' | 'balance' | 'full' | 'refund' | 'adjustment'
-export type PaymentMethod = 'mpesa_stk' | 'mpesa_manual' | 'cash' | 'bank' | 'other'
+export type PaymentMethod = 'mpesa_stk' | 'mpesa_manual' | 'cash' | 'bank' | 'card' | 'other'
 export type PaymentStatus = 'pending' | 'succeeded' | 'failed' | 'cancelled'
 export type TaskStatus = 'dirty' | 'in_progress' | 'clean' | 'inspected'
 
@@ -12,16 +12,21 @@ export type Property = {
   contact_phone: string | null; whatsapp_number: string | null
   check_in_time: string; check_out_time: string; house_rules: string | null
   amenities: string[]; cover_image: string | null; gallery: string[]; active: boolean; sort: number
+  featured: boolean; archived_at: string | null; cancellation_policy: string | null
+  seo_title: string | null; seo_description: string | null; video_url: string | null
 }
 export type Unit = {
   id: string; property_id: string; name: string; code: string | null; unit_type: string; description: string | null
   max_guests: number; bedrooms: number; beds: number; base_rate: number; weekend_rate: number | null
   cleaning_fee: number; min_nights: number; amenities: string[]; images: string[]; active: boolean; sort: number
+  bathrooms: number; bed_config: string | null; max_nights: number | null
+  maintenance_status: 'ok' | 'maintenance' | 'out_of_service'; maintenance_note: string | null
 }
 export type RateOverrideRow = { id: string; unit_id: string; label: string | null; start_date: string; end_date: string; nightly_rate: number; created_at: string }
 export type Guest = {
   id: string; full_name: string; phone: string; email: string | null; id_number: string | null
   notes: string | null; anonymised_at: string | null; created_at: string
+  vip: boolean; flagged: boolean; flag_reason: string | null; comms_opt_out: boolean; country: string | null
 }
 export type Booking = {
   id: string; reference: string; public_token: string; property_id: string; unit_id: string; guest_id: string | null
@@ -42,12 +47,13 @@ export type HousekeepingTask = {
 export type Expense = {
   id: string; property_id: string; category: string; amount: number; expense_date: string; description: string | null
   paid_via: PaymentMethod | null; receipt_url: string | null; voided: boolean; created_at: string
+  status: 'approved' | 'pending' | 'rejected'; review_note: string | null
 }
 export type MessageLog = {
   id: string; booking_id: string | null; guest_id: string | null; property_id: string | null; channel: string
   template: string; to_phone: string; body: string | null; status: string; provider_id: string | null; error: string | null; created_at: string
 }
-export type Profile = { id: string; full_name: string; phone: string | null; active: boolean; created_at: string }
+export type Profile = { id: string; full_name: string; phone: string | null; active: boolean; created_at: string; team_role_id?: string | null }
 
 /** Shape returned by the get_booking_by_token RPC (safe fields only). */
 export type PublicBooking = {
@@ -75,7 +81,7 @@ export const SOURCE_LABEL: Record<BookingSource, string> = {
   website: 'Website', whatsapp: 'WhatsApp', walk_in: 'Walk-in', phone: 'Phone', manual: 'Manual',
 }
 export const METHOD_LABEL: Record<PaymentMethod, string> = {
-  mpesa_stk: 'M-Pesa (STK)', mpesa_manual: 'M-Pesa (manual)', cash: 'Cash', bank: 'Bank', other: 'Other',
+  mpesa_stk: 'M-Pesa (STK)', mpesa_manual: 'M-Pesa (manual)', cash: 'Cash', bank: 'Bank', card: 'Card', other: 'Other',
 }
 export const EXPENSE_CATEGORIES = ['utilities', 'cleaning', 'repairs', 'staff', 'internet', 'supplies', 'marketing', 'other'] as const
 /** Statuses that occupy a unit (mirror of the exclusion constraint). */

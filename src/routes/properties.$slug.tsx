@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { createFileRoute, notFound } from '@tanstack/react-router'
 import { Check, ExternalLink, MapPin } from 'lucide-react'
-import { fetchPropertyBySlug, mapsLink } from '~/lib/public-api'
+import { fetchPropertyBySlug, fetchStayOffers, mapsLink } from '~/lib/public-api'
 import { formatTime } from '~/lib/dates'
 import { fromRate } from '~/lib/pricing'
 import { useBrand } from '~/lib/brand'
@@ -23,14 +23,15 @@ export const Route = createFileRoute('/properties/$slug')({
   loader: async ({ params }) => {
     const property = await fetchPropertyBySlug(params.slug)
     if (!property) throw notFound()
-    return { property }
+    const offers = await fetchStayOffers(property.id).catch(() => [])
+    return { property, offers }
   },
   notFoundComponent: NotFound,
   head: ({ loaderData }) => {
     const p = loaderData?.property
     if (!p) return { meta: [{ title: 'Property not found' }] }
     const from = p.units.length ? Math.min(...p.units.map(fromRate)) : null
-    const desc = (p.tagline || p.description || `Stay at ${p.name}, ${p.area || p.city}.`).slice(0, 160)
+    const desc = (p.seo_description || p.tagline || p.description || `Stay at ${p.name}, ${p.area || p.city}.`).slice(0, 160)
     const ld = {
       '@context': 'https://schema.org', '@type': 'LodgingBusiness', name: p.name, description: p.description ?? p.tagline ?? undefined,
       image: [p.cover_image, ...p.gallery].filter(Boolean), telephone: p.contact_phone ?? undefined,
@@ -41,9 +42,9 @@ export const Route = createFileRoute('/properties/$slug')({
     }
     return {
       meta: [
-        { title: `${p.name} · ${p.area || p.city}` },
+        { title: p.seo_title || `${p.name} · ${p.area || p.city}` },
         { name: 'description', content: desc },
-        { property: 'og:title', content: p.name },
+        { property: 'og:title', content: p.seo_title || p.name },
         { property: 'og:description', content: desc },
         { property: 'og:type', content: 'website' },
         ...(p.cover_image ? [{ property: 'og:image', content: p.cover_image }] : []),
@@ -55,7 +56,7 @@ export const Route = createFileRoute('/properties/$slug')({
 })
 
 function PropertyPage() {
-  const { property: p } = Route.useLoaderData()
+  const { property: p, offers } = Route.useLoaderData()
   const s = Route.useSearch()
   const brand = useBrand()
   const photos = [p.cover_image, ...p.gallery].filter((x, i, a): x is string => !!x && a.indexOf(x) === i)
@@ -65,6 +66,7 @@ function PropertyPage() {
   return (
     <PublicLayout>
       <div className="mx-auto max-w-6xl px-4 py-6">
+        {p.video_url && <video src={p.video_url} controls playsInline preload="metadata" className="mb-4 aspect-video w-full rounded-xl bg-black object-cover" aria-label={`Walkthrough video of ${p.name}`} />}
         {photos.length > 0 && (
           <div className="grid gap-2 md:grid-cols-4 md:grid-rows-2">
             <button onClick={() => setLightbox(photos[0])} className="overflow-hidden rounded-xl md:col-span-2 md:row-span-2" aria-label="Open photo">
@@ -118,6 +120,7 @@ function PropertyPage() {
             <div className="sticky top-24 rounded-2xl border bg-card p-4">
               <h2 className="mb-3 font-semibold">Search all dates</h2>
               <p className="mb-3 text-sm text-muted-foreground">See what is free across all our properties.</p>
+              {offers.length > 0 && <p className="mb-3 rounded-lg bg-brand/10 p-3 text-sm text-brand">{offers.map((o) => `Stay ${o.min_nights}+ nights and save ${o.percent}%`).join(' · ')}</p>}
               <SearchBar propertyId={p.id} initial={{ checkIn: s.in, checkOut: s.out, guests: s.guests }} />
             </div>
           </aside>

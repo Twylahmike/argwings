@@ -41,3 +41,19 @@ export async function receiptUrl(path: string): Promise<string | null> {
   const { data } = await sb().storage.from('expense-receipts').createSignedUrl(path, 300)
   return data?.signedUrl ?? null
 }
+
+export const MAX_VIDEO_BYTES = 40 * 1024 * 1024
+export type UploadedMedia = { url: string; path: string; kind: 'image' | 'video'; size: number }
+
+/** Library upload: images are compressed, short videos (mp4/webm, up to 40 MB) go up as they are. */
+export async function uploadMedia(file: File, folder = 'library'): Promise<UploadedMedia> {
+  const isVideo = file.type === 'video/mp4' || file.type === 'video/webm'
+  if (isVideo && file.size > MAX_VIDEO_BYTES) throw new Error('Videos must be under 40 MB. Trim the clip or lower its quality first.')
+  if (!isVideo && !file.type.startsWith('image/')) throw new Error('Choose an image, or an MP4 / WebM video.')
+  const blob = isVideo ? file : await compressImage(file)
+  const ext = isVideo ? (file.type === 'video/webm' ? 'webm' : 'mp4') : blob.type === 'image/webp' ? 'webp' : blob.type === 'image/svg+xml' ? 'svg' : 'jpg'
+  const path = `${folder}/${crypto.randomUUID()}.${ext}`
+  const { error } = await sb().storage.from('property-images').upload(path, blob, { contentType: blob.type || file.type, cacheControl: '31536000' })
+  if (error) throw error
+  return { url: sb().storage.from('property-images').getPublicUrl(path).data.publicUrl, path, kind: isVideo ? 'video' : 'image', size: blob.size }
+}

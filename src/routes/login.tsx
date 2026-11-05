@@ -34,6 +34,8 @@ function Login() {
   async function onSubmit(v: Values) {
     setFormError('')
     const { error } = await sb().auth.signInWithPassword(v)
+    // Best effort: a failed attempt is recorded (throttled) so the owner can see suspicious sign-ins. Never blocks the login.
+    void Promise.resolve(sb().rpc('record_login_event', { p_email: v.email, p_success: !error })).catch(() => undefined)
     if (error) { setFormError('That email or password is not right. Please try again.'); return }
     const me = await queryClient.fetchQuery({ queryKey: ['me'], queryFn: fetchMe, staleTime: 0 })
     if (!me) { setFormError('This account is not active. Ask the owner to check your access.'); return }
@@ -47,7 +49,7 @@ function Login() {
     <div className="grid min-h-dvh place-items-center px-4">
       <div className="w-full max-w-sm rounded-2xl border bg-card p-6 shadow-sm">
         <Wordmark className="mb-6" />
-        <h1 className="text-xl font-semibold">Staff sign in</h1>
+        <h1 className="font-display text-3xl font-semibold">Staff sign in</h1>
         <p className="mt-1 text-sm text-muted-foreground">Owners, managers and cleaners sign in here.</p>
         <form onSubmit={handleSubmit(onSubmit)} className="mt-5 grid gap-4" noValidate>
           <Field label="Email" htmlFor="email" error={errors.email?.message}>

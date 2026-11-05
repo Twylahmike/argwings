@@ -13,7 +13,7 @@ import { formatKES } from '~/lib/money'
 import { calcDeposit } from '~/lib/pricing'
 import { formatDate, formatTime } from '~/lib/dates'
 import { useBrand } from '~/lib/brand'
-import { DATES_TAKEN_MESSAGE } from '~/lib/utils'
+import { DATES_TAKEN_MESSAGE, isDatesTaken } from '~/lib/utils'
 import type { Property, Unit } from '~/lib/types'
 import { PublicLayout } from '~/components/layout/PublicLayout'
 import { Button } from '~/components/ui/button'
@@ -45,6 +45,9 @@ function BookPage() {
   const brand = useBrand()
   const nav = useNavigate()
   const [formError, setFormError] = useState('')
+  const [codeInput, setCodeInput] = useState('')
+  const [applied, setApplied] = useState<{ code: string; amount: number } | null>(null)
+  const [codeMsg, setCodeMsg] = useState('')
   const valid = !!s.unit && /^\d{4}-\d{2}-\d{2}$/.test(s.in) && /^\d{4}-\d{2}-\d{2}$/.test(s.out) && s.out > s.in
 
   const info = useQuery({
@@ -61,18 +64,44 @@ function BookPage() {
       return { unit: unit as Unit, property: prop.data as Property, quote }
     },
   })
+  const longStay = useQuery({ queryKey: ['long-stay', s.unit, s.in, s.out], enabled: valid, queryFn: async () => {
+    const n = Math.round((Date.parse(s.out) - Date.parse(s.in)) / 86_400_000)
+    const { data } = await pub().rpc('long_stay_percent', { p_unit: s.unit, p_nights: n })
+    return Number(data ?? 0)
+  } })
   const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<Values>({
     resolver: zodResolver(schema), defaultValues: { guests: s.guests, consent: false },
   })
+
+  async function applyCode() {
+    setCodeMsg('')
+    const code = codeInput.trim().toUpperCase()
+    if (!code) return
+    const { data, error } = await pub().rpc('quote_discount_code', { p_code: code, p_unit: s.unit, p_in: s.in, p_out: s.out })
+    if (error) { setCodeMsg(error.message); return }
+    const r = data as { ok: boolean; message: string; amount: number }
+    if (r.ok) setApplied({ code, amount: r.amount }); else setApplied(null)
+    setCodeMsg(r.message)
+  }
 
   async function onSubmit(raw: Values) {
     setFormError('')
     const v = schema.parse(raw)
     const p = normalizePhone(v.phone)
     if (!p.ok) { setError('phone', { message: p.error }); return }
+    if (brand.bookingMode === 'request') {
+      const { data, error } = await pub().rpc('submit_booking_request', {
+        p_unit: s.unit, p_in: s.in, p_out: s.out, p_guests: v.guests, p_name: v.name, p_phone: p.phone,
+        p_email: v.email || null, p_message: null, p_website: '',
+      })
+      if (error) { setFormError(isDatesTaken(error) ? DATES_TAKEN_MESSAGE : error.message); return }
+      if (!data) { setFormError('Something went wrong. Please try again.'); return }
+      nav({ to: '/request/$token', params: { token: String(data) } })
+      return
+    }
     try {
       const res = await callFunction<{ booking: { public_token: string; deposit_required: number } }>('create-booking', {
-        unit_id: s.unit, check_in: s.in, check_out: s.out, guests: v.guests, name: v.name, phone: p.phone, email: v.email || undefined, source: 'website', consent: true,
+        unit_id: s.unit, check_in: s.in, check_out: s.out, guests: v.guests, name: v.name, phone: p.phone, email: v.email || undefined, source: 'website', consent: true, discount_code: applied?.code,
       }, { auth: false })
       // The payment itself is started (and followed live) on the booking page, so a refresh never loses it.
       nav({ to: '/booking/$token', params: { token: res.booking.public_token }, search: { start: p.phone } })
@@ -85,7 +114,9 @@ function BookPage() {
   if (!valid) return <PublicLayout><div className="mx-auto max-w-lg px-4 py-16"><EmptyState title="Choose your dates first" description="Pick a place and dates to start your booking." action={<Button asChild><Link to="/">Find a place</Link></Button>} /></div></PublicLayout>
   const d = info.data
   const q = d?.quote
-  const deposit = q ? calcDeposit(q.total, brand.depositPercent) : 0
+  const discount = applied?.amount ?? 0
+  const total = q ? Math.max(0, q.total - discount) : 0
+  const deposit = q ? calcDeposit(total, brand.depositPercent) : 0
 
   return (
     <PublicLayout>
@@ -105,16 +136,24 @@ function BookPage() {
               <Field label="Guests" htmlFor="b-guests" error={errors.guests?.message}>
                 <Select id="b-guests" {...register('guests')}>{Array.from({ length: d.unit.max_guests }, (_, i) => i + 1).map((n) => <option key={n} value={n}>{n}</option>)}</Select>
               </Field>
+              {brand.bookingMode !== 'request' && <Field label="Discount code (optional)" htmlFor="b-code" hint={codeMsg || undefined}>
+                <div className="flex gap-2">
+                  <Input id="b-code" autoComplete="off" className="uppercase" value={codeInput} onChange={(e) => { setCodeInput(e.target.value); setApplied(null); setCodeMsg('') }} />
+                  <Button type="button" variant="outline" onClick={applyCode} disabled={!codeInput.trim()}>Apply</Button>
+                </div>
+              </Field>}
               <div className="rounded-lg border bg-muted/40 p-3 text-sm">
                 <label className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" {...register('consent')} />
-                  <span>I agree that {brand.businessName} may use my name, phone number and email to manage this booking and send me confirmations and reminders (WhatsApp/SMS). We keep only what we need and never sell your data.</span></label>
+                  <span>I agree that {brand.businessName} may use my name, phone number and email to manage this booking and send me confirmations and reminders (WhatsApp/SMS). We keep only what we need and never sell your data.{brand.pages.some((x) => x.slug === 'privacy') && <> <Link to="/p/$slug" params={{ slug: 'privacy' }} target="_blank" className="underline">Read our privacy notice</Link>.</>}</span></label>
                 {errors.consent && <p role="alert" className="mt-2 text-xs text-danger">{errors.consent.message}</p>}
               </div>
               {formError && <p role="alert" className="rounded-md border border-danger/40 bg-danger/5 p-3 text-sm text-danger">{formError}</p>}
               {q.nights < q.min_nights
                 ? <p role="alert" className="text-sm text-danger">This place has a {q.min_nights}-night minimum. <Link to="/properties/$slug" params={{ slug: d.property.slug }} className="underline">Change dates</Link></p>
-                : <Button type="submit" size="lg" loading={isSubmitting}>Pay {formatKES(deposit)} deposit with M-Pesa</Button>}
-              <p className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4" aria-hidden /> You will get an M-Pesa prompt on your phone. Enter your PIN to confirm. We never see your PIN.</p>
+                : <Button type="submit" size="lg" loading={isSubmitting}>{brand.bookingMode === 'request' ? 'Send booking request' : `Pay ${formatKES(deposit)} deposit with M-Pesa`}</Button>}
+              {brand.bookingMode === 'request'
+                ? <p className="text-xs text-muted-foreground">No payment now. We will confirm availability and send you a link to pay the deposit once approved.</p>
+                : <p className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4" aria-hidden /> You will get an M-Pesa prompt on your phone. Enter your PIN to confirm. We never see your PIN.</p>}
             </form>
           )}
         </div>
@@ -128,10 +167,12 @@ function BookPage() {
                 <p>{formatDate(s.out)} <span className="text-muted-foreground">until {formatTime(d.property.check_out_time)}</span></p>
                 <div className="mt-3 grid gap-1 border-t pt-3">
                   <p className="flex justify-between"><span>{q.nights} night{q.nights > 1 ? 's' : ''}</span><span>{formatKES(q.nightly_total)}</span></p>
+                  {(longStay.data ?? 0) > 0 && <p className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Long-stay discount included</span><span>{longStay.data}% off</span></p>}
                   {q.cleaning_fee > 0 && <p className="flex justify-between"><span>Cleaning fee</span><span>{formatKES(q.cleaning_fee)}</span></p>}
-                  <p className="flex justify-between border-t pt-2 text-base font-semibold"><span>Total</span><span>{formatKES(q.total)}</span></p>
-                  <p className="flex justify-between font-medium text-brand"><span>Deposit due now ({brand.depositPercent}%)</span><span>{formatKES(deposit)}</span></p>
-                  <p className="flex justify-between text-muted-foreground"><span>Balance before check-in</span><span>{formatKES(q.total - deposit)}</span></p>
+                  {discount > 0 && <p className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Discount ({applied?.code})</span><span>-{formatKES(discount)}</span></p>}
+                  <p className="flex justify-between border-t pt-2 text-base font-semibold"><span>Total</span><span>{formatKES(total)}</span></p>
+                  {brand.bookingMode !== 'request' && <p className="flex justify-between font-medium text-brand"><span>Deposit due now ({brand.depositPercent}%)</span><span>{formatKES(deposit)}</span></p>}
+                  {brand.bookingMode !== 'request' && <p className="flex justify-between text-muted-foreground"><span>Balance before check-in</span><span>{formatKES(total - deposit)}</span></p>}
                 </div>
                 <p className="mt-3 text-xs text-muted-foreground">{brand.cancellationPolicy}</p>
               </CardContent>

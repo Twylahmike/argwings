@@ -6,7 +6,7 @@ export type PropertyWithUnits = Property & { units: Unit[] }
 /** All visible properties with their bookable units (anon-readable by RLS). */
 export async function fetchProperties(): Promise<PropertyWithUnits[]> {
   const [p, u] = await Promise.all([
-    pub().from('properties').select('*').eq('active', true).order('sort').order('name'),
+    pub().from('properties').select('*').eq('active', true).order('featured', { ascending: false }).order('sort').order('name'),
     pub().from('units').select('*').eq('active', true).order('sort').order('base_rate'),
   ])
   if (p.error) throw p.error
@@ -21,6 +21,12 @@ export async function fetchPropertyBySlug(slug: string): Promise<PropertyWithUni
   const { data: units, error: e2 } = await pub().from('units').select('*').eq('property_id', prop.id).eq('active', true).order('sort').order('base_rate')
   if (e2) throw e2
   return { ...(prop as Property), units: units as Unit[] }
+}
+
+/** Active length-of-stay offers for a property, best first. */
+export async function fetchStayOffers(propertyId: string): Promise<{ min_nights: number; percent: number }[]> {
+  const { data } = await pub().from('stay_discounts').select('min_nights, percent').eq('property_id', propertyId).is('unit_id', null).order('min_nights')
+  return (data ?? []) as { min_nights: number; percent: number }[]
 }
 
 export type AvailableUnit = { unit_id: string; property_id: string; nights: number; total: number }

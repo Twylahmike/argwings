@@ -19,6 +19,7 @@ import { Field, Input } from '~/components/ui/form'
 import { Dialog, DialogContent, SheetContent } from '~/components/ui/dialog'
 import { ErrorState, PageHeader, Skeleton, Tabs } from '~/components/ui/misc'
 import { Timeline, type TimelineBooking } from '~/components/calendar/Timeline'
+import { RescheduleDialog } from '~/components/booking/RescheduleDialog'
 import { useAdmin } from '~/components/layout/AdminShell'
 
 export const Route = createFileRoute('/admin/calendar')({
@@ -33,12 +34,13 @@ function CalendarPage() {
   const nav = useNavigate()
   const qc = useQueryClient()
   const today = todayNairobi()
-  const [view, setView] = useState<'14' | '30'>('14')
+  const [view, setView] = useState<'7' | '14' | '30'>('14')
   const days = Number(view)
   const [start, setStart] = useState(addDays(today, -2))
   const end = addDays(start, days)
   const [selection, setSelection] = useState<{ unitId: string; from: string; to: string } | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [move, setMove] = useState<{ id: string; unit: string; from: string; to: string } | null>(null)
 
   const units = useQuery({
     queryKey: ['cal-units', scopeIds],
@@ -94,14 +96,21 @@ function CalendarPage() {
           <Button variant="outline" size="icon" aria-label="Next" onClick={() => setStart(addDays(start, days))}><ChevronRight className="h-5 w-5" /></Button>
           <span className="ml-2 hidden text-sm text-muted-foreground md:inline">{label}</span>
         </div>
-        <Tabs label="View length" value={view} onChange={setView} tabs={[{ value: '14', label: '14 days' }, { value: '30', label: '30 days' }]} />
+        <Tabs label="View length" value={view} onChange={setView} tabs={[{ value: '7', label: 'Week' }, { value: '14', label: '14 days' }, { value: '30', label: 'Month' }]} />
       </div>
       <Legend />
       {(units.isLoading || data.isLoading) && <Skeleton className="h-80" />}
       {(units.error || data.error) && <ErrorState error={units.error ?? data.error} retry={() => { units.refetch(); data.refetch() }} />}
       {units.data && data.data && (
+        <>
         <Timeline start={start} days={days} properties={properties} units={units.data} bookings={bars} cleaning={cleaning}
-          onSelectRange={(unitId, from, to) => setSelection({ unitId, from, to })} onOpenBooking={setOpenId} />
+          onSelectRange={(unitId, from, to) => setSelection({ unitId, from, to })} onOpenBooking={setOpenId}
+          onMoveBooking={(id, unit, from, to) => setMove({ id, unit, from, to })} />
+        {move && data.data && (() => {
+          const mb = data.data.bookings.find((x) => x.id === move.id)
+          return mb ? <RescheduleDialog booking={mb} status={mb.status} initial={{ from: move.from, to: move.to, unit: move.unit }} onClose={() => setMove(null)} onDone={() => { setMove(null); qc.invalidateQueries({ queryKey: ['cal-bookings'] }) }} /> : null
+        })()}
+        </>
       )}
 
       {selection && units.data && (
@@ -190,6 +199,7 @@ function BookingDrawer({ b, onClose, onChanged }: { b: BookingRow; onClose: () =
             </div>
           )}
           {b.status !== 'blocked' && <Button variant="ghost" asChild><Link to="/admin/bookings/$id" params={{ id: b.id }}><ExternalLink className="h-4 w-4" /> Open full booking</Link></Button>}
+          {['pending', 'confirmed', 'checked_in'].includes(b.status) && <Button variant="outline" asChild><Link to="/admin/bookings/$id" params={{ id: b.id }} search={{ move: 1 }}>Change dates or room</Link></Button>}
         </div>
       </SheetContent>
     </Dialog>

@@ -27,7 +27,7 @@ function GuestsPage() {
     queryKey: ['guests', scopeIds],
     queryFn: async () => {
       const [g, b] = await Promise.all([
-        sb().from('guests').select('id, full_name, phone, email, id_number, anonymised_at').order('full_name').limit(2000),
+        sb().from('guests').select('id, full_name, phone, email, id_number, anonymised_at, vip, flagged, flag_reason').order('full_name').limit(2000),
         sb().from('bookings').select('guest_id, check_in, status, total_amount, amount_paid').in('property_id', scopeIds).not('guest_id', 'is', null).limit(5000),
       ])
       if (g.error) throw g.error
@@ -43,7 +43,7 @@ function GuestsPage() {
       }
       // Only guests with a booking in the selected properties (managers see no others anyway).
       const ids = new Set(b.data.map((x) => x.guest_id))
-      return (g.data as Pick<Guest, 'id' | 'full_name' | 'phone' | 'email' | 'id_number' | 'anonymised_at'>[])
+      return (g.data as Pick<Guest, 'id' | 'full_name' | 'phone' | 'email' | 'id_number' | 'anonymised_at' | 'vip' | 'flagged' | 'flag_reason'>[])
         .filter((x) => ids.has(x.id)).map((x) => ({ ...x, ...(stats.get(x.id) ?? { stays: 0, spent: 0, last: '' }) }))
     },
   })
@@ -67,7 +67,7 @@ function GuestsPage() {
           <tbody className="divide-y">
             {rows.map((g) => (
               <tr key={g.id} className="hover:bg-muted/40">
-                <td className={td}><Link to="/admin/guests/$id" params={{ id: g.id }} className="font-medium text-brand hover:underline">{g.full_name}</Link></td>
+                <td className={td}><Link to="/admin/guests/$id" params={{ id: g.id }} className="font-medium text-brand hover:underline">{g.full_name}</Link>{g.vip && <span className="ml-2 rounded border border-brand/40 bg-brand/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-brand">VIP</span>}{g.flagged && <span title={g.flag_reason ?? ''} className="ml-2 rounded border border-danger/40 bg-danger/10 px-1.5 py-0.5 text-[10px] font-semibold uppercase text-danger">Flagged</span>}</td>
                 <td className={td}>{formatPhoneLocal(g.phone)}</td>
                 <td className={td}>{g.email}</td>
                 <td className={`${td} font-mono text-xs`}>{maskId(g.id_number)}</td>

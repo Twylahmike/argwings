@@ -5,9 +5,19 @@
  * Business name, WhatsApp number, brand colour, deposit % and cancellation policy live in the other Settings tabs.
  */
 export type Announcement = { id: string; text: string; href?: string; variant?: 'info' | 'promo' }
-export type Review = { id: string; guest: string; stay?: string; rating: 1 | 2 | 3 | 4 | 5; quote: string }
+export type Review = { id: string; guest: string; stay?: string; rating: 1 | 2 | 3 | 4 | 5; quote: string; response?: string }
+
+/** Home page sections after the hero, in their default order. */
+export const HOME_SECTIONS = [
+  { id: 'trust', label: 'Trust bar' }, { id: 'spaces', label: 'Our spaces' }, { id: 'facilities', label: 'Feature band' }, { id: 'amenities', label: 'Amenities' },
+  { id: 'menu', label: 'Bar menu (only when switched on)' }, { id: 'how', label: 'How to book' }, { id: 'payment', label: 'How to pay' }, { id: 'reviews', label: 'Guest reviews' },
+  { id: 'gallery', label: 'Gallery' }, { id: 'faq', label: 'Questions and answers' }, { id: 'contact', label: 'Contact form' }, { id: 'cta', label: 'Final call to action' },
+] as const
+export type HomeSectionId = (typeof HOME_SECTIONS)[number]['id']
 
 export type SiteContent = {
+  /** Order of the home page sections and which ones are hidden. */
+  sections: { order: HomeSectionId[]; hidden: HomeSectionId[] }
   /** Short line under the logo in the footer and PWA description. */
   tagline: string
   /** Hero headline. Wrap ONE word in *asterisks* to show it in italics with the brand colour, e.g. "Stay *well*." */
@@ -31,6 +41,7 @@ export type SiteContent = {
 }
 
 export const DEFAULT_SITE_CONTENT: SiteContent = {
+  sections: { order: HOME_SECTIONS.map((x) => x.id), hidden: [] },
   tagline: 'Where Luxury Meets Home',
   heroHeadline: 'Where *Luxury* Meets Home.',
   heroSubline: 'Short & long-term stays in Lavington & Fedha, Nairobi.',
@@ -69,7 +80,13 @@ export function sanitizeSiteContent(raw: unknown): SiteContent {
   const social = has('social') ? obj('social') : d.social
   const fac = has('facility') ? obj('facility') : d.facility
   const siteUrl = httpsOrEmpty(r.siteUrl).replace(/\/+$/, '')
+  const known = new Set<string>(HOME_SECTIONS.map((x) => x.id))
+  const rawSec = obj('sections')
+  const order = (Array.isArray(rawSec.order) ? rawSec.order : []).filter((x): x is HomeSectionId => typeof x === 'string' && known.has(x)).filter((x, i, a) => a.indexOf(x) === i)
+  const fullOrder = [...order, ...HOME_SECTIONS.map((x) => x.id).filter((x) => !order.includes(x))]
+  const hidden = (Array.isArray(rawSec.hidden) ? rawSec.hidden : []).filter((x): x is HomeSectionId => typeof x === 'string' && known.has(x)).filter((x, i, a) => a.indexOf(x) === i)
   return {
+    sections: { order: fullOrder, hidden },
     tagline: has('tagline') ? text(r.tagline, 120) : d.tagline,
     heroHeadline: text(r.heroHeadline, 80) || d.heroHeadline,
     heroSubline: has('heroSubline') ? text(r.heroSubline, 200) : d.heroSubline,

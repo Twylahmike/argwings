@@ -7,7 +7,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { AlertTriangle, ArrowLeft, Pencil, Plus, Trash2 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
-import { isOwner, requireRole } from '~/lib/auth'
+import { requireRole } from '~/lib/auth'
 import type { Property, RateOverrideRow, Unit } from '~/lib/types'
 import { formatKES } from '~/lib/money'
 import { formatDate, formatTime } from '~/lib/dates'
@@ -21,7 +21,7 @@ import { Dialog, DialogContent } from '~/components/ui/dialog'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { EmptyState, ErrorState, Skeleton, Tabs } from '~/components/ui/misc'
 import { ImageManager } from '~/components/layout/ImageManager'
-import { useAdmin } from '~/components/layout/AdminShell'
+import { MediaPicker } from '~/components/media/MediaPicker'
 
 export const Route = createFileRoute('/admin/properties/$id')({
   beforeLoad: ({ context, params }) => {
@@ -48,7 +48,12 @@ const propSchema = z.object({
   check_out_time: z.string().min(4),
   house_rules: z.string().optional(),
   amenities: z.string().optional(),
+  cancellation_policy: z.string().max(2000).optional(),
+  video_url: z.string().optional(),
+  seo_title: z.string().max(70, 'Keep the search title under 70 characters').optional(),
+  seo_description: z.string().max(200, 'Keep the search description under 200 characters').optional(),
   active: z.boolean(),
+  featured: z.boolean(),
 })
 type PropValues = z.input<typeof propSchema>
 
@@ -87,7 +92,7 @@ function PropertyPage() {
 function DetailsForm({ property }: { property?: Property }) {
   const nav = useNavigate()
   const qc = useQueryClient()
-  const { me } = useAdmin()
+  const [pickVideo, setPickVideo] = useState(false)
   const { register, handleSubmit, watch, setValue, setError, formState: { errors, isSubmitting, dirtyFields } } = useForm<PropValues>({
     resolver: zodResolver(propSchema),
     defaultValues: {
@@ -97,6 +102,7 @@ function DetailsForm({ property }: { property?: Property }) {
       contact_phone: property?.contact_phone ?? '', whatsapp_number: property?.whatsapp_number ?? '',
       check_in_time: formatTime(property?.check_in_time) || '14:00', check_out_time: formatTime(property?.check_out_time) || '10:00',
       house_rules: property?.house_rules ?? '', amenities: (property?.amenities ?? []).join(', '), active: property?.active ?? true,
+      cancellation_policy: property?.cancellation_policy ?? '', video_url: property?.video_url ?? '', seo_title: property?.seo_title ?? '', seo_description: property?.seo_description ?? '', featured: property?.featured ?? false,
     },
   })
   const name = watch('name')
@@ -116,7 +122,9 @@ function DetailsForm({ property }: { property?: Property }) {
       name: v.name, slug: v.slug, tagline: v.tagline || null, description: v.description || null, address: v.address || null,
       area: v.area || null, city: v.city, lat: v.lat, lng: v.lng, ...phones,
       check_in_time: v.check_in_time, check_out_time: v.check_out_time, house_rules: v.house_rules || null,
-      amenities: (v.amenities ?? '').split(',').map((s) => s.trim()).filter(Boolean), active: v.active,
+      amenities: (v.amenities ?? '').split(',').map((s) => s.trim()).filter(Boolean),
+      // An archived listing can never be published: restore it first.
+      active: property?.archived_at ? false : v.active, featured: v.featured, cancellation_policy: v.cancellation_policy?.trim() || null, video_url: v.video_url?.trim() || null, seo_title: v.seo_title?.trim() || null, seo_description: v.seo_description?.trim() || null,
     }
     const res = property
       ? await sb().from('properties').update(row).eq('id', property.id).select('id').single()
@@ -158,11 +166,49 @@ function DetailsForm({ property }: { property?: Property }) {
       </div>
       <Field label="House rules" htmlFor="p-rules" hint="One rule per line."><Textarea id="p-rules" rows={5} {...register('house_rules')} /></Field>
       <Field label="Amenities" htmlFor="p-amen" hint="Separate with commas, e.g. Fast WiFi, Hot shower, Parking"><Input id="p-amen" {...register('amenities')} /></Field>
-      {isOwner(me) && (
-        <label className="flex h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5" {...register('active')} /> Visible on the booking site</label>
-      )}
+      <Field label="Walkthrough video" htmlFor="p-video" hint="Optional. Upload an MP4 or WebM in the Media library, then paste its link here (or pick it).">
+        <div className="flex gap-2"><Input id="p-video" placeholder="https://…" {...register('video_url')} /><Button type="button" variant="outline" onClick={() => setPickVideo(true)}>Pick</Button></div>
+      </Field>
+      {pickVideo && <MediaPicker kind="video" onClose={() => setPickVideo(false)} onPick={(m) => { setValue('video_url', m.url, { shouldDirty: true }); setPickVideo(false) }} />}
+      <Field label="Search title" htmlFor="p-seo-t" hint="Shown in Google results and when the link is shared. Leave empty to use the property name." error={errors.seo_title?.message}><Input id="p-seo-t" maxLength={70} {...register('seo_title')} /></Field>
+      <Field label="Search description" htmlFor="p-seo-d" hint="One or two sentences, up to 200 characters. Leave empty to use the tagline." error={errors.seo_description?.message}><Textarea id="p-seo-d" rows={2} maxLength={200} {...register('seo_description')} /></Field>
+      <Field label="Cancellation policy for this property" htmlFor="p-cancel" hint="Leave empty to use the general policy from Settings."><Textarea id="p-cancel" rows={3} {...register('cancellation_policy')} /></Field>
+      <div className="grid gap-1 rounded-lg border p-4">
+        <p className="text-sm font-medium">Listing status</p>
+        {property?.archived_at
+          ? <p className="text-sm text-muted-foreground">This listing is archived and hidden from the website. Restore it below to edit its visibility.</p>
+          : <label className="flex h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5" {...register('active')} /> Published on the website and booking site</label>}
+        <label className="flex h-11 items-center gap-3 text-sm"><input type="checkbox" className="h-5 w-5" {...register('featured')} /> Featured (shown first, with a "Featured stay" label)</label>
+        {property && <ArchiveControl property={property} />}
+      </div>
       <div><Button type="submit" loading={isSubmitting}>{property ? 'Save changes' : 'Create property'}</Button></div>
     </form>
+  )
+}
+
+function ArchiveControl({ property }: { property: Property }) {
+  const qc = useQueryClient()
+  const archived = !!property.archived_at
+  const [confirming, setConfirming] = useState(false)
+  const go = useMutation({
+    mutationFn: async () => {
+      const patch = archived ? { archived_at: null } : { archived_at: new Date().toISOString(), active: false, featured: false }
+      const { error } = await sb().from('properties').update(patch).eq('id', property.id)
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success(archived ? 'Restored (still unpublished)' : 'Archived'); setConfirming(false); qc.invalidateQueries({ queryKey: ['admin-property'] }); qc.invalidateQueries({ queryKey: ['admin-properties'] }) },
+    onError: (e) => toast.error(errMessage(e)),
+  })
+  return (
+    <div className="mt-1 flex flex-wrap items-center gap-2">
+      {!confirming
+        ? <Button type="button" variant="outline" size="sm" onClick={() => (archived ? go.mutate() : setConfirming(true))} loading={go.isPending}>{archived ? 'Restore listing' : 'Archive listing'}</Button>
+        : <>
+            <span className="text-sm">Archive this listing? It disappears from the website. Bookings and history are kept.</span>
+            <Button type="button" size="sm" variant="danger" loading={go.isPending} onClick={() => go.mutate()}>Yes, archive</Button>
+            <Button type="button" size="sm" variant="ghost" onClick={() => setConfirming(false)}>Cancel</Button>
+          </>}
+    </div>
   )
 }
 
@@ -187,6 +233,61 @@ function PhotosSection({ property }: { property: Property }) {
   )
 }
 
+/* ------------------------------ Length-of-stay discounts ------------------------------ */
+
+type StayRule = { id: string; unit_id: string | null; min_nights: number; percent: number; active: boolean }
+
+function StayDiscountsCard({ property }: { property: Property }) {
+  const qc = useQueryClient()
+  const [nights, setNights] = useState('7')
+  const [percent, setPercent] = useState('10')
+  const [err, setErr] = useState('')
+  const rules = useQuery({ queryKey: ['stay-discounts', property.id], queryFn: async () => {
+    const { data, error } = await sb().from('stay_discounts').select('id, unit_id, min_nights, percent, active').eq('property_id', property.id).order('min_nights')
+    if (error) throw error
+    return data as StayRule[]
+  } })
+  const refresh = () => qc.invalidateQueries({ queryKey: ['stay-discounts', property.id] })
+  const add = useMutation({
+    mutationFn: async () => {
+      setErr('')
+      const n = Number(nights); const p = Number(percent)
+      if (!Number.isInteger(n) || n < 2 || n > 365) throw new Error('Nights must be a whole number from 2 to 365.')
+      if (!Number.isInteger(p) || p < 1 || p > 90) throw new Error('The discount must be a whole percent from 1 to 90.')
+      const { error } = await sb().from('stay_discounts').insert({ property_id: property.id, min_nights: n, percent: p })
+      if (error) throw new Error(error.code === '23505' ? 'There is already a discount for that number of nights.' : error.message)
+    },
+    onSuccess: () => { toast.success('Discount added'); refresh() }, onError: (e) => setErr(errMessage(e)),
+  })
+  const patch = useMutation({
+    mutationFn: async (v: { id: string; active?: boolean; remove?: boolean }) => {
+      const { error } = v.remove ? await sb().from('stay_discounts').delete().eq('id', v.id) : await sb().from('stay_discounts').update({ active: v.active }).eq('id', v.id)
+      if (error) throw error
+    },
+    onSuccess: refresh, onError: (e) => toast.error(errMessage(e)),
+  })
+  return (
+    <Card className="mb-4">
+      <CardHeader><CardTitle>Length-of-stay discounts</CardTitle></CardHeader>
+      <CardContent className="grid gap-3">
+        <p className="text-sm text-muted-foreground">Guests who stay longer pay less automatically, on the room charge only (not the cleaning fee). The best matching rule applies; rules do not add up.</p>
+        {rules.data?.length === 0 && <p className="text-sm text-muted-foreground">No discounts yet.</p>}
+        <ul className="divide-y text-sm">{rules.data?.map((r) => (
+          <li key={r.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+            <span className={r.active ? '' : 'text-muted-foreground line-through'}>{r.min_nights}+ nights: <b>{r.percent}% off</b></span>
+            <span className="flex gap-1"><Button size="sm" variant="outline" onClick={() => patch.mutate({ id: r.id, active: !r.active })}>{r.active ? 'Switch off' : 'Switch on'}</Button><Button size="sm" variant="ghost" className="text-danger" onClick={() => patch.mutate({ id: r.id, remove: true })}>Remove</Button></span>
+          </li>))}</ul>
+        <div className="flex flex-wrap items-end gap-2">
+          <Field label="From (nights)" htmlFor="sd-n"><Input id="sd-n" className="w-28" inputMode="numeric" value={nights} onChange={(e) => setNights(e.target.value)} /></Field>
+          <Field label="Percent off" htmlFor="sd-p"><Input id="sd-p" className="w-28" inputMode="numeric" value={percent} onChange={(e) => setPercent(e.target.value)} /></Field>
+          <Button variant="outline" loading={add.isPending} onClick={() => add.mutate()}>Add discount</Button>
+        </div>
+        {err && <p role="alert" className="text-sm text-danger">{err}</p>}
+      </CardContent>
+    </Card>
+  )
+}
+
 /* ---------------------------------- Units & rates ---------------------------------- */
 
 function UnitsSection({ property }: { property: Property }) {
@@ -202,6 +303,7 @@ function UnitsSection({ property }: { property: Property }) {
   })
   return (
     <div>
+      <StayDiscountsCard property={property} />
       <div className="mb-3 flex justify-end"><Button onClick={() => setEditing('new')}><Plus className="h-4 w-4" /> Add unit</Button></div>
       {units.isLoading && <Skeleton className="h-40" />}
       {units.error && <ErrorState error={units.error} retry={() => units.refetch()} />}
@@ -213,9 +315,9 @@ function UnitsSection({ property }: { property: Property }) {
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <p className="font-semibold">{u.name} {u.code && <span className="text-xs font-normal text-muted-foreground">({u.code})</span>}</p>
-                  <p className="text-sm text-muted-foreground">{u.unit_type} · up to {u.max_guests} guests · min {u.min_nights} night{u.min_nights > 1 ? 's' : ''}</p>
+                  <p className="text-sm text-muted-foreground">{u.unit_type} · up to {u.max_guests} guests · {u.bedrooms} bed{u.bedrooms === 1 ? 'room' : 'rooms'} · {u.bathrooms} bath · {u.min_nights}{u.max_nights ? `-${u.max_nights}` : '+'} nights</p>
                 </div>
-                {!u.active && <Badge className="text-muted-foreground">Inactive</Badge>}
+                <div className="flex flex-col items-end gap-1">{!u.active && <Badge className="text-muted-foreground">Inactive</Badge>}{u.maintenance_status !== 'ok' && <Badge className="border-amber-500/50 text-amber-700 dark:text-amber-300">{u.maintenance_status === 'maintenance' ? 'Maintenance' : 'Out of service'}</Badge>}</div>
               </div>
               <p className="mt-2 text-sm">{formatKES(u.base_rate)}{u.weekend_rate != null && <> · weekend {formatKES(u.weekend_rate)}</>} · cleaning {formatKES(u.cleaning_fee)}</p>
               <Button variant="outline" size="sm" className="mt-3" onClick={() => setEditing(u)}><Pencil className="h-4 w-4" /> Edit unit & rates</Button>
@@ -242,9 +344,14 @@ const unitSchema = z.object({
   weekend_rate: z.preprocess((v) => (v === '' || v == null ? null : Number(v)), z.number().int().min(0).nullable()),
   cleaning_fee: num('Cleaning fee'),
   min_nights: num('Minimum nights', 1),
+  max_nights: z.preprocess((v) => (v === '' || v == null ? null : Number(v)), z.number().int('Maximum nights must be a whole number').min(1, 'Maximum nights must be at least 1').nullable()),
+  bathrooms: z.preprocess((v) => (v === '' || v == null ? NaN : Number(v)), z.number({ message: 'Bathrooms must be a number' }).min(0).max(20)),
+  bed_config: z.string().max(120).optional(),
+  maintenance_status: z.enum(['ok', 'maintenance', 'out_of_service']),
+  maintenance_note: z.string().max(300).optional(),
   amenities: z.string().optional(),
   active: z.boolean(),
-})
+}).refine((v) => v.max_nights == null || v.max_nights >= v.min_nights, { path: ['max_nights'], message: 'Maximum nights cannot be less than minimum nights' })
 type UnitValues = z.input<typeof unitSchema>
 
 function UnitDialog({ property, unit, onClose, onSaved }: { property: Property; unit?: Unit; onClose: () => void; onSaved: () => void }) {
@@ -255,12 +362,14 @@ function UnitDialog({ property, unit, onClose, onSaved }: { property: Property; 
       name: unit?.name ?? '', code: unit?.code ?? '', unit_type: unit?.unit_type ?? 'room', description: unit?.description ?? '',
       max_guests: unit?.max_guests ?? 2, bedrooms: unit?.bedrooms ?? 1, beds: unit?.beds ?? 1,
       base_rate: unit?.base_rate ?? 4000, weekend_rate: unit?.weekend_rate ?? undefined, cleaning_fee: unit?.cleaning_fee ?? 0,
-      min_nights: unit?.min_nights ?? 1, amenities: (unit?.amenities ?? []).join(', '), active: unit?.active ?? true,
+      min_nights: unit?.min_nights ?? 1, max_nights: unit?.max_nights ?? undefined, bathrooms: unit?.bathrooms ?? 1, bed_config: unit?.bed_config ?? '',
+      maintenance_status: unit?.maintenance_status ?? 'ok', maintenance_note: unit?.maintenance_note ?? '',
+      amenities: (unit?.amenities ?? []).join(', '), active: unit?.active ?? true,
     },
   })
   async function onSubmit(raw: UnitValues) {
     const v = unitSchema.parse(raw)
-    const row = { ...v, code: v.code || null, description: v.description || null, amenities: (v.amenities ?? '').split(',').map((s) => s.trim()).filter(Boolean), images, property_id: property.id }
+    const row = { ...v, code: v.code || null, description: v.description || null, bed_config: v.bed_config || null, maintenance_note: v.maintenance_status === 'ok' ? null : v.maintenance_note || null, amenities: (v.amenities ?? '').split(',').map((s) => s.trim()).filter(Boolean), images, property_id: property.id }
     const res = unit ? await sb().from('units').update(row).eq('id', unit.id) : await sb().from('units').insert({ ...row, sort: 100 })
     if (res.error) { toast.error(errMessage(res.error)); return }
     toast.success('Unit saved')
@@ -295,6 +404,13 @@ function UnitDialog({ property, unit, onClose, onSaved }: { property: Property; 
             <Field label="Min nights" htmlFor="u-min" error={errors.min_nights?.message}><Input id="u-min" inputMode="numeric" {...register('min_nights')} /></Field>
             <Field label="Bedrooms" htmlFor="u-bed" error={errors.bedrooms?.message}><Input id="u-bed" inputMode="numeric" {...register('bedrooms')} /></Field>
             <Field label="Beds" htmlFor="u-beds" error={errors.beds?.message}><Input id="u-beds" inputMode="numeric" {...register('beds')} /></Field>
+            <Field label="Bathrooms" htmlFor="u-bath" error={errors.bathrooms?.message}><Input id="u-bath" inputMode="decimal" {...register('bathrooms')} /></Field>
+            <Field label="Max nights" htmlFor="u-maxn" hint="Empty = no limit." error={errors.max_nights?.message}><Input id="u-maxn" inputMode="numeric" {...register('max_nights')} /></Field>
+            <Field label="Bed setup" htmlFor="u-bedcfg" hint="e.g. 1 queen, 1 sofa bed"><Input id="u-bedcfg" {...register('bed_config')} /></Field>
+          </div>
+          <div className="grid gap-4 sm:grid-cols-3">
+            <Field label="Room condition" htmlFor="u-maint" hint="Maintenance or out of service stops new bookings for this unit."><Select id="u-maint" {...register('maintenance_status')}><option value="ok">Ready for guests</option><option value="maintenance">Under maintenance</option><option value="out_of_service">Out of service</option></Select></Field>
+            <Field label="Maintenance note" htmlFor="u-mnote" className="sm:col-span-2"><Input id="u-mnote" placeholder="What is being fixed?" {...register('maintenance_note')} /></Field>
           </div>
           <div className="grid gap-4 sm:grid-cols-3">
             <Field label="Nightly rate (KES)" htmlFor="u-base" error={errors.base_rate?.message}><Input id="u-base" inputMode="numeric" {...register('base_rate')} /></Field>

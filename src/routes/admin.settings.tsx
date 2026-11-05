@@ -15,7 +15,7 @@ import { WebsiteContentForm } from '~/components/layout/WebsiteContentForm'
 import { Button } from '~/components/ui/button'
 import { Badge } from '~/components/ui/badge'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
-import { Field, Input, Textarea } from '~/components/ui/form'
+import { Field, Input, Select, Textarea } from '~/components/ui/form'
 import { ErrorState, PageHeader, Skeleton, Tabs, TableWrap, td, th } from '~/components/ui/misc'
 
 export const Route = createFileRoute('/admin/settings')({
@@ -24,7 +24,7 @@ export const Route = createFileRoute('/admin/settings')({
 })
 
 type Vals = Record<string, string>
-const KEYS = ['business_name', 'brand_color', 'logo_url', 'support_whatsapp', 'owner_notify_phone', 'mpesa_paybill_display', 'mpesa_manual_instructions', 'deposit_percent', 'hold_minutes',
+const KEYS = ['business_name', 'brand_color', 'logo_url', 'support_whatsapp', 'owner_notify_phone', 'mpesa_paybill_display', 'mpesa_manual_instructions', 'deposit_percent', 'hold_minutes', 'booking_mode', 'request_hold_hours', 'business_email', 'business_address', 'currency', 'timezone', 'tax_percent', 'maintenance_mode',
   'default_check_in_time', 'default_check_out_time', 'cancellation_policy', 'reminder_days_before', 'balance_reminder_days_before'] as const
 
 function SettingsPage() {
@@ -39,6 +39,53 @@ function SettingsPage() {
       {tab === 'audit' && <Audit />}
       {tab === 'export' && <Export />}
     </div>
+  )
+}
+
+/** Optional business modules. Off by default; the public menu only appears while it is switched on. */
+function ModulesCard() {
+  const qc = useQueryClient()
+  const q = useQuery({ queryKey: ['modules-full'], queryFn: async () => {
+    const { data } = await sb().from('settings').select('key, value').in('key', ['module_bar_menu', 'module_bar_stock'])
+    return Object.fromEntries((data ?? []).map((r) => [r.key as string, r.value === true])) as Record<string, boolean>
+  } })
+  const save = useMutation({
+    mutationFn: async (v: { key: string; on: boolean }) => { const { error } = await sb().from('settings').upsert({ key: v.key, value: v.on, updated_at: new Date().toISOString() }); if (error) throw error },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['modules-full'] }); qc.invalidateQueries({ queryKey: ['modules'] }); toast.success('Saved') },
+    onError: (e) => toast.error(errMessage(e)),
+  })
+  return (
+    <Card><CardHeader><CardTitle>Optional modules</CardTitle></CardHeader><CardContent className="grid gap-2 text-sm">
+      <label className="flex items-start gap-2"><input className="mt-1" type="checkbox" checked={q.data?.module_bar_menu === true} onChange={(e) => save.mutate({ key: 'module_bar_menu', on: e.target.checked })} /> Bar menu: show a drinks and snacks menu on the website. Only switch on if you really serve them.</label>
+      <label className="flex items-start gap-2"><input className="mt-1" type="checkbox" checked={q.data?.module_bar_stock === true} onChange={(e) => save.mutate({ key: 'module_bar_stock', on: e.target.checked })} /> Bar stock: track purchases, sales, wastage and low-stock alerts (staff only, never public).</label>
+    </CardContent></Card>
+  )
+}
+
+const METHOD_CHOICES: [string, string][] = [['mpesa_manual', 'M-Pesa (manual entry)'], ['cash', 'Cash'], ['bank', 'Bank transfer'], ['card', 'Card'], ['other', 'Other']]
+/** Which payment methods staff can pick when recording a payment. M-Pesa STK push is controlled by the payment provider settings. */
+function PaymentMethodsCard() {
+  const qc = useQueryClient()
+  const q = useQuery({ queryKey: ['enabled-methods'], queryFn: async () => {
+    const { data } = await sb().from('settings').select('value').eq('key', 'enabled_payment_methods').maybeSingle()
+    return Array.isArray(data?.value) ? (data!.value as string[]) : METHOD_CHOICES.map(([k]) => k)
+  } })
+  const save = useMutation({
+    mutationFn: async (list: string[]) => {
+      if (list.length === 0) throw new Error('Keep at least one payment method.')
+      const { error } = await sb().from('settings').upsert({ key: 'enabled_payment_methods', value: list, updated_at: new Date().toISOString() })
+      if (error) throw error
+    },
+    onSuccess: () => { toast.success('Payment methods saved'); qc.invalidateQueries({ queryKey: ['enabled-methods'] }) },
+    onError: (e) => toast.error(errMessage(e)),
+  })
+  const on = q.data ?? []
+  return (
+    <Card><CardHeader><CardTitle>Payment methods for recording payments</CardTitle></CardHeader><CardContent className="grid gap-2 text-sm">
+      {METHOD_CHOICES.map(([k, l]) => (
+        <label key={k} className="flex items-center gap-2"><input type="checkbox" checked={on.includes(k)} onChange={(e) => save.mutate(e.target.checked ? [...on, k] : on.filter((x) => x !== k))} /> {l}</label>))}
+      <p className="text-xs text-muted-foreground">Saved as soon as you tick a box. Manual M-Pesa, bank and card entries by managers wait for the owner to verify them.</p>
+    </CardContent></Card>
   )
 }
 
@@ -64,17 +111,27 @@ function Business() {
       const rows: { key: string; value: unknown; updated_at: string }[] = []
       for (const k of KEYS) {
         let raw = (v[k] ?? '').trim()
+        if (k === 'request_hold_hours' && !raw) raw = '24'
         let val: unknown = raw
         if (k === 'support_whatsapp' || k === 'owner_notify_phone') {
           if (raw) { const p = normalizePhone(raw); if (!p.ok) errs[k] = p.error; else raw = p.phone }
           val = raw
-        } else if (['deposit_percent', 'hold_minutes', 'reminder_days_before', 'balance_reminder_days_before'].includes(k)) {
+        } else if (['deposit_percent', 'hold_minutes', 'request_hold_hours', 'reminder_days_before', 'balance_reminder_days_before'].includes(k)) {
           const n = Number(raw)
-          const [lo, hi] = k === 'deposit_percent' ? [0, 100] : k === 'hold_minutes' ? [1, 1440] : [0, 30]
+          const [lo, hi] = k === 'deposit_percent' ? [0, 100] : k === 'hold_minutes' ? [1, 1440] : k === 'request_hold_hours' ? [1, 168] : [0, 30]
           if (!Number.isFinite(n) || raw === '' || n < lo || n > hi || !Number.isInteger(n)) errs[k] = `Enter a whole number from ${lo} to ${hi}.`
           val = n
-        } else if (k === 'business_name' && !raw) errs[k] = 'Enter your business name.'
-        else if (k === 'brand_color' && raw && !HEX_RE.test(raw)) errs[k] = 'Use a colour like #0f766e.'
+        } else if (k === 'tax_percent') {
+          const n = Number(raw || 0)
+          if (!Number.isFinite(n) || n < 0 || n > 50) errs[k] = 'Enter a percentage from 0 to 50.'
+          val = n
+        } else if (k === 'maintenance_mode') val = raw === 'true'
+        else if (k === 'business_email' && raw && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(raw)) errs[k] = 'Enter a valid email address.'
+        else if (k === 'currency') val = (raw || 'KES').toUpperCase().slice(0, 3)
+        else if (k === 'timezone') val = raw || 'Africa/Nairobi'
+        else if (k === 'business_name' && !raw) errs[k] = 'Enter your business name.'
+        else if (k === 'booking_mode') val = raw === 'request' ? 'request' : 'instant'
+        else if (k === 'brand_color' && raw && !HEX_RE.test(raw)) errs[k] = 'Use a colour like #a9761f.'
         rows.push({ key: k, value: val, updated_at: new Date().toISOString() })
       }
       setErrors(errs)
@@ -107,8 +164,8 @@ function Business() {
         </div>
         <Field label="Brand colour" htmlFor="s-brand_color" error={errors.brand_color} hint="Buttons, links and highlights across the site and admin. The text colour adjusts automatically.">
           <div className="flex items-center gap-3">
-            <input aria-label="Pick a colour" type="color" className="h-11 w-14 cursor-pointer rounded-md border bg-card p-1" value={HEX_RE.test(v.brand_color ?? '') ? v.brand_color : '#0f766e'} onChange={set('brand_color')} />
-            <Input id="s-brand_color" className="w-32 font-mono" value={v.brand_color ?? ''} onChange={set('brand_color')} placeholder="#0f766e" aria-invalid={!!errors.brand_color} />
+            <input aria-label="Pick a colour" type="color" className="h-11 w-14 cursor-pointer rounded-md border bg-card p-1" value={HEX_RE.test(v.brand_color ?? '') ? v.brand_color : '#a9761f'} onChange={set('brand_color')} />
+            <Input id="s-brand_color" className="w-32 font-mono" value={v.brand_color ?? ''} onChange={set('brand_color')} placeholder="#a9761f" aria-invalid={!!errors.brand_color} />
             {HEX_RE.test(v.brand_color ?? '') && <span className="inline-flex h-11 items-center rounded-md px-4 text-sm font-medium" style={{ background: v.brand_color, color: readableOn(v.brand_color) }}>Preview</span>}
           </div>
         </Field>
@@ -117,9 +174,23 @@ function Business() {
         {f('support_whatsapp', 'Support WhatsApp', { inputMode: 'tel', hint: 'Shown to guests. Also the fallback for "Book on WhatsApp".' })}
         {f('owner_notify_phone', 'Owner alert number', { inputMode: 'tel', hint: 'Gets WhatsApp alerts when a payment needs review.' })}
       </CardContent></Card>
+      <Card><CardHeader><CardTitle>Business details</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
+        {f('business_email', 'Business email', { type: 'email', hint: 'Shown on the website footer when no email is set in Website text.' })}
+        {f('business_address', 'Physical address', { hint: 'Shown on the website when no location is set in Website text.' })}
+        {f('currency', 'Currency code', { hint: 'Three letters, for example KES. Amounts are shown in Kenya shillings.' })}
+        <Field label="Time zone" htmlFor="s-timezone" hint="Reminders and daily reports follow this."><Select id="s-timezone" value={v.timezone || 'Africa/Nairobi'} onChange={set('timezone')}><option value="Africa/Nairobi">Africa/Nairobi (EAT)</option><option value="Africa/Kampala">Africa/Kampala</option><option value="Africa/Dar_es_Salaam">Africa/Dar es Salaam</option></Select></Field>
+        {f('tax_percent', 'Tax (%)', { inputMode: 'numeric', hint: 'Shown on receipts when above 0. Prices on the website are tax-inclusive.' })}
+        <label className="flex items-start gap-2 self-end pb-2 text-sm"><input className="mt-1" type="checkbox" checked={v.maintenance_mode === 'true'} onChange={(e) => setV((x) => ({ ...x, maintenance_mode: e.target.checked ? 'true' : 'false' }))} /> Website maintenance mode: public pages show a “back soon” notice. Guests with a booking link and staff can still sign in.</label>
+      </CardContent></Card>
+      <PaymentMethodsCard />
+      <ModulesCard />
       <Card><CardHeader><CardTitle>Booking rules</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
         {f('deposit_percent', 'Deposit (%)', { inputMode: 'numeric', hint: 'Rounded up to the next KES 10.' })}
         {f('hold_minutes', 'Hold time (minutes)', { inputMode: 'numeric', hint: 'How long dates are held while a guest pays.' })}
+        <Field label="How guests book" htmlFor="s-booking_mode" className="sm:col-span-2" hint="Instant: guests pay a deposit and are confirmed automatically. Request first: guests send a request and you approve it in Requests before they can pay.">
+          <Select id="s-booking_mode" value={v.booking_mode === 'request' ? 'request' : 'instant'} onChange={set('booking_mode')}><option value="instant">Instant booking with payment</option><option value="request">Request first, I approve each booking</option></Select>
+        </Field>
+        {v.booking_mode === 'request' && f('request_hold_hours', 'Hold after approval (hours)', { inputMode: 'numeric', hint: 'How long dates are held for the guest to pay once you approve.' })}
         {f('default_check_in_time', 'Default check-in time', { type: 'time' })}{f('default_check_out_time', 'Default check-out time', { type: 'time' })}
         {f('reminder_days_before', 'Check-in reminder (days before)', { inputMode: 'numeric' })}{f('balance_reminder_days_before', 'Balance reminder (days before)', { inputMode: 'numeric' })}
         <Field label="Cancellation policy" htmlFor="s-cancel" className="sm:col-span-2"><Textarea id="s-cancel" rows={3} value={v.cancellation_policy ?? ''} onChange={set('cancellation_policy')} /></Field>

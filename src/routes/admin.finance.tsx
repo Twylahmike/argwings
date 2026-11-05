@@ -19,6 +19,7 @@ import { Dialog, DialogContent } from '~/components/ui/dialog'
 import { Field, Input, Select, Textarea } from '~/components/ui/form'
 import { EmptyState, ErrorState, PageHeader, Skeleton, Stat, Tabs, TableWrap, td, th } from '~/components/ui/misc'
 import { Money } from '~/components/booking/BookingBits'
+import { ReconcileView } from '~/components/finance/ReconcileView'
 import { useAdmin } from '~/components/layout/AdminShell'
 
 export const Route = createFileRoute('/admin/finance')({
@@ -27,12 +28,12 @@ export const Route = createFileRoute('/admin/finance')({
 })
 
 type Pnl = { property_id: string; property_name: string; income: number; refunds: number; expenses: number; net: number }
-type IncomeRow = { id: string; kind: string; method: PaymentMethod; amount: number; mpesa_receipt: string | null; confirmed_at: string; booking: { reference: string; property_id: string; property: { name: string } } }
+type IncomeRow = { id: string; verified: boolean; kind: string; method: PaymentMethod; amount: number; mpesa_receipt: string | null; confirmed_at: string; booking: { reference: string; property_id: string; property: { name: string } } }
 
 function FinancePage() {
   const { scopeIds } = useAdmin()
   const [month, setMonth] = useState(monthStart(todayNairobi()))
-  const [tab, setTab] = useState<'pnl' | 'income' | 'expenses'>('pnl')
+  const [tab, setTab] = useState<'pnl' | 'income' | 'expenses' | 'reconcile'>('pnl')
   const next = addMonths(month, 1)
 
   return (
@@ -43,9 +44,10 @@ function FinancePage() {
           <Input aria-label="Month" type="month" className="w-44" value={month.slice(0, 7)} onChange={(e) => e.target.value && setMonth(e.target.value + '-01')} />
           <Button variant="outline" size="icon" aria-label="Next month" onClick={() => setMonth(next)}><ChevronRight className="h-5 w-5" /></Button>
         </div>} />
-      <div className="mb-5"><Tabs label="Finance sections" value={tab} onChange={setTab} tabs={[{ value: 'pnl', label: 'Monthly profit' }, { value: 'income', label: 'Income' }, { value: 'expenses', label: 'Expenses' }]} /></div>
+      <div className="mb-5"><Tabs label="Finance sections" value={tab} onChange={setTab} tabs={[{ value: 'pnl', label: 'Monthly profit' }, { value: 'income', label: 'Income' }, { value: 'expenses', label: 'Expenses' }, { value: 'reconcile', label: 'Reconcile' }]} /></div>
       {tab === 'pnl' && <ProfitView month={month} scopeIds={scopeIds} />}
       {tab === 'income' && <IncomeView month={month} next={next} scopeIds={scopeIds} />}
+      {tab === 'reconcile' && <ReconcileView />}
       {tab === 'expenses' && <ExpensesView month={month} next={next} scopeIds={scopeIds} />}
     </div>
   )
@@ -86,7 +88,7 @@ function ProfitView({ month, scopeIds }: { month: string; scopeIds: string[] }) 
             <>
               <div className="h-64 w-full" role="img" aria-label="Bar chart of income, expenses and net profit per property">
                 <ResponsiveContainer><BarChart data={chart} margin={{ left: 8, right: 8 }}><CartesianGrid strokeDasharray="3 3" vertical={false} /><XAxis dataKey="name" tick={{ fontSize: 12 }} /><YAxis tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`} width={40} tick={{ fontSize: 12 }} /><Tooltip formatter={(v) => formatKES(Number(v))} /><Legend />
-                  <Bar dataKey="Income" fill="#0f766e" radius={[3, 3, 0, 0]} /><Bar dataKey="Expenses" fill="#b45309" radius={[3, 3, 0, 0]} /><Bar dataKey="Net" fill="#1d4ed8" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer>
+                  <Bar dataKey="Income" fill="#8c5f16" radius={[3, 3, 0, 0]} /><Bar dataKey="Expenses" fill="#6b7280" radius={[3, 3, 0, 0]} /><Bar dataKey="Net" fill="#2b2926" radius={[3, 3, 0, 0]} /></BarChart></ResponsiveContainer>
               </div>
               <div className="mt-4"><TableWrap>
                 <thead><tr>{['Property', 'Income', 'Refunds', 'Expenses', 'Net'].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
@@ -109,35 +111,44 @@ function ProfitView({ month, scopeIds }: { month: string; scopeIds: string[] }) 
 }
 
 function IncomeView({ month, next, scopeIds }: { month: string; next: string; scopeIds: string[] }) {
+  const { me } = useAdmin()
+  const qc = useQueryClient()
+  const verify = useMutation({
+    mutationFn: async (v: { id: string; ok: boolean }) => { const { error } = await sb().rpc('verify_payment', { p_payment: v.id, p_ok: v.ok }); if (error) throw error },
+    onSuccess: () => { toast.success('Updated'); qc.invalidateQueries({ queryKey: ['income'] }); qc.invalidateQueries({ queryKey: ['pnl'] }) },
+    onError: (e) => toast.error(errMessage(e)),
+  })
   const [method, setMethod] = useState<'' | PaymentMethod>('')
   const q = useQuery({
     queryKey: ['income', month, scopeIds],
     queryFn: async () => {
       // Month edges in Nairobi time (UTC+3)
-      const { data, error } = await sb().from('payments').select('id, kind, method, amount, mpesa_receipt, confirmed_at, booking:bookings!inner(reference, property_id, property:properties(name))')
+      const { data, error } = await sb().from('payments').select('id, verified, kind, method, amount, mpesa_receipt, confirmed_at, booking:bookings!inner(reference, property_id, property:properties(name))')
         .eq('status', 'succeeded').in('booking.property_id', scopeIds).gte('confirmed_at', `${month}T00:00:00+03:00`).lt('confirmed_at', `${next}T00:00:00+03:00`).order('confirmed_at', { ascending: false }).limit(2000)
       if (error) throw error
       return data as unknown as IncomeRow[]
     },
   })
   const rows = (q.data ?? []).filter((r) => !method || r.method === method)
-  const total = rows.reduce((s, r) => s + (r.kind === 'refund' ? -r.amount : r.amount), 0)
+  const signed = (r: IncomeRow) => (r.kind === 'refund' ? -r.amount : r.amount)
+  const total = rows.filter((r) => r.verified).reduce((s, r) => s + signed(r), 0)
+  const awaiting = rows.filter((r) => !r.verified).reduce((s, r) => s + signed(r), 0)
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <Select aria-label="Payment method" className="w-52" value={method} onChange={(e) => setMethod(e.target.value as '' | PaymentMethod)}><option value="">All methods</option>{(Object.keys(METHOD_LABEL) as PaymentMethod[]).map((m) => <option key={m} value={m}>{METHOD_LABEL[m]}</option>)}</Select>
-        <div className="flex items-center gap-3"><span className="text-sm">Total <b>{formatKES(total)}</b></span>
+        <div className="flex items-center gap-3"><span className="text-sm">Collected <b>{formatKES(total)}</b>{awaiting !== 0 && <span className="ml-2 text-amber-700 dark:text-amber-400">+ {formatKES(awaiting)} awaiting verification</span>}</span>
           <Button variant="outline" size="sm" disabled={!rows.length} onClick={() => downloadCsv(`income-${month.slice(0, 7)}.csv`, toCsv(rows, [
             { header: 'Date', value: (r) => r.confirmed_at }, { header: 'Property', value: (r) => r.booking.property.name }, { header: 'Booking', value: (r) => r.booking.reference },
-            { header: 'Type', value: (r) => r.kind }, { header: 'Method', value: (r) => METHOD_LABEL[r.method] }, { header: 'Receipt', value: (r) => r.mpesa_receipt }, { header: 'Amount (KES)', value: (r) => (r.kind === 'refund' ? -r.amount : r.amount) },
+            { header: 'Type', value: (r) => r.kind }, { header: 'Method', value: (r) => METHOD_LABEL[r.method] }, { header: 'Receipt', value: (r) => r.mpesa_receipt }, { header: 'Verified', value: (r) => (r.verified ? 'yes' : 'no') }, { header: 'Amount (KES)', value: (r) => (r.kind === 'refund' ? -r.amount : r.amount) },
           ]))}><Download className="h-4 w-4" /> CSV</Button></div>
       </div>
       {q.isLoading && <Skeleton className="h-48" />}
       {q.error && <ErrorState error={q.error} retry={() => q.refetch()} />}
       {q.data && rows.length === 0 && <EmptyState icon={Receipt} title="No payments this month" />}
       {rows.length > 0 && <TableWrap>
-        <thead><tr>{['Date', 'Property', 'Booking', 'Type', 'Method', 'Receipt', 'Amount'].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
-        <tbody className="divide-y">{rows.map((r) => <tr key={r.id}><td className={`${td} whitespace-nowrap`}>{formatDateTime(r.confirmed_at)}</td><td className={td}>{r.booking.property.name}</td><td className={td}>{r.booking.reference}</td><td className={`${td} capitalize`}>{r.kind}</td><td className={td}>{METHOD_LABEL[r.method]}</td><td className={td}>{r.mpesa_receipt}</td><td className={td}><Money value={r.kind === 'refund' ? -r.amount : r.amount} /></td></tr>)}</tbody>
+        <thead><tr>{['Date', 'Property', 'Booking', 'Type', 'Method', 'Receipt', 'Amount', 'Verification'].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
+        <tbody className="divide-y">{rows.map((r) => <tr key={r.id}><td className={`${td} whitespace-nowrap`}>{formatDateTime(r.confirmed_at)}</td><td className={td}>{r.booking.property.name}</td><td className={td}>{r.booking.reference}</td><td className={`${td} capitalize`}>{r.kind}</td><td className={td}>{METHOD_LABEL[r.method]}</td><td className={td}>{r.mpesa_receipt}</td><td className={td}><Money value={r.kind === 'refund' ? -r.amount : r.amount} /></td><td className={td}>{r.verified ? <Badge className="border-emerald-600/40 bg-emerald-600/10 text-emerald-700 dark:text-emerald-300">Verified</Badge> : <span className="flex items-center gap-2"><Badge className="border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300">Awaiting</Badge>{isOwner(me) && <Button size="sm" variant="outline" loading={verify.isPending && verify.variables?.id === r.id} onClick={() => verify.mutate({ id: r.id, ok: true })}>Verify</Button>}</span>}</td></tr>)}</tbody>
       </TableWrap>}
     </div>
   )
@@ -155,17 +166,18 @@ function ExpensesView({ month, next, scopeIds }: { month: string; next: string; 
       return data as unknown as (Expense & { property: { name: string } })[]
     },
   })
-  const total = useMemo(() => (q.data ?? []).filter((e) => !e.voided).reduce((s, e) => s + e.amount, 0), [q.data])
-  const del = useMutation({
-    mutationFn: async (id: string) => { const { error } = await sb().from('expenses').delete().eq('id', id); if (error) throw error },
-    onSuccess: () => { toast.success('Deleted'); qc.invalidateQueries({ queryKey: ['expenses'] }); qc.invalidateQueries({ queryKey: ['pnl'] }) },
+  const total = useMemo(() => (q.data ?? []).filter((e) => !e.voided && e.status === 'approved').reduce((s, e) => s + e.amount, 0), [q.data])
+  const waiting = useMemo(() => (q.data ?? []).filter((e) => !e.voided && e.status === 'pending').reduce((s, e) => s + e.amount, 0), [q.data])
+  const review = useMutation({
+    mutationFn: async (v: { id: string; ok: boolean; note?: string }) => { const { error } = await sb().rpc('review_expense', { p_expense: v.id, p_approve: v.ok, p_note: v.note ?? null }); if (error) throw error },
+    onSuccess: () => { toast.success('Updated'); qc.invalidateQueries({ queryKey: ['expenses'] }); qc.invalidateQueries({ queryKey: ['pnl'] }) },
     onError: (e) => toast.error(errMessage(e)),
   })
   async function openReceipt(path: string) { const u = await receiptUrl(path); if (u) window.open(u, '_blank', 'noopener'); else toast.error('Could not open the receipt') }
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
-        <p className="text-sm">Total expenses <b>{formatKES(total)}</b></p>
+        <p className="text-sm">Approved expenses <b>{formatKES(total)}</b>{waiting > 0 && <span className="ml-2 text-amber-700 dark:text-amber-400">+ {formatKES(waiting)} awaiting approval</span>}</p>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" disabled={!q.data?.length} onClick={() => downloadCsv(`expenses-${month.slice(0, 7)}.csv`, toCsv(q.data ?? [], [
             { header: 'Date', value: (e) => e.expense_date }, { header: 'Property', value: (e) => e.property.name }, { header: 'Category', value: (e) => e.category },
@@ -178,13 +190,15 @@ function ExpensesView({ month, next, scopeIds }: { month: string; next: string; 
       {q.error && <ErrorState error={q.error} retry={() => q.refetch()} />}
       {q.data?.length === 0 && <EmptyState icon={Receipt} title="No expenses this month" action={<Button onClick={() => setEditing('new')}>Add an expense</Button>} />}
       {!!q.data?.length && <TableWrap>
-        <thead><tr>{['Date', 'Property', 'Category', 'Description', 'Amount', ''].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
+        <thead><tr>{['Date', 'Property', 'Category', 'Description', 'Amount', 'Approval', ''].map((h) => <th key={h} className={th}>{h}</th>)}</tr></thead>
         <tbody className="divide-y">{q.data.map((e) => (
           <tr key={e.id} className={e.voided ? 'opacity-50' : ''}>
             <td className={`${td} whitespace-nowrap`}>{formatDate(e.expense_date)}</td><td className={td}>{e.property.name}</td><td className={`${td} capitalize`}>{e.category}</td>
             <td className={td}>{e.description}{e.voided && <Badge className="ml-2 text-muted-foreground">Voided</Badge>}{e.receipt_url && <button className="ml-2 inline-flex items-center text-brand" onClick={() => openReceipt(e.receipt_url!)} aria-label="View receipt"><Paperclip className="h-4 w-4" /></button>}</td>
             <td className={td}><Money value={e.amount} className={e.voided ? 'line-through' : ''} /></td>
-            <td className={`${td} whitespace-nowrap text-right`}><Button variant="ghost" size="sm" onClick={() => setEditing(e)}>Edit</Button>{isOwner(me) && <Button variant="ghost" size="sm" className="text-danger" onClick={() => confirm('Delete this expense permanently?') && del.mutate(e.id)}>Delete</Button>}</td>
+            <td className={td}>{e.status === 'approved' ? <span className="text-xs text-emerald-700 dark:text-emerald-400">Approved</span> : e.status === 'rejected' ? <span className="text-xs text-danger" title={e.review_note ?? ''}>Rejected</span> : (
+              <span className="flex items-center gap-1"><span className="text-xs text-amber-700 dark:text-amber-400">Pending</span>{isOwner(me) && !e.voided && <><Button size="sm" variant="outline" onClick={() => review.mutate({ id: e.id, ok: true })}>Approve</Button><Button size="sm" variant="ghost" className="text-danger" onClick={() => { const note = prompt('Why is this expense rejected?'); if (note && note.trim().length >= 3) review.mutate({ id: e.id, ok: false, note }) }}>Reject</Button></>}</span>)}</td>
+            <td className={`${td} whitespace-nowrap text-right`}><Button variant="ghost" size="sm" onClick={() => setEditing(e)}>Edit</Button></td>
           </tr>))}</tbody>
       </TableWrap>}
       {editing && <ExpenseDialog expense={editing === 'new' ? undefined : editing} onClose={() => setEditing(null)} onSaved={() => { setEditing(null); qc.invalidateQueries({ queryKey: ['expenses'] }); qc.invalidateQueries({ queryKey: ['pnl'] }) }} />}
@@ -195,6 +209,8 @@ function ExpensesView({ month, next, scopeIds }: { month: string; next: string; 
 function ExpenseDialog({ expense, onClose, onSaved }: { expense?: Expense; onClose: () => void; onSaved: () => void }) {
   const { me, propertyId } = useAdmin()
   const [propId, setPropId] = useState(expense?.property_id ?? (propertyId !== 'all' ? propertyId : me.properties[0]?.id ?? ''))
+  const cats = useQuery({ queryKey: ['expense-categories'], queryFn: async () => (await sb().from('expense_categories').select('name').eq('active', true).order('sort')).data?.map((x) => x.name as string) ?? [] })
+  const categories = [...new Set([...(cats.data?.length ? cats.data : EXPENSE_CATEGORIES), ...(expense ? [expense.category] : [])])]
   const [category, setCategory] = useState(expense?.category ?? 'utilities')
   const [amount, setAmount] = useState(expense ? String(expense.amount) : '')
   const [date, setDate] = useState(expense?.expense_date ?? todayNairobi())
@@ -222,7 +238,7 @@ function ExpenseDialog({ expense, onClose, onSaved }: { expense?: Expense; onClo
         <div className="grid gap-4">
           <Field label="Property" htmlFor="ex-prop"><Select id="ex-prop" value={propId} onChange={(e) => setPropId(e.target.value)} disabled={!!expense}>{me.properties.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}</Select></Field>
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Category" htmlFor="ex-cat"><Select id="ex-cat" value={category} onChange={(e) => setCategory(e.target.value)}>{EXPENSE_CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
+            <Field label="Category" htmlFor="ex-cat"><Select id="ex-cat" value={category} onChange={(e) => setCategory(e.target.value)}>{categories.map((c) => <option key={c} value={c}>{c}</option>)}</Select></Field>
             <Field label="Amount (KES)" htmlFor="ex-amt"><Input id="ex-amt" inputMode="numeric" value={amount} onChange={(e) => setAmount(e.target.value)} /></Field>
             <Field label="Date" htmlFor="ex-date"><Input id="ex-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} /></Field>
             <Field label="Paid via" htmlFor="ex-via"><Select id="ex-via" value={paidVia} onChange={(e) => setPaidVia(e.target.value as PaymentMethod)}>{(Object.keys(METHOD_LABEL) as PaymentMethod[]).filter((m) => m !== 'mpesa_stk').map((m) => <option key={m} value={m}>{METHOD_LABEL[m]}</option>)}</Select></Field>

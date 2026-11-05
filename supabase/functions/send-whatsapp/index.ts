@@ -11,7 +11,7 @@ declare const Deno: { serve(h: (r: Request) => Promise<Response>): void; env: { 
 
 const Body = z.object({
   booking_id: z.string().uuid(),
-  template: z.enum(['booking_confirmed', 'payment_receipt', 'balance_reminder', 'checkin_reminder', 'thank_you', 'custom']),
+  template: z.enum(['booking_confirmed', 'payment_receipt', 'balance_reminder', 'checkin_reminder', 'checkout_reminder', 'thank_you', 'custom']),
   text: z.string().trim().min(1).max(1500).optional(),
   amount: z.number().int().positive().optional(),
 })

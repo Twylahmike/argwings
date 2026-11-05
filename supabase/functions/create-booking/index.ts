@@ -6,7 +6,7 @@ import { serviceClient } from '../_shared/supabase.ts'
 import { normalizePhone } from '../_shared/phone.ts'
 import { redactPhone } from '../_shared/log.ts'
 
-declare const Deno: { serve(h: (r: Request) => Promise<Response>): void }
+declare const Deno: { serve(h: (r: Request) => Promise<Response>): void; env: { get(k: string): string | undefined } }
 
 const ymd = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use dates like 2026-11-03')
 const Body = z.object({
@@ -22,6 +22,9 @@ const Body = z.object({
   consent: z.boolean().optional(),
   // Optional discount code. Checked and applied in the database; the browser's own total is never trusted.
   discount_code: z.string().trim().max(24).optional(),
+  // Member offers. Only honoured for a signed-in, verified customer; the database re-checks every rule.
+  reward_id: z.string().uuid().optional(),
+  offer_id: z.string().uuid().optional(),
 })
 
 Deno.serve(serve('create-booking', async (req, log) => {
@@ -43,13 +46,31 @@ Deno.serve(serve('create-booking', async (req, log) => {
   ])
   if (ipOk.data === false || phoneOk.data === false) throw new HttpError(429, 'rate_limited', 'Too many attempts. Please wait a few minutes and try again.')
 
+  // A signed-in customer (verified Supabase user with a customer profile) books as a member; anyone else is a guest.
+  const bearer = (req.headers.get('authorization') ?? '').replace(/^Bearer\s+/i, '')
+  let memberId: string | null = null
+  if (bearer && bearer !== Deno.env.get('SUPABASE_ANON_KEY')) {
+    const { data: u } = await db.auth.getUser(bearer)
+    if (u.user) {
+      const { data: cp } = await db.from('customer_profiles').select('user_id, status').eq('user_id', u.user.id).maybeSingle()
+      if (cp?.status === 'active') memberId = cp.user_id as string
+    }
+  }
+  if ((b.reward_id || b.offer_id) && !memberId) throw new HttpError(401, 'sign_in_required', 'Please sign in to your member account to use an offer.')
+  if (!memberId) {
+    const { data: gc } = await db.from('settings').select('value').eq('key', 'guest_checkout_enabled').maybeSingle()
+    if (gc?.value === false) throw new HttpError(403, 'account_required', 'Please sign in or create a free account to book.')
+  }
+
   const base = {
     p_unit: b.unit_id, p_in: b.check_in, p_out: b.check_out, p_guests: b.guests,
     p_guest_name: b.name, p_guest_phone: phone.phone, p_guest_email: b.email || null, p_source: b.source,
   }
-  const { data, error } = b.discount_code
-    ? await db.rpc('create_booking_with_code', { ...base, p_code: b.discount_code })
-    : await db.rpc('create_booking', { ...base, p_mode: 'hold' })
+  const { data, error } = memberId
+    ? await db.rpc('create_booking_member', { ...base, p_user: memberId, p_code: b.discount_code || null, p_reward: b.reward_id ?? null, p_offer: b.offer_id ?? null })
+    : b.discount_code
+      ? await db.rpc('create_booking_with_code', { ...base, p_code: b.discount_code })
+      : await db.rpc('create_booking', { ...base, p_mode: 'hold' })
   if (error) {
     if (error.code === '23P01') throw new HttpError(409, 'dates_taken', 'Those dates were just taken. Please choose other dates.')
     if (error.code === '23514') throw new HttpError(400, 'invalid_booking', error.message)

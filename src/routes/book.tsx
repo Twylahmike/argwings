@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { createFileRoute, Link, useNavigate } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
@@ -15,6 +15,7 @@ import { formatDate, formatTime } from '~/lib/dates'
 import { useBrand } from '~/lib/brand'
 import { DATES_TAKEN_MESSAGE, isDatesTaken } from '~/lib/utils'
 import type { Property, Unit } from '~/lib/types'
+import { fetchCustomer, hasStoredSession, rpc, type StayOffer } from '~/lib/customer'
 import { PublicLayout } from '~/components/layout/PublicLayout'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
@@ -69,9 +70,29 @@ function BookPage() {
     const { data } = await pub().rpc('long_stay_percent', { p_unit: s.unit, p_nights: n })
     return Number(data ?? 0)
   } })
-  const { register, handleSubmit, setError, formState: { errors, isSubmitting } } = useForm<Values>({
+  const { register, handleSubmit, setError, reset, formState: { errors, isSubmitting } } = useForm<Values>({
     resolver: zodResolver(schema), defaultValues: { guests: s.guests, consent: false },
   })
+
+  // Signed-in members: prefill their details and offer their offers. Visitors without a stored session never load the auth client.
+  const stored = hasStoredSession()
+  const me = useQuery({ queryKey: ['customer'], queryFn: fetchCustomer, enabled: stored, staleTime: 30_000 })
+  const member = me.data?.state === 'ready' && me.data.customer!.status === 'active' ? me.data.customer! : null
+  const [offerId, setOfferId] = useState<string | null>(null)   // reward id, or offer id for open member offers
+  useEffect(() => {
+    if (member) reset((v) => ({ ...v, name: member.full_name, email: member.email, phone: member.phone ? `0${member.phone.slice(3)}` : v.phone }))
+  }, [member?.user_id])
+  const offers = useQuery({
+    queryKey: ['stay-offers', s.unit, s.in, s.out, member?.user_id],
+    enabled: valid && !!member && brand.bookingMode !== 'request',
+    queryFn: () => rpc<StayOffer[]>('my_offers_for_stay', { p_unit: s.unit, p_in: s.in, p_out: s.out }),
+  })
+  const usable = (offers.data ?? []).filter((o) => o.ok)
+  const key = (o: StayOffer) => o.reward_id ?? o.offer_id
+  // Default to the best usable offer unless the member picked another (or picked none: offerId === '').
+  const best = usable.slice().sort((x, y) => y.amount - x.amount)[0]
+  const chosen = applied || offerId === '' ? undefined : usable.find((o) => key(o) === offerId) ?? best
+  const gated = !brand.guestCheckout && !member && !me.isLoading
 
   async function applyCode() {
     setCodeMsg('')
@@ -80,7 +101,7 @@ function BookPage() {
     const { data, error } = await pub().rpc('quote_discount_code', { p_code: code, p_unit: s.unit, p_in: s.in, p_out: s.out })
     if (error) { setCodeMsg(error.message); return }
     const r = data as { ok: boolean; message: string; amount: number }
-    if (r.ok) setApplied({ code, amount: r.amount }); else setApplied(null)
+    if (r.ok) { setApplied({ code, amount: r.amount }); setOfferId('') } else setApplied(null)   // a code and a member offer are not combined
     setCodeMsg(r.message)
   }
 
@@ -102,7 +123,8 @@ function BookPage() {
     try {
       const res = await callFunction<{ booking: { public_token: string; deposit_required: number } }>('create-booking', {
         unit_id: s.unit, check_in: s.in, check_out: s.out, guests: v.guests, name: v.name, phone: p.phone, email: v.email || undefined, source: 'website', consent: true, discount_code: applied?.code,
-      }, { auth: false })
+        reward_id: chosen?.reward_id ?? undefined, offer_id: chosen && !chosen.reward_id ? chosen.offer_id : undefined,
+      }, { auth: !!member })
       // The payment itself is started (and followed live) on the booking page, so a refresh never loses it.
       nav({ to: '/booking/$token', params: { token: res.booking.public_token }, search: { start: p.phone } })
     } catch (e) {
@@ -114,7 +136,8 @@ function BookPage() {
   if (!valid) return <PublicLayout><div className="mx-auto max-w-lg px-4 py-16"><EmptyState title="Choose your dates first" description="Pick a place and dates to start your booking." action={<Button asChild><Link to="/">Find a place</Link></Button>} /></div></PublicLayout>
   const d = info.data
   const q = d?.quote
-  const discount = applied?.amount ?? 0
+  const offerAmount = chosen ? chosen.amount : 0
+  const discount = (applied?.amount ?? 0) + offerAmount
   const total = q ? Math.max(0, q.total - discount) : 0
   const deposit = q ? calcDeposit(total, brand.depositPercent) : 0
 
@@ -127,7 +150,15 @@ function BookPage() {
           {info.error && <div className="mt-6"><ErrorState error={info.error} retry={() => info.refetch()} /></div>}
           {info.data === null && <div className="mt-6"><EmptyState title="That place is no longer available" action={<Button asChild><Link to="/">Find another</Link></Button>} /></div>}
           {d && q && (
+            gated ? (
+            <div className="mt-6 rounded-xl border bg-card p-6 text-sm" role="status">
+              <h2 className="font-display text-2xl">Sign in to book</h2>
+              <p className="mt-2 text-muted-foreground">Bookings on this site are for members. Joining is free and takes a minute, and your welcome offer is waiting.</p>
+              <div className="mt-4 flex flex-wrap gap-3"><Button asChild><Link to="/join">Join for free</Link></Button><Button asChild variant="outline"><Link to="/login" search={{ redirect: `/book?unit=${s.unit}&in=${s.in}&out=${s.out}&guests=${s.guests}` }}>Sign in</Link></Button></div>
+            </div>
+            ) : (
             <form onSubmit={handleSubmit(onSubmit)} className="mt-6 grid gap-4" noValidate>
+              {member && <p className="rounded-md bg-muted/50 p-3 text-sm">Booking as <b>{member.full_name}</b> ({member.tier.name}). Your details are filled in.</p>}
               <Field label="Full name" htmlFor="b-name" error={errors.name?.message}><Input id="b-name" autoComplete="name" aria-invalid={!!errors.name} {...register('name')} /></Field>
               <Field label="M-Pesa phone number" htmlFor="b-phone" error={errors.phone?.message} hint="We send the payment request to this number, and your confirmation on WhatsApp.">
                 <Input id="b-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="0712 345 678" aria-invalid={!!errors.phone} {...register('phone')} />
@@ -142,6 +173,20 @@ function BookPage() {
                   <Button type="button" variant="outline" onClick={applyCode} disabled={!codeInput.trim()}>Apply</Button>
                 </div>
               </Field>}
+              {member && brand.bookingMode !== 'request' && (offers.data?.length ?? 0) > 0 && (
+                <fieldset className="grid gap-2 rounded-lg border-2 border-brand/40 p-3 text-sm">
+                  <legend className="px-1 font-medium text-brand">Your member offers</legend>
+                  {(offers.data ?? []).map((o) => (
+                    <label key={key(o)} className={`flex items-start gap-3 rounded-md p-2 ${o.ok ? 'cursor-pointer hover:bg-muted/50' : 'opacity-60'}`}>
+                      <input type="radio" name="offer" className="mt-0.5 h-5 w-5 shrink-0" disabled={!o.ok} checked={chosen ? key(chosen) === key(o) : false}
+                        onChange={() => { setOfferId(key(o)); setApplied(null); setCodeMsg('') }} />
+                      <span><b>{o.name}</b>{o.ok ? <> <span className="text-emerald-700 dark:text-emerald-400">saves {formatKES(o.amount)}</span></> : <span className="block text-xs text-muted-foreground">{o.message}</span>}{o.ok && o.terms ? <span className="block text-xs text-muted-foreground">{o.terms}</span> : null}</span>
+                    </label>
+                  ))}
+                  <label className="flex items-center gap-3 p-2"><input type="radio" name="offer" className="h-5 w-5" checked={!chosen} onChange={() => setOfferId('')} /> No offer</label>
+                  <p className="text-xs text-muted-foreground">A member offer and a discount code are not combined. The discount is checked again when you book.</p>
+                </fieldset>
+              )}
               <div className="rounded-lg border bg-muted/40 p-3 text-sm">
                 <label className="flex items-start gap-3"><input type="checkbox" className="mt-0.5 h-5 w-5 shrink-0" {...register('consent')} />
                   <span>I agree that {brand.businessName} may use my name, phone number and email to manage this booking and send me confirmations and reminders (WhatsApp/SMS). We keep only what we need and never sell your data.{brand.pages.some((x) => x.slug === 'privacy') && <> <Link to="/p/$slug" params={{ slug: 'privacy' }} target="_blank" className="underline">Read our privacy notice</Link>.</>}</span></label>
@@ -155,6 +200,7 @@ function BookPage() {
                 ? <p className="text-xs text-muted-foreground">No payment now. We will confirm availability and send you a link to pay the deposit once approved.</p>
                 : <p className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4" aria-hidden /> You will get an M-Pesa prompt on your phone. Enter your PIN to confirm. We never see your PIN.</p>}
             </form>
+            )
           )}
         </div>
         {d && q && (
@@ -169,7 +215,7 @@ function BookPage() {
                   <p className="flex justify-between"><span>{q.nights} night{q.nights > 1 ? 's' : ''}</span><span>{formatKES(q.nightly_total)}</span></p>
                   {(longStay.data ?? 0) > 0 && <p className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Long-stay discount included</span><span>{longStay.data}% off</span></p>}
                   {q.cleaning_fee > 0 && <p className="flex justify-between"><span>Cleaning fee</span><span>{formatKES(q.cleaning_fee)}</span></p>}
-                  {discount > 0 && <p className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Discount ({applied?.code})</span><span>-{formatKES(discount)}</span></p>}
+                  {discount > 0 && <p className="flex justify-between text-emerald-700 dark:text-emerald-400"><span>Discount ({applied?.code ?? chosen?.name})</span><span>-{formatKES(discount)}</span></p>}
                   <p className="flex justify-between border-t pt-2 text-base font-semibold"><span>Total</span><span>{formatKES(total)}</span></p>
                   {brand.bookingMode !== 'request' && <p className="flex justify-between font-medium text-brand"><span>Deposit due now ({brand.depositPercent}%)</span><span>{formatKES(deposit)}</span></p>}
                   {brand.bookingMode !== 'request' && <p className="flex justify-between text-muted-foreground"><span>Balance before check-in</span><span>{formatKES(total - deposit)}</span></p>}

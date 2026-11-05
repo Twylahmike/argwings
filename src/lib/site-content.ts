@@ -10,7 +10,7 @@ export type Review = { id: string; guest: string; stay?: string; rating: 1 | 2 |
 /** Home page sections after the hero, in their default order. */
 export const HOME_SECTIONS = [
   { id: 'trust', label: 'Trust bar' }, { id: 'spaces', label: 'Our spaces' }, { id: 'facilities', label: 'Feature band' }, { id: 'amenities', label: 'Amenities' },
-  { id: 'menu', label: 'Bar menu (only when switched on)' }, { id: 'how', label: 'How to book' }, { id: 'payment', label: 'How to pay' }, { id: 'reviews', label: 'Guest reviews' },
+  { id: 'menu', label: 'Bar menu (only when switched on)' }, { id: 'how', label: 'How to book' }, { id: 'payment', label: 'How to pay' }, { id: 'membership', label: 'Join for free (member benefits)' }, { id: 'reviews', label: 'Guest reviews' },
   { id: 'gallery', label: 'Gallery' }, { id: 'faq', label: 'Questions and answers' }, { id: 'contact', label: 'Contact form' }, { id: 'cta', label: 'Final call to action' },
 ] as const
 export type HomeSectionId = (typeof HOME_SECTIONS)[number]['id']

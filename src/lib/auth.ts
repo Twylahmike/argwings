@@ -36,7 +36,9 @@ export async function fetchMe(): Promise<Me | null> {
     client.from('user_roles').select('role').eq('user_id', user.id),
     client.from('staff_properties').select('property_id').eq('user_id', user.id),
   ])
-  if (!profile.data || !profile.data.active || !roles.data?.length) {
+  // A signed-in customer (no staff profile) is not staff: return null but keep their session. Deactivated staff are signed out.
+  if (!profile.data) return null
+  if (!profile.data.active || !roles.data?.length) {
     await client.auth.signOut()
     return null
   }

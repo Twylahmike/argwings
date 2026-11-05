@@ -12,11 +12,11 @@ import type { FrontDeskBooking } from './FrontDeskDialogs'
 type Preview = { nights: number; old_total: number; new_total: number; difference: number; amount_paid: number; balance_after: number; refund_due: number }
 
 /** Change a booking's dates and/or room. The preview comes from the database (same quote the website uses); saving is refused if the dates clash. */
-export function RescheduleDialog({ booking: b, status, onClose, onDone }: { booking: FrontDeskBooking; status: string; onClose: () => void; onDone: () => void }) {
+export function RescheduleDialog({ booking: b, status, initial, onClose, onDone }: { booking: FrontDeskBooking; status: string; initial?: { from: string; to: string; unit: string }; onClose: () => void; onDone: () => void }) {
   const checkedIn = status === 'checked_in'
-  const [from, setFrom] = useState(b.check_in)
-  const [to, setTo] = useState(b.check_out)
-  const [unit, setUnit] = useState(b.unit_id)
+  const [from, setFrom] = useState(initial?.from ?? b.check_in)
+  const [to, setTo] = useState(initial?.to ?? b.check_out)
+  const [unit, setUnit] = useState(initial?.unit ?? b.unit_id)
   const [reprice, setReprice] = useState(true)
   const [reason, setReason] = useState('')
   const [err, setErr] = useState('')

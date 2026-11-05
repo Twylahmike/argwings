@@ -1,7 +1,7 @@
 import { memo, useEffect, useRef, useState } from 'react'
 import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react'
 import { layoutBar, selectionRange, windowDays } from '~/lib/calendar'
-import { formatDayMonth, isoWeekday, todayNairobi } from '~/lib/dates'
+import { addDays, diffDays, formatDayMonth, isoWeekday, todayNairobi } from '~/lib/dates'
 import { cn } from '~/lib/utils'
 import type { BookingStatus } from '~/lib/types'
 
@@ -26,15 +26,19 @@ type Props = {
   cleaning: Map<string, { priority: boolean }>
   onSelectRange: (unitId: string, from: string, to: string) => void
   onOpenBooking: (id: string) => void
+  /** Drag a pending or confirmed booking to other dates or another room. The parent confirms and validates the move. */
+  onMoveBooking?: (id: string, unitId: string, checkIn: string, checkOut: string) => void
 }
 
-export const Timeline = memo(function Timeline({ start, days, properties, units, bookings, cleaning, onSelectRange, onOpenBooking }: Props) {
+export const Timeline = memo(function Timeline({ start, days, properties, units, bookings, cleaning, onSelectRange, onOpenBooking, onMoveBooking }: Props) {
   const today = todayNairobi()
   const cols = windowDays(start, days)
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set())
   const [sel, setSel] = useState<Sel | null>(null)
   const dragging = useRef(false)
   const touchAnchor = useRef(false)
+  const moving = useRef<{ id: string; grab: number; nights: number } | null>(null)
+  const [dropHint, setDropHint] = useState<string | null>(null)
 
   function finish(s: Sel) {
     const r = selectionRange(s.a, s.b)
@@ -91,7 +95,19 @@ export const Timeline = memo(function Timeline({ start, days, properties, units,
                 const rowBookings = bookings.filter((b) => b.unit_id === u.id)
                 const clean = cleaning.get(u.id)
                 return (
-                  <div key={u.id} role="row" className="grid border-b" style={{ gridTemplateColumns: `9.5rem repeat(${days}, ${DAY_W})` }}>
+                  <div key={u.id} role="row" className="grid border-b" style={{ gridTemplateColumns: `9.5rem repeat(${days}, ${DAY_W})` }}
+                    onDragOver={(e) => { if (moving.current) { e.preventDefault(); setDropHint(u.id) } }}
+                    onDragLeave={() => setDropHint(null)}
+                    onDrop={(e) => {
+                      const m = moving.current; moving.current = null; setDropHint(null)
+                      if (!m || !onMoveBooking) return
+                      e.preventDefault()
+                      const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+                      const idx = Math.floor((e.clientX - e.currentTarget.getBoundingClientRect().left - 9.5 * rem) / (2.75 * rem))
+                      if (idx < 0 || idx >= days) return
+                      const newIn = addDays(start, idx - m.grab)
+                      onMoveBooking(m.id, u.id, newIn, addDays(newIn, m.nights))
+                    }}>
                     <div role="rowheader" className={cn('sticky left-0 z-20 flex h-14 flex-col justify-center border-r bg-card px-3', clean && 'shadow-[inset_3px_0_0_hsl(var(--st-pending))]')} style={{ gridRow: 1, gridColumn: 1 }}>
                       <span className="truncate text-sm font-medium">{u.name}</span>
                       {clean && <span className={cn('flex items-center gap-1 text-[11px]', clean.priority ? 'font-semibold text-danger' : 'text-amber-700 dark:text-amber-400')}><Sparkles className="h-3 w-3" aria-hidden /> {clean.priority ? 'Clean today!' : 'Needs cleaning'}</span>}
@@ -105,7 +121,7 @@ export const Timeline = memo(function Timeline({ start, days, properties, units,
                           key={d} role="gridcell" disabled={taken}
                           aria-label={`${u.name}, ${d}${taken ? ', booked' : ', free'}`}
                           style={{ gridRow: 1, gridColumn: i + 2 }}
-                          className={cn('h-14 border-l transition-colors', wd >= 6 && 'bg-muted/40', d === today && 'bg-brand/10', !taken && 'hover:bg-brand/15', inSel && 'bg-brand/30 hover:bg-brand/30', taken && 'pointer-events-none')}
+                          className={cn('h-14 border-l transition-colors', dropHint === u.id && 'bg-brand/5', wd >= 6 && 'bg-muted/40', d === today && 'bg-brand/10', !taken && 'hover:bg-brand/15', inSel && 'bg-brand/30 hover:bg-brand/30', taken && 'pointer-events-none')}
                           onPointerDown={(e) => {
                             if (taken || e.pointerType === 'touch') return // touch uses tap, then tap (onClick below)
                             dragging.current = true
@@ -130,6 +146,16 @@ export const Timeline = memo(function Timeline({ start, days, properties, units,
                       return (
                         <button
                           key={b.id} onClick={() => onOpenBooking(b.id)}
+                          draggable={!!onMoveBooking && (b.status === 'pending' || b.status === 'confirmed')}
+                          onDragStart={(e) => {
+                            const rem = parseFloat(getComputedStyle(document.documentElement).fontSize) || 16
+                            const row = (e.currentTarget.parentElement as HTMLElement).getBoundingClientRect()
+                            const idx = Math.floor((e.clientX - row.left - 9.5 * rem) / (2.75 * rem))
+                            moving.current = { id: b.id, grab: Math.max(0, idx - diffDays(start, b.check_in)), nights: diffDays(b.check_in, b.check_out) }
+                            e.dataTransfer.effectAllowed = 'move'
+                            e.dataTransfer.setData('text/plain', b.id)
+                          }}
+                          onDragEnd={() => { moving.current = null; setDropHint(null) }}
                           aria-label={`${b.guestName ?? 'Blocked'} ${b.check_in} to ${b.check_out}, ${b.status}`}
                           style={{
                             gridRow: 1, gridColumn: `${l.start + 1} / ${l.end + 1}`, zIndex: 10, color: 'hsl(var(--foreground))',

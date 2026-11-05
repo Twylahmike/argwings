@@ -1,8 +1,10 @@
+import { Fragment } from 'react'
 import { createFileRoute } from '@tanstack/react-router'
 import { fetchProperties } from '~/lib/public-api'
 import { isSupabaseConfigured } from '~/lib/config'
 import { pageMeta } from '~/lib/seo'
-import { DEFAULT_BRAND, type Brand } from '~/lib/brand'
+import { DEFAULT_BRAND, useBrand, type Brand } from '~/lib/brand'
+import type { HomeSectionId } from '~/lib/site-content'
 import { PublicLayout } from '~/components/layout/PublicLayout'
 import { Hero } from '~/components/site/Hero'
 import { TrustBar } from '~/components/site/TrustBar'
@@ -30,22 +32,18 @@ export const Route = createFileRoute('/')({
 
 function Home() {
   const { properties } = Route.useLoaderData()
+  const brand = useBrand()
+  const { order, hidden } = brand.site.sections
+  const parts: Record<HomeSectionId, React.ReactNode> = {
+    trust: <TrustBar />, spaces: <Spaces properties={properties} />, facilities: <Facilities />, amenities: <Amenities />, menu: <BarMenu />,
+    how: <HowToBook />, payment: <PaymentExplainer />, reviews: <Reviews />, gallery: <Gallery properties={properties} limit={8} />,
+    faq: <Faq />, contact: <InquiryForm />, cta: <FinalCTA properties={properties} />,
+  }
   return (
     <PublicLayout overlay>
       <Hero properties={properties} />
       <PromoStrip />
-      <TrustBar />
-      <Spaces properties={properties} />
-      <Facilities />
-      <Amenities />
-      <BarMenu />
-      <HowToBook />
-      <PaymentExplainer />
-      <Reviews />
-      <Gallery properties={properties} limit={8} />
-      <Faq />
-      <InquiryForm />
-      <FinalCTA properties={properties} />
+      {order.filter((id) => !hidden.includes(id)).map((id) => <Fragment key={id}>{parts[id]}</Fragment>)}
     </PublicLayout>
   )
 }

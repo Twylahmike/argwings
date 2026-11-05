@@ -51,3 +51,17 @@ describe('sanitizeSiteContent', () => {
     expect(c.tagline).toBe('')
   })
 })
+
+import { HOME_SECTIONS } from '../../src/lib/site-content'
+describe('home page sections', () => {
+  it('defaults to every section in order, none hidden', () => {
+    const s = sanitizeSiteContent({}).sections
+    expect(s.order).toEqual(HOME_SECTIONS.map((x) => x.id)); expect(s.hidden).toEqual([])
+  })
+  it('keeps a saved order, drops unknown and repeated ids, and appends sections it does not mention', () => {
+    const s = sanitizeSiteContent({ sections: { order: ['faq', 'nope', 'spaces', 'faq'], hidden: ['gallery', 'x'] } }).sections
+    expect(s.order.slice(0, 2)).toEqual(['faq', 'spaces'])
+    expect(new Set(s.order).size).toBe(HOME_SECTIONS.length)
+    expect(s.hidden).toEqual(['gallery'])
+  })
+})

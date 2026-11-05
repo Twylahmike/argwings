@@ -19,6 +19,7 @@ import { Field, Input } from '~/components/ui/form'
 import { Dialog, DialogContent, SheetContent } from '~/components/ui/dialog'
 import { ErrorState, PageHeader, Skeleton, Tabs } from '~/components/ui/misc'
 import { Timeline, type TimelineBooking } from '~/components/calendar/Timeline'
+import { RescheduleDialog } from '~/components/booking/RescheduleDialog'
 import { useAdmin } from '~/components/layout/AdminShell'
 
 export const Route = createFileRoute('/admin/calendar')({
@@ -39,6 +40,7 @@ function CalendarPage() {
   const end = addDays(start, days)
   const [selection, setSelection] = useState<{ unitId: string; from: string; to: string } | null>(null)
   const [openId, setOpenId] = useState<string | null>(null)
+  const [move, setMove] = useState<{ id: string; unit: string; from: string; to: string } | null>(null)
 
   const units = useQuery({
     queryKey: ['cal-units', scopeIds],
@@ -100,8 +102,15 @@ function CalendarPage() {
       {(units.isLoading || data.isLoading) && <Skeleton className="h-80" />}
       {(units.error || data.error) && <ErrorState error={units.error ?? data.error} retry={() => { units.refetch(); data.refetch() }} />}
       {units.data && data.data && (
+        <>
         <Timeline start={start} days={days} properties={properties} units={units.data} bookings={bars} cleaning={cleaning}
-          onSelectRange={(unitId, from, to) => setSelection({ unitId, from, to })} onOpenBooking={setOpenId} />
+          onSelectRange={(unitId, from, to) => setSelection({ unitId, from, to })} onOpenBooking={setOpenId}
+          onMoveBooking={(id, unit, from, to) => setMove({ id, unit, from, to })} />
+        {move && data.data && (() => {
+          const mb = data.data.bookings.find((x) => x.id === move.id)
+          return mb ? <RescheduleDialog booking={mb} status={mb.status} initial={{ from: move.from, to: move.to, unit: move.unit }} onClose={() => setMove(null)} onDone={() => { setMove(null); qc.invalidateQueries({ queryKey: ['cal-bookings'] }) }} /> : null
+        })()}
+        </>
       )}
 
       {selection && units.data && (

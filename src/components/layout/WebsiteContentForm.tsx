@@ -5,7 +5,7 @@ import { ImagePlus } from 'lucide-react'
 import { sb } from '~/lib/supabase'
 import { uploadImage } from '~/lib/images'
 import { errMessage } from '~/lib/utils'
-import { DEFAULT_SITE_CONTENT, parseHeadline, sanitizeSiteContent, type SiteContent } from '~/lib/site-content'
+import { DEFAULT_SITE_CONTENT, HOME_SECTIONS, parseHeadline, sanitizeSiteContent, type SiteContent } from '~/lib/site-content'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
 import { Field, Input, Textarea } from '~/components/ui/form'
@@ -105,6 +105,23 @@ export function WebsiteContentForm() {
       <Card><CardHeader><CardTitle>Sharing and search</CardTitle></CardHeader><CardContent className="grid gap-4 sm:grid-cols-2">
         {t('w-url', 'Website address', c.siteUrl, (v) => set('siteUrl', v), 'e.g. https://yourdomain.co.ke (used for share links).')}
         {t('w-og', 'Share image link', c.ogImage, (v) => set('ogImage', v), 'Picture shown when the site link is shared (1200x630).')}
+      </CardContent></Card>
+      <Card><CardHeader><CardTitle>Home page sections</CardTitle></CardHeader><CardContent className="grid gap-2">
+        <p className="text-sm text-muted-foreground">Choose the order of the sections under the top banner, and hide the ones you do not want. Takes effect when you publish.</p>
+        <ol className="divide-y text-sm">{c.sections.order.map((id, i) => {
+          const label = HOME_SECTIONS.find((x) => x.id === id)?.label ?? id
+          const hidden = c.sections.hidden.includes(id)
+          const move = (d: -1 | 1) => { const o = [...c.sections.order]; const j = i + d; if (j < 0 || j >= o.length) return; [o[i], o[j]] = [o[j], o[i]]; set('sections', { ...c.sections, order: o }) }
+          return (
+            <li key={id} className="flex items-center justify-between gap-2 py-2">
+              <span className={hidden ? 'text-muted-foreground line-through' : ''}>{i + 1}. {label}</span>
+              <span className="flex gap-1">
+                <Button size="sm" variant="ghost" aria-label={`Move ${label} up`} disabled={i === 0} onClick={() => move(-1)}>↑</Button>
+                <Button size="sm" variant="ghost" aria-label={`Move ${label} down`} disabled={i === c.sections.order.length - 1} onClick={() => move(1)}>↓</Button>
+                <Button size="sm" variant="outline" onClick={() => set('sections', { ...c.sections, hidden: hidden ? c.sections.hidden.filter((x) => x !== id) : [...c.sections.hidden, id] })}>{hidden ? 'Show' : 'Hide'}</Button>
+              </span>
+            </li>)
+        })}</ol>
       </CardContent></Card>
       <Card><CardHeader><CardTitle>Preview</CardTitle></CardHeader><CardContent>
         <div className="rounded-xl bg-neutral-900 p-6 text-center text-white" aria-label="Preview of the home page top">

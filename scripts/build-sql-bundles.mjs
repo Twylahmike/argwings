@@ -41,6 +41,20 @@ for (const f of files) {
 }
 pending += 'end\n$apply$;\n'
 writeFileSync('docs/sql/apply_pending.sql', pending)
+// The same thing in four smaller pastes (a phone's SQL editor copes better). Run them in order; each is guarded and re-runnable.
+const header = pending.slice(0, pending.indexOf('  if ' + cond(MARKERS[files[0].slice(0, 4)])))
+const parts = [['0009', '0011'], ['0012', '0014'], ['0015', '0018'], ['0019', '0021']]
+const blocks = new Map()
+for (const f of files) {
+  const n = f.slice(0, 4)
+  const a = pending.indexOf('  if ' + cond(MARKERS[n]) + ' then\n    execute $m' + n + '$')
+  const b = pending.indexOf("    raise notice '" + n + " already applied, skipped';\n  end if;\n", a) + ("    raise notice '" + n + " already applied, skipped';\n  end if;\n").length
+  blocks.set(n, pending.slice(a, b))
+}
+parts.forEach(([from, to], i) => {
+  const body = [...blocks].filter(([n]) => n >= from && n <= to).map(([, t]) => t).join('')
+  writeFileSync(`docs/sql/apply_part${i + 1}.sql`, header.replace(/-- Applies migrations[^\n]*/, `-- PART ${i + 1} of ${parts.length}: migrations ${from} to ${to}. Run the parts in order.`) + body + 'end\n$apply$;\n')
+})
 let all = readFileSync('docs/sql/ALL_IN_ONE.sql', 'utf8')
 const start = all.indexOf('    -- ---- 0009_')
 const end = all.indexOf('end\n$install$;')

@@ -108,6 +108,7 @@ function RequestDialog({ b, kind, onClose }: { b: MyBooking; kind: 'cancellation
 /** Link an earlier guest booking: needs the booking reference AND the phone number it was made with. */
 function Claim() {
   const qc = useQueryClient()
+  const found = useQuery({ queryKey: ['unclaimed-count'], queryFn: () => rpc<number>('unclaimed_bookings_count') })
   const [ref, setRef] = useState('')
   const [phone, setPhone] = useState('')
   const claim = useMutation({
@@ -117,13 +118,14 @@ function Claim() {
       if (!p.ok) throw new Error(p.error)
       return rpc<{ reference: string }>('claim_booking', { p_reference: ref, p_phone: p.phone })
     },
-    onSuccess: (r) => { toast.success(`Booking ${r.reference} added to your account`); setRef(''); setPhone(''); qc.invalidateQueries({ queryKey: ['my-bookings'] }); qc.invalidateQueries({ queryKey: ['customer'] }) },
+    onSuccess: (r) => { toast.success(`Booking ${r.reference} added to your account`); setRef(''); setPhone(''); qc.invalidateQueries({ queryKey: ['my-bookings'] }); qc.invalidateQueries({ queryKey: ['customer'] }); qc.invalidateQueries({ queryKey: ['unclaimed-count'] }) },
     onError: (e) => toast.error(errMessage(e)),
   })
   return (
     <section className="rounded-xl border bg-card p-5" aria-labelledby="claim">
       <h2 id="claim" className="font-display text-2xl">Booked before without an account?</h2>
-      <p className="mt-1 text-sm text-muted-foreground">Add that booking to your account. For your protection we need the booking reference and the phone number you booked with.</p>
+      <p className="mt-1 text-sm text-muted-foreground">Add that booking to your account. For your protection we need the booking reference and the phone number you booked with. Or open the booking link from your confirmation message while signed in and tap <b>Add to my account</b>.</p>
+      {(found.data ?? 0) > 0 && <p className="mt-2 rounded-md bg-brand/10 p-2 text-sm text-brand" role="status">We found {found.data} earlier booking{found.data === 1 ? '' : 's'} made with your email address. Add {found.data === 1 ? 'it' : 'them'} below using the reference and phone number.</p>}
       <form className="mt-4 grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-end" onSubmit={(e) => { e.preventDefault(); claim.mutate() }}>
         <Field label="Booking reference" htmlFor="cl-ref"><Input id="cl-ref" value={ref} onChange={(e) => setRef(e.target.value)} placeholder="BNB-2611-0001" autoCapitalize="characters" /></Field>
         <Field label="Phone used" htmlFor="cl-phone"><Input id="cl-phone" type="tel" inputMode="tel" value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="0712 345 678" /></Field>

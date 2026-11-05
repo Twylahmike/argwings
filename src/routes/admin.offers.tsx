@@ -98,6 +98,7 @@ function Editor({ offer, props, onClose }: { offer: Offer | null; props: { id: s
   const [v, setV] = useState({
     name: offer?.name ?? '', description: offer?.description ?? '', terms: offer?.terms ?? '', audience: offer?.audience ?? 'member', kind: offer?.kind ?? 'percent', value: String(offer?.value ?? 5),
     max_discount: offer?.max_discount ? String(offer.max_discount) : '', min_total: String(offer?.min_total ?? 0), min_tier_key: offer?.min_tier_key ?? '',
+    min_nights: String(offer?.min_nights ?? 1), applies_to: offer?.applies_to ?? 'room',
     first: offer?.first_booking_only ?? false, returning: offer?.returning_only ?? false, valid_from: offer?.valid_from ?? '', valid_to: offer?.valid_to ?? '',
     valid_days: offer?.valid_days ? String(offer.valid_days) : '', max_redemptions: offer?.max_redemptions ? String(offer.max_redemptions) : '', per_customer: String(offer?.per_customer_limit ?? 1),
     stackable: offer?.stackable ?? false, active: offer?.active ?? true, property_ids: offer?.property_ids ?? [] as string[],
@@ -116,6 +117,7 @@ function Editor({ offer, props, onClose }: { offer: Offer | null; props: { id: s
       const row = {
         name: v.name.trim(), description: v.description.trim() || null, terms: v.terms.trim() || null, audience: v.audience, kind: v.kind, value,
         max_discount: opt(v.max_discount, 'Maximum discount', 1), min_total: int(v.min_total, 'Minimum booking value', 0), property_ids: v.property_ids, min_tier_key: v.min_tier_key || null,
+        min_nights: int(v.min_nights, 'Minimum nights', 1), applies_to: v.applies_to,
         first_booking_only: v.first, returning_only: v.returning, valid_from: v.valid_from || null, valid_to: v.valid_to || null, valid_days: opt(v.valid_days, 'Reward validity', 1, 730),
         max_redemptions: opt(v.max_redemptions, 'Total redemptions', 1), per_customer_limit: int(v.per_customer, 'Uses per customer', 1), stackable: v.stackable, active: v.active,
       }
@@ -140,6 +142,8 @@ function Editor({ offer, props, onClose }: { offer: Offer | null; props: { id: s
             <Field label="Maximum discount (KES)" htmlFor="o-max" hint="Empty = no cap."><Input id="o-max" inputMode="numeric" value={v.max_discount} onChange={set('max_discount')} /></Field>
             <Field label="Minimum booking value (KES)" htmlFor="o-min" hint="Room total before the discount."><Input id="o-min" inputMode="numeric" value={v.min_total} onChange={set('min_total')} /></Field>
             <Field label="Minimum tier" htmlFor="o-tier"><Select id="o-tier" value={v.min_tier_key} onChange={set('min_tier_key')}><option value="">Any member</option>{(tiers.data ?? []).map((t) => <option key={t.key} value={t.key}>{t.name} and above</option>)}</Select></Field>
+            <Field label="Minimum nights" htmlFor="o-nights"><Input id="o-nights" inputMode="numeric" value={v.min_nights} onChange={set('min_nights')} /></Field>
+            <Field label="Discount applies to" htmlFor="o-applies"><Select id="o-applies" value={v.applies_to} onChange={set('applies_to')}><option value="room">Accommodation charge only</option><option value="total">Whole total (includes cleaning fee)</option></Select></Field>
             <Field label="Starts" htmlFor="o-from"><Input id="o-from" type="date" value={v.valid_from} onChange={set('valid_from')} /></Field>
             <Field label="Ends" htmlFor="o-to"><Input id="o-to" type="date" value={v.valid_to} onChange={set('valid_to')} /></Field>
             <Field label="Reward lasts (days)" htmlFor="o-days" hint="For welcome and birthday rewards: days from issue."><Input id="o-days" inputMode="numeric" value={v.valid_days} onChange={set('valid_days')} /></Field>

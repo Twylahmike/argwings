@@ -196,6 +196,7 @@ function BookPage() {
               {q.nights < q.min_nights
                 ? <p role="alert" className="text-sm text-danger">This place has a {q.min_nights}-night minimum. <Link to="/properties/$slug" params={{ slug: d.property.slug }} className="underline">Change dates</Link></p>
                 : <Button type="submit" size="lg" loading={isSubmitting}>{brand.bookingMode === 'request' ? 'Send booking request' : `Pay ${formatKES(deposit)} deposit with M-Pesa`}</Button>}
+              {!member && !gated && brand.registrationEnabled && <p className="rounded-lg border border-dashed p-3 text-xs text-muted-foreground">Booking as a guest is quick and needs no account. Prefer member offers? <Link to="/join" className="font-medium text-foreground underline">Join for free</Link> or <Link to="/login" search={{ redirect: `/book?unit=${s.unit}&in=${s.in}&out=${s.out}&guests=${s.guests}` }} className="font-medium text-foreground underline">sign in</Link> first, then come back here.</p>}
               {brand.bookingMode === 'request'
                 ? <p className="text-xs text-muted-foreground">No payment now. We will confirm availability and send you a link to pay the deposit once approved.</p>
                 : <p className="flex items-center gap-2 text-xs text-muted-foreground"><ShieldCheck className="h-4 w-4" aria-hidden /> You will get an M-Pesa prompt on your phone. Enter your PIN to confirm. We never see your PIN.</p>}

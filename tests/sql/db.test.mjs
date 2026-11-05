@@ -258,7 +258,7 @@ test('RLS: anon cannot read bookings, guests, payments; can use availability and
     for (const k of ['email', 'id_number', 'notes', 'guest_id', 'created_by']) assert.ok(!(k in info), `${k} must not leak`)
     assert.equal((await one(c, 'select get_booking_by_token($1) j', [randomUUID()])).j, null)
     const settings = await q(c, 'select key from settings')
-    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content', 'booking_mode', 'business_email', 'business_address', 'currency', 'maintenance_mode', 'guest_checkout_enabled', 'module_bar_menu'].includes(s.key)))
+    assert.ok(settings.every((s) => ['business_name', 'cancellation_policy', 'logo_url', 'support_whatsapp', 'deposit_percent', 'hold_minutes', 'mpesa_manual_instructions', 'mpesa_paybill_display', 'brand_color', 'site_content', 'booking_mode', 'business_email', 'business_address', 'currency', 'maintenance_mode', 'guest_checkout_enabled', 'registration_enabled', 'module_bar_menu'].includes(s.key)))
     assert.ok(settings.length > 0)
   }))
 
@@ -2009,4 +2009,113 @@ test('membership emails: pending welcome offer listed once; marketing opt-out re
     await as(c, 'authenticated', id)
     await fails(c, 'select * from pending_reward_emails()', [], '42501')
     await fails(c, 'select * from promo_recipients($1)', [o], '42501')
+  }))
+
+// ---------------------------------------------------------------------------------------------
+// Optional registration (migration 0030)
+// ---------------------------------------------------------------------------------------------
+test('optional registration: switch stops new memberships only; guest checkout setting is owner-controlled', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const early = await customer(c, 'Early'); await activate(c, early)
+    await as(c, 'authenticated', f.manager)
+    await one(c, `select set_membership_setting('registration_enabled', false) x`)
+    await fails(c, `select set_membership_setting('maintenance_mode', true)`, [], '23514')   // only the two switches
+    await admin(c)
+    const late = await customer(c, 'Late')
+    assert.equal((await activate(c, late)).status, 'closed')
+    assert.equal((await one(c, 'select count(*)::int n from customer_profiles where user_id = $1', [late])).n, 0)
+    assert.equal((await activate(c, early)).status, 'active')                                // existing members keep theirs
+    await as(c, 'authenticated', f.manager)
+    await one(c, `select set_membership_setting('registration_enabled', true) x`)
+    await admin(c)
+    assert.equal((await activate(c, late)).status, 'active')
+    // cleaners cannot touch the switches; guests/anon can read them
+    await as(c, 'authenticated', f.cleaner)
+    await fails(c, `select set_membership_setting('guest_checkout_enabled', false)`, [], '42501')
+    await as(c, 'anon')
+    assert.ok((await q(c, `select key from settings where key in ('registration_enabled','guest_checkout_enabled')`)).length === 2)
+  }))
+
+test('welcome offer is configurable (nights, whole total, minimum) and only one welcome reward per customer', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const fri = fmt(f.friday)
+    const w = (await one(c, `select id from promotional_offers where audience = 'welcome'`)).id
+    const id = await customer(c, 'Welcomed'); await activate(c, id)
+    const reward = (await one(c, 'select id from customer_rewards where user_id = $1', [id])).id
+    const quote = await one(c, 'select * from quote_stay($1,$2,$3)', [f.ua, fri, day(fri, 2)])
+    const call = (nights = 2) => one(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, null, reward, null, f.ua, fri, day(fri, nights), 2, 'W', phone(), null, 'website'])
+    // owner sets: 10%, whole total (includes the cleaning fee), at least 2 nights
+    await c.query(`update promotional_offers set value = 10, applies_to = 'total', min_nights = 3 where id = $1`, [w])
+    const e = await fails(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id, null, reward, null, f.ua, fri, day(fri, 2), 2, 'W', phone(), null, 'website'], '23514')
+    assert.match(e.message, /at least 3 night/)
+    const b = await call(3)
+    const q3 = await one(c, 'select * from quote_stay($1,$2,$3)', [f.ua, fri, day(fri, 3)])
+    assert.equal(b.discount, Math.floor(q3.total * 10 / 100))                                  // percentage of the whole total, not just the room
+    assert.ok(quote.cleaning_fee > 0)
+    // a second welcome offer cannot be issued to someone who already holds a welcome reward
+    const w2 = (await one(c, `insert into promotional_offers(name, audience, kind, value) values ('Second welcome','welcome','percent',20) returning id`)).id
+    assert.equal((await one(c, 'select issue_reward($1,$2) r', [id, w2])).r, null)
+    // owner may switch it fully off, or to a fixed amount with a cap
+    await c.query(`update promotional_offers set active = false where id = $1`, [w])
+    const id2 = await customer(c, 'NoWelcome')
+    assert.equal((await activate(c, id2)).welcome_rewards, 1)                                  // w2 is still active: the only live welcome offer
+    await c.query(`update promotional_offers set active = false where id = $1`, [w2])
+    const id3 = await customer(c, 'Nothing')
+    assert.equal((await activate(c, id3)).welcome_rewards, 0)
+    await c.query(`update promotional_offers set active = true, kind = 'fixed', value = 700, max_discount = 500, applies_to = 'room', min_nights = 1 where id = $1`, [w])
+    const id4 = await customer(c, 'Fixed'); await activate(c, id4)
+    const r4 = (await one(c, 'select id from customer_rewards where user_id = $1', [id4])).id
+    const b4 = await one(c, 'select * from create_booking_member($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)', [id4, null, r4, null, f.ua, day(fri, 10), day(fri, 12), 2, 'F', phone(), null, 'website'])
+    assert.equal(b4.discount, 500)                                                             // capped
+  }))
+
+test('claim a booking from its secret link; never someone else\'s; count of earlier bookings with my email is only a number', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const fri = fmt(f.friday)
+    const mine = await customer(c, 'Linker'); await activate(c, mine)
+    const other = await customer(c, 'Other'); await activate(c, other)
+    const email = (await one(c, 'select email from customer_profiles where user_id = $1', [mine])).email
+    const b = await booking(c, f, { from: fri, to: day(fri, 2) })
+    await c.query('update guests set email = $1 where id = $2', [email.toUpperCase(), b.guest_id])
+    await as(c, 'authenticated', mine)
+    assert.equal((await one(c, 'select unclaimed_bookings_count() n')).n, 1)
+    assert.equal((await one(c, 'select jsonb_array_length(my_bookings()) n')).n, 0)             // the count never reveals the booking
+    await fails(c, `select claim_booking_by_token($1)`, [randomUUID()], '23514')                // wrong token
+    const r = await one(c, 'select claim_booking_by_token($1) r', [b.public_token])
+    assert.equal(r.r.reference, b.reference)
+    await one(c, 'select claim_booking_by_token($1) r', [b.public_token])                       // idempotent for the owner
+    assert.equal((await one(c, 'select jsonb_array_length(my_bookings()) n')).n, 1)
+    assert.equal((await one(c, 'select unclaimed_bookings_count() n')).n, 0)
+    await admin(c)
+    await as(c, 'authenticated', other)
+    await fails(c, `select claim_booking_by_token($1)`, [b.public_token], '23514')              // already someone else's
+    assert.equal((await one(c, 'select jsonb_array_length(my_bookings()) n')).n, 0)
+    await admin(c)
+    await as(c, 'anon')
+    await fails(c, `select claim_booking_by_token($1)`, [b.public_token], '42501')
+  }))
+
+test('analytics: guest vs member bookings and returning-customer rate come from the records', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const fri = fmt(f.friday)
+    const m = await customer(c, 'Analyst'); await activate(c, m)
+    await as(c, 'authenticated', f.owner)
+    const before = (await one(c, 'select membership_overview() o')).o
+    await admin(c)
+    const b1 = await booking(c, f, { from: fri, to: day(fri, 2), status: 'confirmed' })
+    await c.query('update bookings set customer_id = $1 where id = $2', [m, b1.id])
+    const b2 = await booking(c, f, { from: day(fri, 5), to: day(fri, 7), status: 'confirmed' })           // a guest booking
+    // the same guest books again: returning
+    await c.query(`insert into bookings(property_id, unit_id, guest_id, check_in, check_out, status, total_amount, deposit_required) values ($1,$2,$3,$4,$5,'confirmed',1000,500)`, [f.pa, f.ua, b2.guest_id, day(fri, 10), day(fri, 12)])
+    await as(c, 'authenticated', f.owner)
+    const o = (await one(c, 'select membership_overview() o')).o
+    assert.equal(o.member_bookings - before.member_bookings, 1)
+    assert.equal(o.guest_bookings - before.guest_bookings, 2)
+    assert.equal(o.returning_customers - before.returning_customers, 1)
+    assert.ok(o.returning_rate >= 0 && o.returning_rate <= 100)
+    assert.equal(o.registration_enabled, true); assert.equal(o.guest_checkout_enabled, true)
   }))

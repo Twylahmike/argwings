@@ -12,6 +12,7 @@ import { Button } from '~/components/ui/button'
 import { Field, Input } from '~/components/ui/form'
 
 export const Route = createFileRoute('/join')({
+  validateSearch: (s: Record<string, unknown>): { email?: string } => (typeof s.email === 'string' && s.email.length < 120 ? { email: s.email } : {}),
   head: ({ matches }) => {
     const brand = (matches[0]?.loaderData as { brand?: Brand } | undefined)?.brand ?? DEFAULT_BRAND
     return pageMeta({ brand: brand.businessName, site: brand.site, title: 'Join for free', description: `Create your free ${brand.businessName} account for member-only offers and rewards.`, path: '/join' })
@@ -30,9 +31,10 @@ type Values = z.input<typeof schema>
 
 function Join() {
   const brand = useBrand()
+  const prefill = Route.useSearch()
   const [done, setDone] = useState<string | null>(null)
   const [formError, setFormError] = useState('')
-  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { agree: false } })
+  const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Values>({ resolver: zodResolver(schema), defaultValues: { agree: false, email: prefill.email ?? '' } })
 
   async function onSubmit(v: Values) {
     setFormError('')
@@ -41,9 +43,21 @@ function Join() {
     setDone(v.email.trim().toLowerCase())
   }
 
+  if (!brand.registrationEnabled) {
+    return (
+      <AuthShell title="Membership is paused" subtitle="New accounts are not being opened right now." promo={false}>
+        <div className="grid gap-4 text-sm">
+          <p>You can still book as a guest: it is quick and needs no account.</p>
+          <Button asChild><Link to="/search">Find a place to stay</Link></Button>
+          <Button asChild variant="outline"><Link to="/login" search={{}}>Sign in</Link></Button>
+        </div>
+      </AuthShell>
+    )
+  }
+
   if (done) {
     return (
-      <AuthShell title="Welcome aboard" subtitle="Your account is almost ready.">
+      <AuthShell title="Almost there" subtitle="One last step to activate your free membership.">
         <div className="grid gap-4 text-sm" role="status">
           <span className="grid h-12 w-12 place-items-center rounded-full bg-brand/15 text-brand"><MailCheck className="h-6 w-6" aria-hidden /></span>
           <p>We sent a verification link to <b>{done}</b>. Open it to activate your membership and unlock your welcome offer.</p>

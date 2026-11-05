@@ -8,6 +8,7 @@ import { todayNairobi } from '~/lib/dates'
 import { StatusBadge } from '~/components/ui/badge'
 import { Skeleton } from '~/components/ui/misc'
 import { Button } from '~/components/ui/button'
+import { useBrand } from '~/lib/brand'
 import { useCustomer } from './account'
 import type { BookingStatus } from '~/lib/types'
 
@@ -17,6 +18,7 @@ export const isLive = (b: MyBooking) => ['pending', 'confirmed', 'checked_in'].i
 
 function Overview() {
   const c = useCustomer()
+  const brand = useBrand()
   const search = Route.useSearch() as { welcome?: string }
   const bookings = useQuery({ queryKey: ['my-bookings'], queryFn: () => rpc<MyBooking[]>('my_bookings') })
   const rewards = useQuery({ queryKey: ['my-rewards'], queryFn: () => rpc<MyReward[]>('my_rewards') })
@@ -33,7 +35,17 @@ function Overview() {
         <h1 className="font-display text-4xl">Welcome, {c.full_name.split(' ')[0]}</h1>
         <p className="mt-1 text-sm text-muted-foreground">{c.tier.name} · member since {formatDate(c.member_since.slice(0, 10))}</p>
       </div>
-      {(search.welcome === '1' || (available.length > 0 && c.completed_stays === 0 && all.length === 0)) && available[0] && (
+      {search.welcome === '1' && (
+        <div className="rounded-2xl border-2 border-brand/50 bg-card p-6" role="status">
+          <p className="eyebrow text-brand">Membership active</p>
+          <h2 className="font-display mt-2 text-3xl">Welcome to {brand.businessName}!</h2>
+          <p className="mt-2 text-sm text-muted-foreground">Your free membership is ready. Explore exclusive member offers and enjoy a more rewarding stay with us.</p>
+          <ul className="mt-4 grid gap-1 text-sm sm:grid-cols-2">
+            {['Member-only offers and seasonal promotions', 'Your bookings, receipts and history in one place', 'Birthday rewards and returning-guest offers', 'Faster booking with your details saved'].map((b) => <li key={b} className="flex items-start gap-2"><span className="mt-0.5 text-brand">&#10003;</span>{b}</li>)}
+          </ul>
+        </div>
+      )}
+      {available[0] && c.completed_stays === 0 && all.length === 0 && (
         <div className="rounded-2xl bg-ink p-6 text-ink-foreground">
           <p className="eyebrow text-brand">Your welcome offer is ready</p>
           <p className="font-display mt-2 text-3xl">{available[0].name}</p>

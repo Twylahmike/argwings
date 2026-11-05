@@ -5,6 +5,7 @@ import { pageMeta } from '~/lib/seo'
 import { DEFAULT_BRAND, type Brand } from '~/lib/brand'
 import { PublicLayout } from '~/components/layout/PublicLayout'
 import { Spaces } from '~/components/site/Spaces'
+import { MembershipNudge } from '~/components/site/MembershipPromo'
 
 export const Route = createFileRoute('/spaces')({
   loader: async () => ({ properties: isSupabaseConfigured ? await fetchProperties().catch(() => []) : [] }),
@@ -17,5 +18,5 @@ export const Route = createFileRoute('/spaces')({
 
 function SpacesPage() {
   const { properties } = Route.useLoaderData()
-  return <PublicLayout><Spaces properties={properties} page /></PublicLayout>
+  return <PublicLayout><Spaces properties={properties} page /><div className="mx-auto max-w-6xl px-4 pb-12 sm:px-6"><MembershipNudge /></div></PublicLayout>
 }

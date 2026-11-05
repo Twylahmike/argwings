@@ -2,6 +2,7 @@ import { Link } from '@tanstack/react-router'
 import { Mail, MapPin, MessageCircle, Phone } from 'lucide-react'
 import { Wordmark } from '~/components/layout/Wordmark'
 import { InstallAppButton } from './InstallAppButton'
+import { MembershipNudge } from './MembershipPromo'
 import { useBrand } from '~/lib/brand'
 import { useWhatsApp } from '~/lib/contact'
 import { normalizePhone, formatPhoneLocal } from '~/lib/phone'
@@ -64,6 +65,7 @@ export function SiteFooter() {
           </ul>
         </div>
       </div>
+      <div className="relative mx-auto max-w-7xl px-4 pb-6 sm:px-6"><MembershipNudge tone="dark" /></div>
       <div className="relative border-t border-white/10 py-6 text-center text-xs opacity-50">&copy; {new Date().getFullYear()} {brand.businessName}</div>
     </footer>
   )

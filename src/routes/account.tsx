@@ -18,6 +18,7 @@ export const Route = createFileRoute('/account')({
     const cs = await context.queryClient.fetchQuery({ queryKey: ['customer'], queryFn: fetchCustomer, staleTime: 30_000 })
     if (cs.state === 'anonymous') throw redirect({ to: '/login', search: { redirect: location.pathname } })
     if (cs.state === 'staff') throw redirect({ to: '/admin' })
+    if (cs.state === 'closed') throw redirect({ to: '/join' })
   },
   component: AccountLayout,
 })

@@ -56,6 +56,8 @@ const NAV: NavItem[] = [
   { to: '/admin/pages', label: 'Policy pages', icon: FileText, show: canManage, group: 'Website', perm: 'cms.manage' },
   { to: '/admin/reviews', label: 'Reviews', icon: Star, show: canManage, group: 'Website', perm: 'cms.manage' },
   { to: '/admin/announcements', label: 'Announcements', icon: Megaphone, show: canManage, group: 'Website', perm: 'cms.manage' },
+  { to: '/admin/membership-settings', label: 'Membership settings', icon: Settings, show: canManage, group: 'Customers & membership', perm: 'customers.view' },
+  { to: '/admin/member-bookings', label: 'Member & guest bookings', icon: ClipboardList, show: canManage, group: 'Customers & membership', perm: 'customers.view' },
   { to: '/admin/customers', label: 'Customer accounts', icon: Users, show: canManage, group: 'Customers & membership', perm: 'customers.view' },
   { to: '/admin/membership', label: 'Membership overview', icon: Crown, show: canManage, group: 'Customers & membership', perm: 'customers.view' },
   { to: '/admin/membership-tiers', label: 'Membership tiers', icon: Star, show: canManage, group: 'Customers & membership', perm: 'customers.view' },

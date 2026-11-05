@@ -10,6 +10,7 @@ import { UnitBooking } from '~/components/booking/UnitBooking'
 import { SearchBar } from '~/components/booking/SearchBar'
 import { NotFound } from '~/components/layout/ErrorPages'
 import { Dialog, DialogContent } from '~/components/ui/dialog'
+import { MembershipNudge } from '~/components/site/MembershipPromo'
 
 type Search = { unit?: string; in?: string; out?: string; guests?: number }
 
@@ -95,6 +96,7 @@ function PropertyPage() {
 
             <section className="mt-8" aria-labelledby="units">
               <h2 id="units" className="mb-3 text-lg font-semibold">Choose your place</h2>
+              <MembershipNudge className="mb-4" />
               {p.units.length === 0 && <p className="text-muted-foreground">No units are available to book online yet.</p>}
               <div className="grid gap-4">
                 {p.units.map((u) => <UnitBooking key={u.id} unit={u} property={p} prefill={{ in: s.in, out: s.out, guests: s.guests }} defaultOpen={s.unit === u.id} />)}

@@ -60,7 +60,7 @@ async function client() {
  * Loads the signed-in customer. Verifies the email, creates the profile on first verified visit (which also issues the welcome
  * reward), then returns the profile. Returns { state } describing why there is no customer when there is none.
  */
-export type CustomerState = { state: 'anonymous' | 'unverified' | 'staff' | 'ready'; customer?: Customer; newlyJoined?: boolean; email?: string }
+export type CustomerState = { state: 'anonymous' | 'unverified' | 'staff' | 'closed' | 'ready'; customer?: Customer; newlyJoined?: boolean; email?: string }
 export async function fetchCustomer(): Promise<CustomerState> {
   const c = await client()
   const { data } = await c.auth.getSession()
@@ -71,6 +71,7 @@ export async function fetchCustomer(): Promise<CustomerState> {
   const e = ensured as { status: string; new?: boolean; welcome_emailed?: boolean }
   if (e.status === 'unverified') return { state: 'unverified', email: user.email ?? '' }
   if (e.status === 'staff') return { state: 'staff' }
+  if (e.status === 'closed') return { state: 'closed' }
   const { data: me } = await c.rpc('my_customer')
   if (!me) return { state: 'anonymous' }
   // First visit after verifying: send the welcome emails. Fire and forget; the server checks it is only done once.
@@ -99,6 +100,11 @@ export const describeOffer = (o: { kind: 'percent' | 'fixed'; value: number; max
   o.kind === 'percent' ? `${o.value}% off${o.max_discount ? ` (up to KES ${o.max_discount.toLocaleString('en-KE')})` : ''}` : `KES ${o.value.toLocaleString('en-KE')} off`
 
 /** Where the Supabase email links (verify, reset) should send people back to. */
+/** Where to send a signed-in member who has only a booking link: adds the booking to their account. */
+export async function claimBookingByToken(token: string): Promise<{ reference: string; status: string }> {
+  return rpc('claim_booking_by_token', { p_token: token })
+}
+
 export const authRedirect = (path: string): string => (typeof window === 'undefined' ? path : `${window.location.origin}${path}`)
 
 export async function signUp(v: { name: string; email: string; password: string }): Promise<{ error?: string; needsVerification: boolean }> {

@@ -6,6 +6,7 @@ import { ThemeToggle } from '~/components/layout/ThemeToggle'
 import { AnnouncementBar } from './AnnouncementBar'
 import { cn } from '~/lib/utils'
 import { hasStoredSession } from '~/lib/customer'
+import { useBrand } from '~/lib/brand'
 
 const links = [
   { to: '/', label: 'Home' },
@@ -23,6 +24,7 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
     window.addEventListener('scroll', on, { passive: true })
     return () => window.removeEventListener('scroll', on)
   }, [])
+  const brand = useBrand()
   const [member, setMember] = useState(false)
   useEffect(() => setMember(hasStoredSession()), [])
   const solid = !overlay || scrolled || open
@@ -41,7 +43,7 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
           {member
             ? <Link to="/account" className="hidden h-10 items-center rounded-full border border-current px-4 text-sm font-medium md:inline-flex">My account</Link>
             : <><Link to="/login" search={{}} className="hidden h-10 items-center px-3 text-sm font-medium hover:opacity-70 md:inline-flex">Sign in</Link>
-                <Link to="/join" className="hidden h-10 items-center rounded-full border border-current px-4 text-sm font-medium md:inline-flex">Join free</Link></>}
+                {brand.registrationEnabled && <Link to="/join" className="hidden h-10 items-center rounded-full border border-current px-4 text-sm font-medium md:inline-flex">Join free</Link>}</>}
           <Link to="/search" className="btn-brand hidden h-10 items-center rounded-full px-5 text-sm font-medium sm:inline-flex">Book direct</Link>
           <button type="button" className="inline-flex h-11 w-11 items-center justify-center rounded-md hover:bg-muted/30 md:hidden" aria-label={open ? 'Close menu' : 'Open menu'} aria-expanded={open} aria-controls="mobile-nav" onClick={() => setOpen((o) => !o)}>
             {open ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
@@ -56,7 +58,7 @@ export function SiteHeader({ overlay = false }: { overlay?: boolean }) {
           {member
             ? <Link to="/account" onClick={() => setOpen(false)} className="flex h-12 items-center border-b text-base">My account</Link>
             : <><Link to="/login" search={{}} onClick={() => setOpen(false)} className="flex h-12 items-center border-b text-base">Sign in</Link>
-                <Link to="/join" onClick={() => setOpen(false)} className="flex h-12 items-center border-b text-base font-medium text-brand">Join for free</Link></>}
+                {brand.registrationEnabled && <Link to="/join" onClick={() => setOpen(false)} className="flex h-12 items-center border-b text-base font-medium text-brand">Join for free</Link>}</>}
           <Link to="/search" onClick={() => setOpen(false)} className="btn-brand mt-4 flex h-12 w-full items-center justify-center rounded-full text-base font-medium">Book direct</Link>
         </nav>
       )}

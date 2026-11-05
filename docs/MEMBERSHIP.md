@@ -13,7 +13,7 @@ Free member accounts for guests: sign up, verified email, welcome offer, member 
 
 ## One-time setup (Supabase dashboard)
 
-1. **SQL**: run `docs/sql/apply_part7.sql` in the SQL editor (project **bnb-system**). It is safe to run twice.
+1. **SQL**: run `docs/sql/apply_part7.sql`, then `docs/sql/apply_part8.sql`, in the SQL editor (project **bnb-system**). Both are safe to run twice.
 2. **Authentication > Providers > Email**: turn on **Confirm email**. Turn off "Allow new users to sign up" only if you want to stop all sign-ups.
 3. **Authentication > URL Configuration**: set **Site URL** to your website address and add `https://YOUR-SITE/auth/callback` and `https://YOUR-SITE/reset-password` to **Redirect URLs**. Without this the verification and reset links will not return to your site.
 4. **Authentication > SMTP Settings**: use your own sender (for example Resend SMTP) so verification and reset emails come from your domain and are not rate-limited. Supabase's built-in sender is for testing only.
@@ -63,6 +63,25 @@ Subject: `Confirm your new email`. Same layout; button `Confirm new email` linki
 - *Reward redemptions*, *Loyalty transactions*, *Customer activity*: read-only ledgers.
 
 Customer change and cancellation requests appear on the booking page and as a notification. Staff decide; nothing changes automatically.
+
+## Optional by design
+
+Registration is free and never required. Guests can browse and book without an account, and their booking page (the secret link in the confirmation message) shows payment status and receipts. In Admin, **Membership settings** has two switches:
+
+- **Optional registration**: when off, the "Join for free" invitations disappear and no new memberships are created. Existing members keep theirs.
+- **Guest checkout**: on by default. Turn it off only if you want bookings for members only (the booking function enforces it).
+
+The invitation ("Stay More. Enjoy More.") appears on the home page, the spaces list, each property page, the booking page (a quiet one-line note) and the footer. It is hidden for signed-in members.
+
+### Welcome offer
+
+Edited under Membership settings. Nothing is hardcoded: percentage or fixed KES amount (0 switches it off), minimum booking amount, maximum discount, minimum nights, eligible accommodation, start and end dates, reward expiry in days after registration, accommodation charge only or whole total, and whether it can be combined with a discount code. A customer can receive and use only one welcome reward, whatever is configured. The reward is issued only after the email is verified.
+
+### Adding a guest booking to an account
+
+- From the booking page: a signed-in member taps **Add to my account**. The secret booking link is the proof.
+- From the account: **My bookings** accepts a booking reference **and** the phone number it was made with.
+- After joining with the same email as an earlier guest booking, the account shows only a count ("We found 2 earlier bookings made with your email"). The bookings themselves are never shown until one of the proofs above is given.
 
 ## Guest checkout
 

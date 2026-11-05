@@ -33,6 +33,8 @@ function MembershipOverview() {
           <Stat label="Offers redeemed" value={o.offers_redeemed} hint={`of ${o.offers_issued} issued`} />
           <Stat label="Discount value granted" value={formatKES(o.discount_value)} hint="Live bookings only" />
           <Stat label="Member bookings" value={o.member_bookings} hint={`${formatKES(o.member_revenue)} paid`} />
+          <Stat label="Guest bookings" value={o.guest_bookings} hint="Booked without an account" />
+          <Stat label="Returning customers" value={`${o.returning_rate}%`} hint={`${o.returning_customers} of ${o.booked_customers} customers booked more than once`} />
         </div>
         <section className="mt-8" aria-labelledby="bt"><h2 id="bt" className="font-display text-2xl">Members by tier</h2>
           <ul className="mt-3 grid max-w-xl gap-2">{o.by_tier.map((t) => (

@@ -65,6 +65,7 @@ function Login() {
       else nav({ to: target })
       return
     }
+    if (cs.state === 'closed') { setFormError('New memberships are paused right now. You can still book as a guest.'); await sb().auth.signOut(); return }
     if (cs.state === 'unverified') { setUnverified(v.email); setFormError('Please verify your email first. We sent you a link when you joined.'); await sb().auth.signOut(); return }
     setFormError('This account is not active. Please contact us.')
     await sb().auth.signOut()

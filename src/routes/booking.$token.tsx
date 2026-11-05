@@ -11,6 +11,7 @@ import { formatPhoneLocal } from '~/lib/phone'
 import type { PublicBooking } from '~/lib/types'
 import { PublicLayout } from '~/components/layout/PublicLayout'
 import { PayPanel, PaidBanner } from '~/components/booking/PayPanel'
+import { AccountPrompt } from '~/components/booking/AccountPrompt'
 import { StatusBadge } from '~/components/ui/badge'
 import { Button } from '~/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card'
@@ -119,6 +120,7 @@ function BookingPage() {
               </Card>
             )}
 
+            <AccountPrompt token={token} />
             <Card className="mt-4">
               <CardHeader><CardTitle>Getting there & contact</CardTitle></CardHeader>
               <CardContent className="grid gap-3 text-sm">

@@ -49,7 +49,9 @@ import { Route as AdminInquiriesRouteImport } from './routes/admin.inquiries'
 import { Route as AdminLoyaltyRouteImport } from './routes/admin.loyalty'
 import { Route as AdminMaintenanceRouteImport } from './routes/admin.maintenance'
 import { Route as AdminMediaRouteImport } from './routes/admin.media'
+import { Route as AdminMemberBookingsRouteImport } from './routes/admin.member-bookings'
 import { Route as AdminMembershipRouteImport } from './routes/admin.membership'
+import { Route as AdminMembershipSettingsRouteImport } from './routes/admin.membership-settings'
 import { Route as AdminMembershipTiersRouteImport } from './routes/admin.membership-tiers'
 import { Route as AdminMessagesRouteImport } from './routes/admin.messages'
 import { Route as AdminNotificationsRouteImport } from './routes/admin.notifications'
@@ -281,9 +283,19 @@ const AdminMediaRoute = AdminMediaRouteImport.update({
   path: '/media',
   getParentRoute: () => AdminRoute,
 } as any)
+const AdminMemberBookingsRoute = AdminMemberBookingsRouteImport.update({
+  id: '/member-bookings',
+  path: '/member-bookings',
+  getParentRoute: () => AdminRoute,
+} as any)
 const AdminMembershipRoute = AdminMembershipRouteImport.update({
   id: '/membership',
   path: '/membership',
+  getParentRoute: () => AdminRoute,
+} as any)
+const AdminMembershipSettingsRoute = AdminMembershipSettingsRouteImport.update({
+  id: '/membership-settings',
+  path: '/membership-settings',
   getParentRoute: () => AdminRoute,
 } as any)
 const AdminMembershipTiersRoute = AdminMembershipTiersRouteImport.update({
@@ -476,7 +488,9 @@ export interface FileRoutesByFullPath {
   '/admin/loyalty': typeof AdminLoyaltyRoute
   '/admin/maintenance': typeof AdminMaintenanceRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/member-bookings': typeof AdminMemberBookingsRoute
   '/admin/membership': typeof AdminMembershipRoute
+  '/admin/membership-settings': typeof AdminMembershipSettingsRoute
   '/admin/membership-tiers': typeof AdminMembershipTiersRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -547,7 +561,9 @@ export interface FileRoutesByTo {
   '/admin/loyalty': typeof AdminLoyaltyRoute
   '/admin/maintenance': typeof AdminMaintenanceRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/member-bookings': typeof AdminMemberBookingsRoute
   '/admin/membership': typeof AdminMembershipRoute
+  '/admin/membership-settings': typeof AdminMembershipSettingsRoute
   '/admin/membership-tiers': typeof AdminMembershipTiersRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -621,7 +637,9 @@ export interface FileRoutesById {
   '/admin/loyalty': typeof AdminLoyaltyRoute
   '/admin/maintenance': typeof AdminMaintenanceRoute
   '/admin/media': typeof AdminMediaRoute
+  '/admin/member-bookings': typeof AdminMemberBookingsRoute
   '/admin/membership': typeof AdminMembershipRoute
+  '/admin/membership-settings': typeof AdminMembershipSettingsRoute
   '/admin/membership-tiers': typeof AdminMembershipTiersRoute
   '/admin/messages': typeof AdminMessagesRoute
   '/admin/notifications': typeof AdminNotificationsRoute
@@ -696,7 +714,9 @@ export interface FileRouteTypes {
     | '/admin/loyalty'
     | '/admin/maintenance'
     | '/admin/media'
+    | '/admin/member-bookings'
     | '/admin/membership'
+    | '/admin/membership-settings'
     | '/admin/membership-tiers'
     | '/admin/messages'
     | '/admin/notifications'
@@ -767,7 +787,9 @@ export interface FileRouteTypes {
     | '/admin/loyalty'
     | '/admin/maintenance'
     | '/admin/media'
+    | '/admin/member-bookings'
     | '/admin/membership'
+    | '/admin/membership-settings'
     | '/admin/membership-tiers'
     | '/admin/messages'
     | '/admin/notifications'
@@ -840,7 +862,9 @@ export interface FileRouteTypes {
     | '/admin/loyalty'
     | '/admin/maintenance'
     | '/admin/media'
+    | '/admin/member-bookings'
     | '/admin/membership'
+    | '/admin/membership-settings'
     | '/admin/membership-tiers'
     | '/admin/messages'
     | '/admin/notifications'
@@ -1178,11 +1202,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AdminMediaRouteImport
       parentRoute: typeof AdminRoute
     }
+    '/admin/member-bookings': {
+      id: '/admin/member-bookings'
+      path: '/member-bookings'
+      fullPath: '/admin/member-bookings'
+      preLoaderRoute: typeof AdminMemberBookingsRouteImport
+      parentRoute: typeof AdminRoute
+    }
     '/admin/membership': {
       id: '/admin/membership'
       path: '/membership'
       fullPath: '/admin/membership'
       preLoaderRoute: typeof AdminMembershipRouteImport
+      parentRoute: typeof AdminRoute
+    }
+    '/admin/membership-settings': {
+      id: '/admin/membership-settings'
+      path: '/membership-settings'
+      fullPath: '/admin/membership-settings'
+      preLoaderRoute: typeof AdminMembershipSettingsRouteImport
       parentRoute: typeof AdminRoute
     }
     '/admin/membership-tiers': {
@@ -1442,7 +1480,9 @@ interface AdminRouteChildren {
   AdminLoyaltyRoute: typeof AdminLoyaltyRoute
   AdminMaintenanceRoute: typeof AdminMaintenanceRoute
   AdminMediaRoute: typeof AdminMediaRoute
+  AdminMemberBookingsRoute: typeof AdminMemberBookingsRoute
   AdminMembershipRoute: typeof AdminMembershipRoute
+  AdminMembershipSettingsRoute: typeof AdminMembershipSettingsRoute
   AdminMembershipTiersRoute: typeof AdminMembershipTiersRoute
   AdminMessagesRoute: typeof AdminMessagesRoute
   AdminNotificationsRoute: typeof AdminNotificationsRoute
@@ -1491,7 +1531,9 @@ const AdminRouteChildren: AdminRouteChildren = {
   AdminLoyaltyRoute: AdminLoyaltyRoute,
   AdminMaintenanceRoute: AdminMaintenanceRoute,
   AdminMediaRoute: AdminMediaRoute,
+  AdminMemberBookingsRoute: AdminMemberBookingsRoute,
   AdminMembershipRoute: AdminMembershipRoute,
+  AdminMembershipSettingsRoute: AdminMembershipSettingsRoute,
   AdminMembershipTiersRoute: AdminMembershipTiersRoute,
   AdminMessagesRoute: AdminMessagesRoute,
   AdminNotificationsRoute: AdminNotificationsRoute,

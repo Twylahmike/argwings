@@ -42,6 +42,8 @@ export type Brand = {
   maintenanceMode: boolean
   /** When false, visitors must sign in to book. */
   guestCheckout: boolean
+  /** When false the "Join for free" invitations are hidden and no new memberships are created. */
+  registrationEnabled: boolean
   /** Membership tiers shown on the join page. */
   tiers: { key: string; name: string; benefits: string[] }[]
 }
@@ -70,6 +72,7 @@ export const DEFAULT_BRAND: Brand = {
   currency: 'KES',
   maintenanceMode: false,
   guestCheckout: true,
+  registrationEnabled: true,
   tiers: [],
 }
 
@@ -149,6 +152,7 @@ export async function fetchBrand(): Promise<Brand> {
       currency: str('currency', 'KES'),
       maintenanceMode: m.maintenance_mode === true,
       guestCheckout: m.guest_checkout_enabled !== false,
+      registrationEnabled: m.registration_enabled !== false,
       tiers: ((tiersRes.data ?? []) as { key: string; name: string; benefits: string[] | null }[]).map((t) => ({ key: t.key, name: t.name, benefits: t.benefits ?? [] })),
       gallery: managedGallery(gcats.data, gitems.data),
       ...splitBanners(banners.data),

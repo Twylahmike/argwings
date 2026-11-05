@@ -7,7 +7,7 @@ import { readFileSync, readdirSync, writeFileSync } from 'node:fs'
 const MARKERS = {
   '0009': 't:booking_requests', '0010': 'f:dashboard_overview(date,date,uuid)', '0011': 't:support_tickets', '0012': 't:discount_codes',
   '0013': 'c:guests.vip', '0014': 't:booking_charges', '0015': 't:blocked_ranges', '0016': 't:media_assets', '0017': 't:expense_categories',
-  '0018': 't:contact_numbers', '0019': 't:bar_products', '0020': 't:permissions_catalog', '0021': 'f:global_search(text)',
+  '0018': 't:contact_numbers', '0019': 't:bar_products', '0020': 't:permissions_catalog', '0021': 'f:global_search(text)', '0022': 'f:trg_notify_more()',
 }
 const dir = 'supabase/migrations'
 const files = readdirSync(dir).filter((f) => /^\d{4}_.*\.sql$/.test(f) && f.slice(0, 4) >= '0009').sort()

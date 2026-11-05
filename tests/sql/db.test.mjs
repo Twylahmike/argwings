@@ -1546,3 +1546,18 @@ test('global search: finds by reference, guest name and phone, escapes wildcards
     const hk = (await one(c, `select global_search('zuri') r`)).r
     assert.equal(hk.guests.length + hk.bookings.length, 0, 'housekeeping cannot search guests or bookings')
   }))
+
+test('regression: message_log rows in every status insert and update without error (the notify trigger must not read other tables\' fields)', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const b = await booking(c, f, { from: fmt(f.friday), to: day(fmt(f.friday), 2), status: 'confirmed' })
+    const row = await one(c, `insert into message_log(booking_id, property_id, template, to_phone, status) values ($1,$2,'booking_confirmed','254712000000','queued') returning id`, [b.id, f.pa])
+    await c.query(`update message_log set status='sent' where id=$1`, [row.id])
+    await c.query(`update message_log set status='skipped', error='off' where id=$1`, [row.id])
+    await c.query(`update message_log set status='failed', error='Provider timeout' where id=$1`, [row.id])
+    assert.equal((await one(c, `select count(*)::int n from notifications where kind='message_failed' and entity_id=$1`, [row.id])).n, 1, 'a failure notifies once')
+    // the other tables sharing the trigger still work in every status
+    await c.query(`insert into housekeeping_tasks(property_id, unit_id) values ($1,$2)`, [f.pa, f.ua])
+    await c.query(`insert into payments(booking_id,kind,method,status,amount) values ($1,'deposit','cash','pending',100)`, [b.id])
+    await c.query(`insert into payments(booking_id,kind,method,status,amount,confirmed_at) values ($1,'deposit','cash','succeeded',100,now())`, [b.id])
+  }))

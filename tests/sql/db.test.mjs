@@ -1697,3 +1697,48 @@ test('site pages: public sees published pages only, starter drafts are unpublish
     assert.equal((await c.query(`update site_pages set published=false where slug='terms'`)).rowCount, 0)
     assert.equal((await c.query(`delete from site_pages where slug='terms'`)).rowCount, 0)
   }))
+
+test('permission overrides: allow or block one permission for one person, owners untouchable, no privilege escalation', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const roleId = async (name) => (await one(c, 'select id from team_roles where name=$1', [name])).id
+    await admin(c)
+    const recep = await user(c, 'Rita', 'manager', [f.pa]); const hr = await user(c, 'Hannah', 'manager', [f.pa])
+    await c.query('update profiles set team_role_id=$2 where id=$1', [recep, await roleId('Receptionist')])
+    await as(c, 'authenticated', f.owner)
+    await c.query(`select assign_team_role($1,$2)`, [hr, (await one(c, `insert into team_roles(name, base_role) values ('People only','manager') returning id`)).id])
+    await c.query(`insert into team_role_permissions(role_id, permission_key) select id, 'users.manage' from team_roles where name='People only'`)
+
+    const can = async (u, p) => { await admin(c); return (await one(c, 'select has_permission($1,$2) h', [u, p])).h }
+    assert.equal(await can(recep, 'expenses.manage'), false)
+    assert.equal(await can(recep, 'bookings.create'), true)
+    await as(c, 'authenticated', f.owner)
+    await c.query(`select set_user_permission($1,'expenses.manage','grant')`, [recep])
+    await c.query(`select set_user_permission($1,'bookings.create','deny')`, [recep])
+    assert.equal(await can(recep, 'expenses.manage'), true, 'extra permission granted')
+    assert.equal(await can(recep, 'bookings.create'), false, 'role permission blocked for this person')
+    await as(c, 'authenticated', recep)
+    await c.query(`insert into expenses(property_id, category, amount) values ($1,'other',100)`, [f.pa])      // now allowed
+    await fails(c, `insert into bookings(property_id, unit_id, check_in, check_out, status) values ($1,$2,'2030-01-01','2030-01-02','confirmed')`, [f.pa, f.ua], '42501')
+    assert.deepEqual((await one(c, 'select my_permissions() p')).p.includes('expenses.manage'), true)
+    await as(c, 'authenticated', f.owner)
+    await c.query(`select set_user_permission($1,'expenses.manage','inherit')`, [recep])
+    assert.equal(await can(recep, 'expenses.manage'), false, 'back to the role default')
+
+    // guard rails
+    await as(c, 'authenticated', f.owner)
+    await fails(c, `select set_user_permission($1,'bookings.create','deny')`, [f.owner], '23514')             // own account
+    await fails(c, `select set_user_permission($1,'nonsense.key','grant')`, [recep], '23514')
+    await fails(c, `select set_user_permission($1,'bookings.create','maybe')`, [recep], '23514')
+    await as(c, 'authenticated', f.manager)
+    await fails(c, `select set_user_permission($1,'expenses.manage','grant')`, [recep], '42501')              // no users.manage
+    await as(c, 'authenticated', hr)
+    await fails(c, `select set_user_permission($1,'payments.verify','grant')`, [recep], '42501')              // cannot grant what you do not hold
+    await fails(c, `select set_user_permission($1,'users.manage','deny')`, [f.owner], '23514')                // owners untouchable
+    await c.query(`select set_user_permission($1,'users.manage','grant')`, [recep])                            // may grant what they hold
+    await fails(c, `insert into user_permission_overrides(user_id, permission_key, granted) values ($1,'payments.verify',true)`, [recep], '42501')   // no direct writes
+    await as(c, 'authenticated', recep)
+    assert.equal((await q(c, 'select * from user_permission_overrides')).length, 2, 'their own exceptions (deny bookings.create, grant users.manage)')
+    await as(c, 'authenticated', f.cleaner)
+    assert.equal((await q(c, 'select * from user_permission_overrides')).length, 0)
+  }))

@@ -211,6 +211,7 @@ function EditStaff({ row, onClose, onDone }: { row: StaffRow; onClose: () => voi
             </Select>
           </Field>
           {baseRole !== 'owner' && <PropertyChecks value={props} onChange={setProps} />}
+          {baseRole !== 'owner' && row.id !== me.id && <OverridesEditor userId={row.id} />}
           <Field label="Reset password (optional)" htmlFor="es-pw" hint="They will be asked to choose a new one at next sign in.">
             <div className="flex gap-2"><KeyRound className="mt-3 h-4 w-4 text-muted-foreground" aria-hidden /><Input id="es-pw" type="text" autoComplete="off" value={pw} onChange={(e) => setPw(e.target.value)} placeholder="Leave blank to keep" /></div>
           </Field>
@@ -218,5 +219,45 @@ function EditStaff({ row, onClose, onDone }: { row: StaffRow; onClose: () => voi
         </div>
       </DialogContent>
     </Dialog>
+  )
+}
+
+/** Exceptions for one person: allow an extra permission or block one, on top of their team role. Saved immediately. */
+function OverridesEditor({ userId }: { userId: string }) {
+  const qc = useQueryClient()
+  const [open, setOpen] = useState(false)
+  const data = useQuery({ queryKey: ['overrides', userId], enabled: open, queryFn: async () => {
+    const [c, o] = await Promise.all([
+      sb().from('permissions_catalog').select('key, module, label').order('sort'),
+      sb().from('user_permission_overrides').select('permission_key, granted').eq('user_id', userId),
+    ])
+    if (c.error) throw c.error
+    return { catalog: c.data as { key: string; module: string; label: string }[], state: new Map((o.data ?? []).map((x) => [x.permission_key as string, x.granted as boolean])) }
+  } })
+  const set = useMutation({
+    mutationFn: async (v: { key: string; state: 'grant' | 'deny' | 'inherit' }) => { const { error } = await sb().rpc('set_user_permission', { p_user: userId, p_perm: v.key, p_state: v.state }); if (error) throw error },
+    onSuccess: () => { qc.invalidateQueries({ queryKey: ['overrides', userId] }); toast.success('Saved') },
+    onError: (e) => toast.error(errMessage(e)),
+  })
+  return (
+    <div className="rounded-lg border p-3">
+      <button type="button" className="text-sm font-medium text-brand hover:underline" aria-expanded={open} onClick={() => setOpen((o) => !o)}>{open ? 'Hide' : 'Show'} exceptions for this person</button>
+      {open && (
+        <div className="mt-3 grid gap-2">
+          <p className="text-xs text-muted-foreground">Normally a person gets exactly what their team role allows. Use this only for a one-off: allow one extra thing, or block one. Changes save at once.</p>
+          {data.isLoading && <Skeleton className="h-16" />}
+          {data.data?.catalog.map((p) => {
+            const st = data.data.state.get(p.key)
+            return (
+              <label key={p.key} className="flex items-center justify-between gap-3 text-sm">
+                <span>{p.label} <span className="text-xs text-muted-foreground">({p.module})</span></span>
+                <Select aria-label={p.label} className="h-9 w-36" value={st === undefined ? 'inherit' : st ? 'grant' : 'deny'} onChange={(e) => set.mutate({ key: p.key, state: e.target.value as 'grant' | 'deny' | 'inherit' })}>
+                  <option value="inherit">Role default</option><option value="grant">Allow</option><option value="deny">Block</option>
+                </Select>
+              </label>)
+          })}
+        </div>
+      )}
+    </div>
   )
 }

@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   BarChart3, BedDouble, Brush, Building2, CalendarCheck, CalendarDays, ClipboardList, Inbox, LayoutDashboard, LogOut, Megaphone, Menu, MessageCircle,
   Settings, Star, UserCog, Users, Wallet, type LucideIcon,
-  Ban, Crown, History, ShieldCheck, KeyRound, Wine, Phone, Send, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
+  Ban, Crown, PanelLeft, History, ShieldCheck, KeyRound, Wine, Phone, Send, DoorOpen, ImagePlus, Images, LifeBuoy, PanelTop, Tag, Wrench,
 } from 'lucide-react'
 import { sb } from '~/lib/supabase'
 import { canManage, isOwner, type Me } from '~/lib/auth'
@@ -15,6 +15,8 @@ import { cn } from '~/lib/utils'
 import { Wordmark } from './Wordmark'
 import { ThemeToggle } from './ThemeToggle'
 import { NotificationBell } from './NotificationBell'
+import { GlobalSearch } from './GlobalSearch'
+import { Breadcrumbs } from './Breadcrumbs'
 
 type AdminCtx = {
   me: Me
@@ -78,6 +80,9 @@ export function AdminShell({ me }: { me: Me }) {
   const active = useActive()
   const [menuOpen, setMenuOpen] = useState(false)
   const [propertyId, setPid] = useState('all')
+  const [collapsed, setCollapsed] = useState(false)
+  useEffect(() => { try { setCollapsed(localStorage.getItem('admin:collapsed') === '1') } catch { /* ignore */ } }, [])
+  const toggleCollapsed = () => setCollapsed((c) => { try { localStorage.setItem('admin:collapsed', c ? '0' : '1') } catch { /* ignore */ } return !c })
 
   useEffect(() => {
     try {
@@ -124,15 +129,15 @@ export function AdminShell({ me }: { me: Me }) {
   return (
     <Ctx.Provider value={{ me, propertyId, setPropertyId, scopeIds }}>
       <div className="min-h-dvh md:flex">
-        <aside className="no-print hidden w-60 shrink-0 flex-col border-r bg-card md:flex">
-          <div className="flex h-16 items-center border-b px-4"><Wordmark /></div>
+        <aside className={cn('no-print hidden shrink-0 flex-col border-r bg-card transition-[width] md:flex', collapsed ? 'w-16' : 'w-60')}>
+          <div className="flex h-16 items-center justify-between border-b px-3">{!collapsed && <Wordmark />}<button type="button" onClick={toggleCollapsed} aria-label={collapsed ? 'Expand the menu' : 'Collapse the menu'} aria-expanded={!collapsed} className="inline-flex h-10 w-10 items-center justify-center rounded-md hover:bg-muted"><PanelLeft className="h-5 w-5" /></button></div>
           <nav className="flex-1 overflow-y-auto p-2" aria-label="Main">
             {GROUPS.map((g) => { const list = items.filter((n) => n.group === g); return list.length === 0 ? null : (
               <div key={g} className="mb-3">
-                <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{g}</p>
+                {!collapsed && <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{g}</p>}
                 <div className="space-y-0.5">{list.map((n) => (
-                  <Link key={n.to} to={n.to} className={cn('flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium hover:bg-muted', active(n.to) && 'bg-muted text-brand')}>
-                    <n.icon className="h-5 w-5" aria-hidden /> {n.label}
+                  <Link key={n.to} to={n.to} title={collapsed ? n.label : undefined} aria-label={collapsed ? n.label : undefined} className={cn('flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium hover:bg-muted', collapsed && 'justify-center px-0', active(n.to) && 'bg-muted text-brand')}>
+                    <n.icon className="h-5 w-5 shrink-0" aria-hidden /> {!collapsed && n.label}
                   </Link>))}</div>
               </div>) })}
             <a href="/" className="mt-2 flex h-11 items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground hover:bg-muted">Back to website</a>
@@ -147,7 +152,8 @@ export function AdminShell({ me }: { me: Me }) {
         <div className="flex min-w-0 flex-1 flex-col">
           <header className="no-print sticky top-0 z-30 flex h-16 items-center justify-between gap-2 border-b bg-background/90 px-3 backdrop-blur md:px-6">
             <div className="md:hidden"><Wordmark compact /></div>
-            <div className="hidden md:block" />
+            <div className="hidden min-w-0 shrink md:block md:w-64 lg:w-80"><Breadcrumbs /></div>
+            {canManage(me) && <GlobalSearch />}
             <div className="flex items-center gap-2">
               {showFilter && (
                 <Select aria-label="Filter by property" value={propertyId} onChange={(e) => setPropertyId(e.target.value)} className="h-11 w-36 sm:w-56">

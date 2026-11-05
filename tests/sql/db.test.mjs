@@ -1521,3 +1521,28 @@ test('activity log: readable through the audit.view permission, never writable',
     await fails(c, `delete from audit_log`, [], '42501')
     await fails(c, `update audit_log set action='edited'`, [], '42501')
   }))
+
+test('global search: finds by reference, guest name and phone, escapes wildcards, respects each person\'s access', async () =>
+  tx(async (c) => {
+    const f = await fixture(c)
+    const d0 = fmt(f.friday)
+    const a = await booking(c, f, { from: d0, to: day(d0, 2), status: 'confirmed' })
+    const other = await booking(c, f, { unit: f.ub, prop: f.pb, from: d0, to: day(d0, 2), status: 'confirmed' })
+    await c.query(`update guests set full_name='Zuri Wanjiku', phone='254799123456' where id=$1`, [a.guest_id])
+    await c.query(`update guests set full_name='Zuri Hidden', phone='254799654321' where id=$1`, [other.guest_id])
+    await as(c, 'authenticated', f.manager)
+    const byName = (await one(c, `select global_search('zuri') r`)).r
+    assert.deepEqual(byName.guests.map((g) => g.name), ['Zuri Wanjiku'], 'manager A only finds guests from their property')
+    assert.equal((await one(c, `select global_search($1) r`, [a.reference.toLowerCase()])).r.bookings[0].reference, a.reference)
+    assert.equal((await one(c, `select global_search('0799 123 456') r`)).r.guests[0].name, 'Zuri Wanjiku', 'spaces in a typed phone number are ignored')
+    assert.equal((await one(c, `select global_search('0799123456') r`)).r.guests[0].name, 'Zuri Wanjiku')
+    assert.equal((await one(c, `select global_search('%') r`)).r.guests.length, 0, 'a lone % is not a wildcard')
+    assert.equal((await one(c, `select global_search('a') r`)).r.bookings.length, 0, 'too short')
+    assert.equal((await one(c, `select global_search('Prop A') r`)).r.rooms.length >= 1, true)
+    assert.equal((await one(c, `select global_search('Prop B') r`)).r.rooms.length, 0, 'rooms of other properties hidden')
+    await as(c, 'authenticated', f.owner)
+    assert.equal((await one(c, `select global_search('zuri') r`)).r.guests.length, 2)
+    await as(c, 'authenticated', f.cleaner)
+    const hk = (await one(c, `select global_search('zuri') r`)).r
+    assert.equal(hk.guests.length + hk.bookings.length, 0, 'housekeeping cannot search guests or bookings')
+  }))

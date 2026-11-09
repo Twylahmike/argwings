@@ -87,6 +87,10 @@ Edited under Membership settings. Nothing is hardcoded: percentage or fixed KES 
 
 Settings key `guest_checkout_enabled` (default on). When off, visitors must sign in to book. The booking function enforces it, not only the page.
 
+## Spending points
+
+Off until the owner switches it on (Membership settings, Loyalty points). The owner sets what one point is worth, the most of a stay that points may cover, and how much spend earns a point. At checkout a signed-in member can tick "Use my points"; the database checks the balance, the cap and that spending is on, takes the points inside the booking and records a ledger row tied to the booking. If that booking is cancelled, expires or is a no-show the points come back, once. Run `docs/sql/apply_part10.sql` for this and redeploy `create-booking`.
+
 ## Privacy
 
 In Account settings a member can **download their data** (one JSON file) and **request deletion**. The request reaches staff as a notification; in Customer accounts, staff with `customers.manage` can then **Remove personal details**. That clears name, email, phone, country and birthday and suspends the profile, but keeps bookings, payments, redemptions and points in the records (financial records are never deleted). The sign-in itself is removed separately in Supabase, Authentication, Users. Run `docs/sql/apply_part9.sql` for this.
@@ -94,5 +98,4 @@ In Account settings a member can **download their data** (one JSON file) and **r
 ## Not built
 
 - SMS and smart-lock integrations (no provider connected).
-- Redeeming loyalty points for money off. Points are recorded and shown, and can be adjusted by staff.
 - Deleting an account from the account page (ask the owner; financial records are never hard-deleted).

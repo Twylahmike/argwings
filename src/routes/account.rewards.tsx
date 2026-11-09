@@ -33,7 +33,7 @@ function Rewards() {
         </p>
       </div>
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border bg-card p-5"><p className="text-xs uppercase tracking-wider text-muted-foreground">Points</p><p className="font-display mt-1 text-3xl">{c.points.toLocaleString('en-KE')}</p></div>
+        <div className="rounded-xl border bg-card p-5"><p className="text-xs uppercase tracking-wider text-muted-foreground">Points</p><p className="font-display mt-1 text-3xl">{c.points.toLocaleString('en-KE')}</p>{c.points_redeem?.enabled ? <p className="mt-1 text-xs text-muted-foreground">Worth {formatKES(c.points * c.points_redeem.kes_per_point)} off your next stay (up to {c.points_redeem.max_percent}% of the accommodation charge). Use them when you book.</p> : <p className="mt-1 text-xs text-muted-foreground">Earned on every completed stay.</p>}</div>
         <div className="rounded-xl border bg-card p-5"><p className="text-xs uppercase tracking-wider text-muted-foreground">Completed stays</p><p className="font-display mt-1 text-3xl">{c.completed_stays}</p></div>
         <div className="rounded-xl border bg-card p-5"><p className="text-xs uppercase tracking-wider text-muted-foreground">Total spent</p><p className="font-display mt-1 text-3xl">{formatKES(c.total_spend)}</p></div>
       </div>

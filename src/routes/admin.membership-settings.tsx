@@ -42,6 +42,7 @@ function MembershipSettings() {
         </CardContent></Card>
       )}
       <WelcomeOffer manage={can('offers.manage')} />
+      <LoyaltyPoints manage={manage} />
     </div>
   )
 }
@@ -115,6 +116,49 @@ function WelcomeOffer({ manage }: { manage: boolean }) {
         <p className="text-xs text-muted-foreground">Each customer can receive and use only one welcome reward, whatever is set here.</p>
         {err && <p role="alert" className="text-sm text-danger">{err}</p>}
         {manage && <Button loading={save.isPending} onClick={() => save.mutate()}>Save welcome offer</Button>}
+      </>}
+    </CardContent></Card>
+  )
+}
+
+type LoyaltyInfo = { redeem_enabled: boolean; kes_per_point: number; max_percent: number; earn_kes_per_point: number; points_outstanding: number; points_redeemed: number; value_redeemed: number }
+
+function LoyaltyPoints({ manage }: { manage: boolean }) {
+  const qc = useQueryClient()
+  const q = useQuery({ queryKey: ['loyalty-settings'], queryFn: () => adminRpc<LoyaltyInfo>('loyalty_settings') })
+  const [v, setV] = useState({ on: false, value: '1', max: '50', earn: '100' })
+  const [err, setErr] = useState('')
+  useEffect(() => { if (q.data) setV({ on: q.data.redeem_enabled, value: String(q.data.kes_per_point), max: String(q.data.max_percent), earn: String(q.data.earn_kes_per_point) }) }, [q.data])
+  const save = useMutation({
+    mutationFn: () => {
+      setErr('')
+      const n = (s: string) => Number(s)
+      if (![v.value, v.max, v.earn].every((x) => Number.isInteger(n(x)) && n(x) > 0)) throw new Error('Enter whole numbers.')
+      return adminRpc('set_loyalty_settings', { p_redeem_enabled: v.on, p_kes_per_point: n(v.value), p_max_percent: n(v.max), p_earn_kes_per_point: n(v.earn) })
+    },
+    onSuccess: () => { toast.success('Saved'); qc.invalidateQueries({ queryKey: ['loyalty-settings'] }) },
+    onError: (e) => setErr(errMessage(e)),
+  })
+  return (
+    <Card><CardHeader><CardTitle>Loyalty points</CardTitle></CardHeader><CardContent className="grid gap-4 text-sm">
+      {q.isLoading && <Skeleton className="h-24" />}
+      {q.error && <ErrorState error={q.error} retry={() => q.refetch()} />}
+      {q.data && <>
+        <p className="text-muted-foreground">Members earn points on completed stays. When spending is on, they can use points at checkout for money off the accommodation charge. Points are taken inside the booking, can never be spent twice, and come back if the booking is cancelled.</p>
+        <label className="flex items-center gap-2"><input type="checkbox" className="h-5 w-5" disabled={!manage} checked={v.on} onChange={(e) => setV((s) => ({ ...s, on: e.target.checked }))} /> Members can spend points at checkout</label>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label="Spend: one point is worth (KES)" htmlFor="l-val"><Input id="l-val" inputMode="numeric" disabled={!manage} value={v.value} onChange={(e) => setV((s) => ({ ...s, value: e.target.value }))} /></Field>
+          <Field label="Points can cover at most (% of the stay)" htmlFor="l-max"><Input id="l-max" inputMode="numeric" disabled={!manage} value={v.max} onChange={(e) => setV((s) => ({ ...s, max: e.target.value }))} /></Field>
+          <Field label="Earn: one point per (KES paid)" htmlFor="l-earn" hint="Applies to stays completed from now on."><Input id="l-earn" inputMode="numeric" disabled={!manage} value={v.earn} onChange={(e) => setV((s) => ({ ...s, earn: e.target.value }))} /></Field>
+        </div>
+        <p className="text-xs text-muted-foreground">Example: earning 1 point per KES {v.earn || '…'} and spending each point as KES {v.value || '…'} gives members back about {Number(v.earn) > 0 ? ((Number(v.value) / Number(v.earn)) * 100).toFixed(1) : '…'}% of what they spend.</p>
+        <dl className="grid gap-2 sm:grid-cols-3">
+          <div><dt className="text-muted-foreground">Points outstanding</dt><dd className="font-semibold">{q.data.points_outstanding.toLocaleString('en-KE')}</dd></div>
+          <div><dt className="text-muted-foreground">Points spent</dt><dd className="font-semibold">{q.data.points_redeemed.toLocaleString('en-KE')}</dd></div>
+          <div><dt className="text-muted-foreground">Discount given with points</dt><dd className="font-semibold">KES {q.data.value_redeemed.toLocaleString('en-KE')}</dd></div>
+        </dl>
+        {err && <p role="alert" className="text-danger">{err}</p>}
+        {manage && <Button loading={save.isPending} onClick={() => save.mutate()}>Save loyalty settings</Button>}
       </>}
     </CardContent></Card>
   )
